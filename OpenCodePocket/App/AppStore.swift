@@ -19,7 +19,13 @@ final class AppStore {
     var sessions: [Session] = []
     var selectedSessionID: String?
     var messagesBySession: [String: [MessageEnvelope]] = [:]
+    var diffsBySession: [String: [FileDiff]] = [:]
     var sessionStatuses: [String: String] = [:]
+
+    var availableAgents: [AgentDescriptor] = []
+    var availableModels: [ModelOption] = []
+    var selectedAgentName: String
+    var selectedModel: ModelSelector?
 
     var draftMessage = ""
     var isSending = false
@@ -28,18 +34,41 @@ final class AppStore {
 
     private var client: OpenCodeClient?
     private var eventsTask: Task<Void, Never>?
-    private var debouncedMessageRefreshTask: Task<Void, Never>?
+    private var debouncedSessionRefreshTask: Task<Void, Never>?
 
     private let settingsStore: ConnectionSettingsStore
+    private let isMockWorkspace: Bool
 
     init(settingsStore: ConnectionSettingsStore = ConnectionSettingsStore()) {
         self.settingsStore = settingsStore
+        let processInfo = ProcessInfo.processInfo
+        let isRunningUITests = processInfo.environment["XCTestConfigurationFilePath"] != nil
+        let isExplicitConnectUITest = processInfo.arguments.contains("-ui-testing")
+        self.isMockWorkspace =
+            processInfo.arguments.contains("-ui-testing-workspace") ||
+            processInfo.environment["OPENCODE_POCKET_UI_TEST_WORKSPACE"] == "1" ||
+            (isRunningUITests && !isExplicitConnectUITest)
+
         let settings = settingsStore.loadSettings()
         self.baseURL = settings.baseURL
         self.username = settings.username
         self.useBasicAuth = settings.useBasicAuth
         self.directory = settings.directory
         self.password = settingsStore.loadPassword(baseURL: settings.baseURL, username: settings.username) ?? ""
+        self.selectedAgentName = settings.selectedAgent ?? "build"
+
+        if
+            let selectedProviderID = settings.selectedProviderID,
+            let selectedModelID = settings.selectedModelID
+        {
+            self.selectedModel = ModelSelector(providerID: selectedProviderID, modelID: selectedModelID)
+        } else {
+            self.selectedModel = nil
+        }
+
+        if isMockWorkspace {
+            seedMockWorkspace()
+        }
     }
 
     var selectedMessages: [MessageEnvelope] {
@@ -47,7 +76,50 @@ final class AppStore {
         return messagesBySession[selectedSessionID] ?? []
     }
 
+    var selectedDiffs: [FileDiff] {
+        guard let selectedSessionID else { return [] }
+        return diffsBySession[selectedSessionID] ?? []
+    }
+
+    var visibleSessions: [Session] {
+        sessions.filter { ($0.time.archived ?? 0) <= 0 }
+    }
+
+    var selectedModelDisplayName: String {
+        guard
+            let selectedModel,
+            let match = availableModels.first(where: {
+                $0.providerID == selectedModel.providerID && $0.modelID == selectedModel.modelID
+            })
+        else {
+            return "Select model"
+        }
+        return match.modelName
+    }
+
+    var modelProviderGroups: [ModelProviderGroup] {
+        let grouped = Dictionary(grouping: availableModels, by: \.providerID)
+        return grouped.keys
+            .sorted()
+            .compactMap { providerID in
+                guard let models = grouped[providerID], let first = models.first else {
+                    return nil
+                }
+                return ModelProviderGroup(
+                    providerID: providerID,
+                    providerName: first.providerName,
+                    models: models.sorted { lhs, rhs in
+                        lhs.modelName.localizedCaseInsensitiveCompare(rhs.modelName) == .orderedAscending
+                    }
+                )
+            }
+    }
+
     func connect() async {
+        if isMockWorkspace {
+            return
+        }
+
         guard !isConnecting else { return }
 
         isConnecting = true
@@ -94,6 +166,7 @@ final class AppStore {
 
             saveConnectionSettings(using: normalizedURL.absoluteString)
 
+            await refreshAgentAndModelOptions()
             await refreshSessions()
             startEventSubscriptionLoop()
         } catch {
@@ -106,8 +179,8 @@ final class AppStore {
     func disconnect() {
         eventsTask?.cancel()
         eventsTask = nil
-        debouncedMessageRefreshTask?.cancel()
-        debouncedMessageRefreshTask = nil
+        debouncedSessionRefreshTask?.cancel()
+        debouncedSessionRefreshTask = nil
         client = nil
         isConnected = false
         eventConnectionState = "Disconnected"
@@ -115,6 +188,15 @@ final class AppStore {
     }
 
     func refreshSessions() async {
+        if isMockWorkspace {
+            sessions.sort { $0.sortTimestamp > $1.sortTimestamp }
+            if let selectedSessionID, visibleSessions.contains(where: { $0.id == selectedSessionID }) {
+                return
+            }
+            selectedSessionID = visibleSessions.first?.id
+            return
+        }
+
         guard let client else { return }
         guard !isRefreshingSessions else { return }
 
@@ -128,13 +210,16 @@ final class AppStore {
             nextSessions.sort { $0.sortTimestamp > $1.sortTimestamp }
 
             sessions = nextSessions
+            let nextVisible = visibleSessions
 
-            if let selectedSessionID, sessions.contains(where: { $0.id == selectedSessionID }) {
+            if let selectedSessionID, nextVisible.contains(where: { $0.id == selectedSessionID }) {
                 await loadMessages(sessionID: selectedSessionID)
+                await loadDiffs(sessionID: selectedSessionID)
             } else {
-                selectedSessionID = sessions.first?.id
+                selectedSessionID = nextVisible.first?.id
                 if let selectedSessionID {
                     await loadMessages(sessionID: selectedSessionID)
+                    await loadDiffs(sessionID: selectedSessionID)
                 }
             }
         } catch {
@@ -143,6 +228,28 @@ final class AppStore {
     }
 
     func createSession(title: String? = nil) async {
+        if isMockWorkspace {
+            let now = Date().timeIntervalSince1970 * 1000
+            let created = Session(
+                id: "ses_mock_\(UUID().uuidString.prefix(8))",
+                slug: "mock-session",
+                projectID: "prj_mock",
+                directory: "/tmp/mock",
+                parentID: nil,
+                title: title?.trimmedNonEmpty ?? "New Session",
+                version: "1",
+                time: SessionTime(created: now, updated: now, archived: nil),
+                summary: nil,
+                share: nil,
+                revert: nil
+            )
+            sessions.insert(created, at: 0)
+            selectedSessionID = created.id
+            messagesBySession[created.id] = []
+            diffsBySession[created.id] = []
+            return
+        }
+
         guard let client else { return }
         guard !isCreatingSession else { return }
 
@@ -167,9 +274,11 @@ final class AppStore {
         guard let sessionID else { return }
         selectedSessionID = sessionID
         await loadMessages(sessionID: sessionID)
+        await loadDiffs(sessionID: sessionID)
     }
 
     func loadMessages(sessionID: String, limit: Int? = nil) async {
+        if isMockWorkspace { return }
         guard let client else { return }
 
         do {
@@ -184,11 +293,34 @@ final class AppStore {
         }
     }
 
-    func sendDraftMessage(in sessionID: String) async {
+    func loadDiffs(sessionID: String) async {
+        if isMockWorkspace { return }
         guard let client else { return }
+
+        do {
+            let diffs = try await client.getSessionDiff(sessionID: sessionID, directory: directory.trimmedNonEmpty)
+            diffsBySession[sessionID] = diffs
+        } catch {
+            connectionError = error.localizedDescription
+        }
+    }
+
+    func sendDraftMessage(in sessionID: String) async {
         let trimmed = draftMessage.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
 
+        if isMockWorkspace {
+            draftMessage = ""
+            if let userMessage = makeMockMessage(sessionID: sessionID, role: .user, text: trimmed) {
+                messagesBySession[sessionID, default: []].append(userMessage)
+            }
+            if let assistantMessage = makeMockMessage(sessionID: sessionID, role: .assistant, text: "Mock response for \"\(trimmed)\".") {
+                messagesBySession[sessionID, default: []].append(assistantMessage)
+            }
+            return
+        }
+
+        guard let client else { return }
         let original = trimmed
         draftMessage = ""
         isSending = true
@@ -198,11 +330,16 @@ final class AppStore {
         }
 
         do {
-            let request = PromptRequest(parts: [.text(original)])
+            let request = PromptRequest(
+                model: selectedModel,
+                agent: selectedAgentName.trimmedNonEmpty,
+                parts: [.text(original)]
+            )
             try await client.sendMessageAsync(sessionID: sessionID, body: request, directory: directory.trimmedNonEmpty)
 
             try? await Task.sleep(nanoseconds: 200_000_000)
             await loadMessages(sessionID: sessionID)
+            await loadDiffs(sessionID: sessionID)
         } catch {
             connectionError = error.localizedDescription
             draftMessage = original
@@ -210,6 +347,11 @@ final class AppStore {
     }
 
     func abort(sessionID: String) async {
+        if isMockWorkspace {
+            sessionStatuses[sessionID] = "idle"
+            return
+        }
+
         guard let client else { return }
         do {
             _ = try await client.abortSession(sessionID: sessionID, directory: directory.trimmedNonEmpty)
@@ -225,6 +367,185 @@ final class AppStore {
 
     func statusLabel(for sessionID: String) -> String {
         sessionStatuses[sessionID] ?? "idle"
+    }
+
+    func isSessionRunning(_ sessionID: String) -> Bool {
+        switch statusLabel(for: sessionID) {
+        case "busy", "retry":
+            return true
+        default:
+            return false
+        }
+    }
+
+    func refreshAgentAndModelOptions() async {
+        guard let client else { return }
+
+        do {
+            let allAgents = try await client.listAgents(directory: directory.trimmedNonEmpty)
+            let primaryAgents = allAgents
+                .filter { $0.mode == "primary" }
+                .filter { $0.hidden != true }
+                .sorted { lhs, rhs in
+                    lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+                }
+
+            availableAgents = primaryAgents
+
+            if !availableAgents.contains(where: { $0.name == selectedAgentName }) {
+                if let buildAgent = availableAgents.first(where: { $0.name == "build" }) {
+                    selectedAgentName = buildAgent.name
+                } else {
+                    selectedAgentName = availableAgents.first?.name ?? selectedAgentName
+                }
+            }
+        } catch {
+            connectionError = error.localizedDescription
+        }
+
+        do {
+            let catalog = try await client.listConfigProviders(directory: directory.trimmedNonEmpty)
+            var options: [ModelOption] = []
+
+            for provider in catalog.providers {
+                for model in provider.models.values {
+                    options.append(
+                        ModelOption(
+                            providerID: provider.id,
+                            providerName: provider.name,
+                            modelID: model.id,
+                            modelName: model.name,
+                            variants: model.variants?.keys.sorted() ?? []
+                        )
+                    )
+                }
+            }
+
+            options.sort { lhs, rhs in
+                if lhs.providerName != rhs.providerName {
+                    return lhs.providerName.localizedCaseInsensitiveCompare(rhs.providerName) == .orderedAscending
+                }
+                return lhs.modelName.localizedCaseInsensitiveCompare(rhs.modelName) == .orderedAscending
+            }
+
+            availableModels = options
+            reconcileSelectedModel(using: catalog.defaultModels)
+            persistSettingsBestEffort()
+        } catch {
+            connectionError = error.localizedDescription
+        }
+    }
+
+    func selectAgent(named name: String) {
+        selectedAgentName = name
+        persistSettingsBestEffort()
+    }
+
+    func selectModel(_ option: ModelOption) {
+        selectedModel = option.selector
+        persistSettingsBestEffort()
+    }
+
+    func renameSession(sessionID: String, title: String) async {
+        let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedTitle.isEmpty else { return }
+
+        if isMockWorkspace {
+            if let index = sessions.firstIndex(where: { $0.id == sessionID }) {
+                var updated = sessions[index]
+                updated = Session(
+                    id: updated.id,
+                    slug: updated.slug,
+                    projectID: updated.projectID,
+                    directory: updated.directory,
+                    parentID: updated.parentID,
+                    title: trimmedTitle,
+                    version: updated.version,
+                    time: updated.time,
+                    summary: updated.summary,
+                    share: updated.share,
+                    revert: updated.revert
+                )
+                sessions[index] = updated
+            }
+            return
+        }
+
+        guard let client else { return }
+        do {
+            _ = try await client.updateSession(
+                id: sessionID,
+                body: SessionUpdateRequest(title: trimmedTitle),
+                directory: directory.trimmedNonEmpty
+            )
+            await refreshSessions()
+        } catch {
+            connectionError = error.localizedDescription
+        }
+    }
+
+    func archiveSession(sessionID: String) async {
+        let archiveTime = Date().timeIntervalSince1970 * 1000
+
+        if isMockWorkspace {
+            if let index = sessions.firstIndex(where: { $0.id == sessionID }) {
+                var updated = sessions[index]
+                updated = Session(
+                    id: updated.id,
+                    slug: updated.slug,
+                    projectID: updated.projectID,
+                    directory: updated.directory,
+                    parentID: updated.parentID,
+                    title: updated.title,
+                    version: updated.version,
+                    time: SessionTime(created: updated.time.created, updated: updated.time.updated, archived: archiveTime),
+                    summary: updated.summary,
+                    share: updated.share,
+                    revert: updated.revert
+                )
+                sessions[index] = updated
+                if selectedSessionID == sessionID {
+                    selectedSessionID = visibleSessions.first?.id
+                }
+            }
+            return
+        }
+
+        guard let client else { return }
+        do {
+            _ = try await client.updateSession(
+                id: sessionID,
+                body: SessionUpdateRequest(time: SessionUpdateTime(archived: archiveTime)),
+                directory: directory.trimmedNonEmpty
+            )
+            await refreshSessions()
+        } catch {
+            connectionError = error.localizedDescription
+        }
+    }
+
+    func deleteSession(sessionID: String) async {
+        if isMockWorkspace {
+            sessions.removeAll { $0.id == sessionID }
+            messagesBySession[sessionID] = nil
+            diffsBySession[sessionID] = nil
+            sessionStatuses[sessionID] = nil
+            if selectedSessionID == sessionID {
+                selectedSessionID = visibleSessions.first?.id
+            }
+            return
+        }
+
+        guard let client else { return }
+        do {
+            _ = try await client.deleteSession(id: sessionID, directory: directory.trimmedNonEmpty)
+            messagesBySession[sessionID] = nil
+            diffsBySession[sessionID] = nil
+            sessionStatuses[sessionID] = nil
+            await refreshSessions()
+        } catch {
+            connectionError = error.localizedDescription
+        }
     }
 
     private func normalizedBaseURL() throws -> URL {
@@ -249,7 +570,10 @@ final class AppStore {
             baseURL: normalizedBaseURL,
             username: username,
             useBasicAuth: useBasicAuth,
-            directory: directory
+            directory: directory,
+            selectedAgent: selectedAgentName.trimmedNonEmpty,
+            selectedProviderID: selectedModel?.providerID,
+            selectedModelID: selectedModel?.modelID
         )
         settingsStore.saveSettings(settings)
 
@@ -289,7 +613,7 @@ final class AppStore {
         case "session.idle":
             if let sessionID = event.properties.objectValue?.string(for: "sessionID") {
                 sessionStatuses[sessionID] = "idle"
-                scheduleMessageRefresh(sessionID: sessionID)
+                scheduleSessionRefresh(sessionID: sessionID)
             }
 
         case "session.status":
@@ -314,22 +638,168 @@ final class AppStore {
                 connectionError = JSONValue.object(errorObject).compactDescription
             }
 
-        case "message.updated", "message.part.updated", "message.part.removed", "message.removed", "session.diff":
-            scheduleMessageRefresh(sessionID: selectedSessionID)
+        case "session.diff":
+            guard
+                let properties = event.properties.objectValue,
+                let sessionID = properties.string(for: "sessionID")
+            else {
+                return
+            }
+
+            if
+                let diffValue = properties["diff"],
+                let data = try? JSONEncoder().encode(diffValue),
+                let decoded = try? JSONDecoder().decode([FileDiff].self, from: data)
+            {
+                diffsBySession[sessionID] = decoded
+            } else {
+                scheduleSessionRefresh(sessionID: sessionID)
+            }
+
+        case "message.updated", "message.part.updated", "message.part.removed", "message.removed":
+            scheduleSessionRefresh(sessionID: selectedSessionID)
 
         default:
             break
         }
     }
 
-    private func scheduleMessageRefresh(sessionID: String?) {
+    private func scheduleSessionRefresh(sessionID: String?) {
         guard let sessionID else { return }
 
-        debouncedMessageRefreshTask?.cancel()
-        debouncedMessageRefreshTask = Task { [weak self] in
+        debouncedSessionRefreshTask?.cancel()
+        debouncedSessionRefreshTask = Task { [weak self] in
             try? await Task.sleep(nanoseconds: 300_000_000)
             await self?.loadMessages(sessionID: sessionID)
+            await self?.loadDiffs(sessionID: sessionID)
         }
+    }
+
+    private func reconcileSelectedModel(using defaultModels: [String: String]) {
+        if
+            let selectedModel,
+            availableModels.contains(where: {
+                $0.providerID == selectedModel.providerID && $0.modelID == selectedModel.modelID
+            })
+        {
+            return
+        }
+
+        for (providerID, modelID) in defaultModels {
+            if let match = availableModels.first(where: { $0.providerID == providerID && $0.modelID == modelID }) {
+                selectedModel = match.selector
+                return
+            }
+        }
+
+        selectedModel = availableModels.first?.selector
+    }
+
+    private func persistSettingsBestEffort() {
+        let normalized: String
+        if let url = try? normalizedBaseURL() {
+            normalized = url.absoluteString
+        } else {
+            normalized = baseURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+
+        guard !normalized.isEmpty else { return }
+        saveConnectionSettings(using: normalized)
+    }
+
+    private func seedMockWorkspace() {
+        let now = Date().timeIntervalSince1970 * 1000
+
+        let primary = Session(
+            id: "ses_mock_primary",
+            slug: "mock-primary",
+            projectID: "prj_mock",
+            directory: "/tmp/opencode-pocket",
+            parentID: nil,
+            title: "Mock Workspace Session",
+            version: "1",
+            time: SessionTime(created: now - 50_000, updated: now - 5_000, archived: nil),
+            summary: nil,
+            share: nil,
+            revert: nil
+        )
+
+        let secondary = Session(
+            id: "ses_mock_secondary",
+            slug: "mock-secondary",
+            projectID: "prj_mock",
+            directory: "/tmp/opencode-pocket",
+            parentID: nil,
+            title: "Mock Planning Session",
+            version: "1",
+            time: SessionTime(created: now - 140_000, updated: now - 40_000, archived: nil),
+            summary: nil,
+            share: nil,
+            revert: nil
+        )
+
+        sessions = [primary, secondary]
+        selectedSessionID = primary.id
+        sessionStatuses[primary.id] = "idle"
+        sessionStatuses[secondary.id] = "idle"
+        diffsBySession[primary.id] = [
+            FileDiff(file: "OpenCodePocket/App/AppStore.swift", before: "", after: "", additions: 24, deletions: 9, status: "modified"),
+            FileDiff(file: "OpenCodePocket/Features/WorkspaceView.swift", before: "", after: "", additions: 108, deletions: 0, status: "added")
+        ]
+        diffsBySession[secondary.id] = []
+        availableAgents = [
+            AgentDescriptor(name: "build", description: "Executes tools based on configured permissions.", mode: "primary", hidden: false),
+            AgentDescriptor(name: "plan", description: "Planning mode with edit restrictions.", mode: "primary", hidden: false)
+        ]
+        availableModels = [
+            ModelOption(providerID: "openai", providerName: "OpenAI", modelID: "gpt-5.3-codex", modelName: "GPT-5.3 Codex", variants: ["low", "medium", "high"]),
+            ModelOption(providerID: "anthropic", providerName: "Anthropic", modelID: "claude-sonnet-4-5", modelName: "Claude Sonnet 4.5", variants: ["high", "max"])
+        ]
+
+        if !availableAgents.contains(where: { $0.name == selectedAgentName }) {
+            selectedAgentName = "build"
+        }
+        selectedModel = availableModels.first?.selector
+
+        if let greeting = makeMockMessage(sessionID: primary.id, role: .assistant, text: "Welcome to the mock workspace.") {
+            messagesBySession[primary.id] = [greeting]
+        }
+
+        isConnected = true
+        eventConnectionState = "Mock workspace"
+        serverVersion = "mock"
+        connectionError = nil
+    }
+
+    private func makeMockMessage(sessionID: String, role: MessageRole, text: String) -> MessageEnvelope? {
+        let messageID = "msg_mock_\(UUID().uuidString.prefix(10))"
+
+        let payload: [String: Any] = [
+            "info": [
+                "id": messageID,
+                "sessionID": sessionID,
+                "role": role.rawValue,
+                "agent": selectedAgentName
+            ],
+            "parts": [
+                [
+                    "id": "prt_mock_\(UUID().uuidString.prefix(10))",
+                    "sessionID": sessionID,
+                    "messageID": messageID,
+                    "type": "text",
+                    "text": text
+                ]
+            ]
+        ]
+
+        guard
+            let data = try? JSONSerialization.data(withJSONObject: payload),
+            let envelope = try? JSONDecoder().decode(MessageEnvelope.self, from: data)
+        else {
+            return nil
+        }
+
+        return envelope
     }
 }
 

@@ -3,11 +3,12 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 63;
+	objectVersion = 77;
 	objects = {
 
 /* Begin PBXBuildFile section */
 		06C4BC829CCC1FB46B79708F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 8E5D2399CD06F9BB20324AC1 /* Assets.xcassets */; };
+		09D6A584B0209852D35B95F4 /* WorkspaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D83BD8354E87398437EA542 /* WorkspaceView.swift */; };
 		0E9E6AA9FEFC0FBE898B75A5 /* SessionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C7BFCD6254DAE5C93352594 /* SessionsView.swift */; };
 		11E20ED9CE29DA2A91B5D259 /* SSEParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 425BDDA751D2C0DD1117DEC6 /* SSEParser.swift */; };
 		1355DEB3AE787C31F3505B08 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77054C883C43469DFD38B5A5 /* RootView.swift */; };
@@ -57,9 +58,10 @@
 		5F2AB2259CAD47AEF8C1F3AA /* OpenCodePocketApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenCodePocketApp.swift; sourceTree = "<group>"; };
 		63F71037BF0C7E8D736AB0EA /* OpenCodePocketUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = OpenCodePocketUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		6C7BFCD6254DAE5C93352594 /* SessionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionsView.swift; sourceTree = "<group>"; };
-		6E0B7D1C84E1310D9D09080B /* OpenCodePocket.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OpenCodePocket.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		6E0B7D1C84E1310D9D09080B /* OpenCodePocket.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = OpenCodePocket.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		77054C883C43469DFD38B5A5 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		8E5D2399CD06F9BB20324AC1 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		9D83BD8354E87398437EA542 /* WorkspaceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceView.swift; sourceTree = "<group>"; };
 		9E7A5853E1410E9674150788 /* OpenCodeError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenCodeError.swift; sourceTree = "<group>"; };
 		A80E49A8772FB36D8B6AF3C6 /* HTTPRequestBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTTPRequestBuilder.swift; sourceTree = "<group>"; };
 		AD77BF34D8ED8192C6406A29 /* JSONDecodingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSONDecodingTests.swift; sourceTree = "<group>"; };
@@ -175,6 +177,7 @@
 				C69CD8CF636DA57803128B44 /* ConnectView.swift */,
 				77054C883C43469DFD38B5A5 /* RootView.swift */,
 				6C7BFCD6254DAE5C93352594 /* SessionsView.swift */,
+				9D83BD8354E87398437EA542 /* WorkspaceView.swift */,
 			);
 			path = Features;
 			sourceTree = "<group>";
@@ -260,6 +263,7 @@
 			);
 			mainGroup = 2DEDBAAC348ACF0A4140518A;
 			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -299,6 +303,7 @@
 				1355DEB3AE787C31F3505B08 /* RootView.swift in Sources */,
 				11E20ED9CE29DA2A91B5D259 /* SSEParser.swift in Sources */,
 				0E9E6AA9FEFC0FBE898B75A5 /* SessionsView.swift in Sources */,
+				09D6A584B0209852D35B95F4 /* WorkspaceView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -452,7 +457,6 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				DEVELOPMENT_TEAM = WH4QW9ND3J;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = OpenCodePocket/Support/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
@@ -535,7 +539,6 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				DEVELOPMENT_TEAM = WH4QW9ND3J;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = OpenCodePocket/Support/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;

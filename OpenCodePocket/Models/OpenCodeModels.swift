@@ -34,6 +34,94 @@ struct Session: Codable, Hashable, Identifiable, Sendable {
     }
 }
 
+struct FileDiff: Codable, Hashable, Identifiable, Sendable {
+    let file: String
+    let before: String
+    let after: String
+    let additions: Double
+    let deletions: Double
+    let status: String?
+
+    var id: String {
+        "\(file)::\(before)::\(after)"
+    }
+
+    var additionsCount: Int {
+        Int(additions.rounded())
+    }
+
+    var deletionsCount: Int {
+        Int(deletions.rounded())
+    }
+}
+
+struct AgentDescriptor: Codable, Hashable, Identifiable, Sendable {
+    let name: String
+    let description: String?
+    let mode: String
+    let hidden: Bool?
+
+    var id: String {
+        name
+    }
+}
+
+struct ProviderCatalogResponse: Decodable, Sendable {
+    let providers: [ProviderDescriptor]
+    let defaultModels: [String: String]
+
+    enum CodingKeys: String, CodingKey {
+        case providers
+        case defaultModels = "default"
+    }
+}
+
+struct ProviderDescriptor: Decodable, Hashable, Sendable {
+    let id: String
+    let name: String
+    let models: [String: ProviderModelDescriptor]
+}
+
+struct ProviderModelDescriptor: Decodable, Hashable, Sendable {
+    let id: String
+    let providerID: String
+    let name: String
+    let variants: [String: JSONValue]?
+}
+
+struct ModelOption: Hashable, Identifiable, Sendable {
+    let providerID: String
+    let providerName: String
+    let modelID: String
+    let modelName: String
+    let variants: [String]
+
+    var id: String {
+        "\(providerID)::\(modelID)"
+    }
+
+    var selector: ModelSelector {
+        ModelSelector(providerID: providerID, modelID: modelID)
+    }
+
+    var displayLabel: String {
+        if variants.isEmpty {
+            return modelName
+        }
+        return "\(modelName) (\(variants.count) variants)"
+    }
+}
+
+struct ModelProviderGroup: Hashable, Identifiable, Sendable {
+    let providerID: String
+    let providerName: String
+    let models: [ModelOption]
+
+    var id: String {
+        providerID
+    }
+}
+
 struct SessionCreateRequest: Encodable, Sendable {
     var parentID: String?
     var title: String?

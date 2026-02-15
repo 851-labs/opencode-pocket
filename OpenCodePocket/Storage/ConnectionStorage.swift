@@ -6,12 +6,18 @@ struct ConnectionSettings: Codable, Equatable {
     var username: String
     var useBasicAuth: Bool
     var directory: String
+    var selectedAgent: String?
+    var selectedProviderID: String?
+    var selectedModelID: String?
 
     static let `default` = ConnectionSettings(
         baseURL: "http://claudl.taile64ce5.ts.net:4096",
         username: "opencode",
         useBasicAuth: false,
-        directory: ""
+        directory: "",
+        selectedAgent: nil,
+        selectedProviderID: nil,
+        selectedModelID: nil
     )
 }
 

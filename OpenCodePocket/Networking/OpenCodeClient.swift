@@ -30,6 +30,14 @@ final class OpenCodeClient {
         try await request(.get, path: "/session", query: mergedDirectoryQuery(directory), response: [Session].self)
     }
 
+    func listAgents(directory: String? = nil) async throws -> [AgentDescriptor] {
+        try await request(.get, path: "/agent", query: mergedDirectoryQuery(directory), response: [AgentDescriptor].self)
+    }
+
+    func listConfigProviders(directory: String? = nil) async throws -> ProviderCatalogResponse {
+        try await request(.get, path: "/config/providers", query: mergedDirectoryQuery(directory), response: ProviderCatalogResponse.self)
+    }
+
     func createSession(_ body: SessionCreateRequest, directory: String? = nil) async throws -> Session {
         try await request(
             .post,
@@ -87,6 +95,20 @@ final class OpenCodeClient {
             path: "/session/\(escapedPathComponent(sessionID))/message/\(escapedPathComponent(messageID))",
             query: mergedDirectoryQuery(directory),
             response: MessageEnvelope.self
+        )
+    }
+
+    func getSessionDiff(sessionID: String, messageID: String? = nil, directory: String? = nil) async throws -> [FileDiff] {
+        var query = mergedDirectoryQuery(directory)
+        if let messageID {
+            query.append(URLQueryItem(name: "messageID", value: messageID))
+        }
+
+        return try await request(
+            .get,
+            path: "/session/\(escapedPathComponent(sessionID))/diff",
+            query: query,
+            response: [FileDiff].self
         )
     }
 
