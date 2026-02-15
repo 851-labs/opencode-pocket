@@ -27,8 +27,10 @@ struct SessionsView: View {
                     }
                 }
                 .tag(session.id)
+                .accessibilityIdentifier("session.row.\(session.id)")
             }
         }
+        .accessibilityIdentifier("sessions.list")
         .overlay {
             if store.sessions.isEmpty {
                 ContentUnavailableView(
@@ -54,6 +56,7 @@ struct SessionsView: View {
                     }
                 }
                 .disabled(store.isRefreshingSessions)
+                .accessibilityIdentifier("sessions.refresh")
 
                 Button {
                     Task {
@@ -68,12 +71,14 @@ struct SessionsView: View {
                     }
                 }
                 .disabled(store.isCreatingSession)
+                .accessibilityIdentifier("sessions.create")
             }
 
             ToolbarItem(placement: .topBarLeading) {
                 Button("Disconnect") {
                     store.disconnect()
                 }
+                .accessibilityIdentifier("sessions.disconnect")
             }
         }
         .onChange(of: store.selectedSessionID) { _, newValue in

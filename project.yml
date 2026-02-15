@@ -46,3 +46,15 @@ targets:
       base:
         PRODUCT_NAME: OpenCodePocketTests
         GENERATE_INFOPLIST_FILE: YES
+  OpenCodePocketUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    deploymentTarget: "26.0"
+    sources:
+      - path: OpenCodePocketUITests
+    dependencies:
+      - target: OpenCodePocket
+    settings:
+      base:
+        PRODUCT_NAME: OpenCodePocketUITests
+        GENERATE_INFOPLIST_FILE: YES

@@ -11,21 +11,26 @@ struct ConnectView: View {
                         .keyboardType(.URL)
                         .autocorrectionDisabled()
                         .textInputAutocapitalization(.never)
+                        .accessibilityIdentifier("connect.baseURL")
 
                     TextField("Workspace directory (optional)", text: $store.directory)
                         .autocorrectionDisabled()
                         .textInputAutocapitalization(.never)
+                        .accessibilityIdentifier("connect.directory")
                 }
 
                 Section("Authentication") {
                     Toggle("Use Basic Auth", isOn: $store.useBasicAuth)
+                        .accessibilityIdentifier("connect.useBasicAuth")
 
                     if store.useBasicAuth {
                         TextField("Username", text: $store.username)
                             .autocorrectionDisabled()
                             .textInputAutocapitalization(.never)
+                            .accessibilityIdentifier("connect.username")
 
                         SecureField("Password", text: $store.password)
+                            .accessibilityIdentifier("connect.password")
                     }
                 }
 
@@ -44,11 +49,13 @@ struct ConnectView: View {
                         }
                     }
                     .disabled(store.isConnecting)
+                    .accessibilityIdentifier("connect.button")
 
                     if let error = store.connectionError {
                         Text(error)
                             .font(.footnote)
                             .foregroundStyle(.red)
+                            .accessibilityIdentifier("connect.error")
                     }
                 }
             }

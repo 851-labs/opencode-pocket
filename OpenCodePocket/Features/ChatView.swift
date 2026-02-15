@@ -12,10 +12,12 @@ struct ChatView: View {
                         ForEach(store.messagesBySession[sessionID] ?? []) { message in
                             MessageBubble(message: message)
                                 .id(message.id)
+                                .accessibilityIdentifier("chat.message.\(message.id)")
                         }
                     }
                     .padding(16)
                 }
+                .accessibilityIdentifier("chat.messages")
                 .onChange(of: store.messagesBySession[sessionID]?.count ?? 0) { _, _ in
                     guard let lastID = store.messagesBySession[sessionID]?.last?.id else { return }
                     withAnimation(.easeOut(duration: 0.2)) {
@@ -29,6 +31,7 @@ struct ChatView: View {
             HStack(alignment: .bottom, spacing: 8) {
                 TextField("Message", text: $store.draftMessage, axis: .vertical)
                     .lineLimit(1...6)
+                    .accessibilityIdentifier("chat.input")
 
                 Button("Send") {
                     Task {
@@ -37,6 +40,7 @@ struct ChatView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(store.draftMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || store.isSending)
+                .accessibilityIdentifier("chat.send")
             }
             .padding(12)
 
@@ -46,12 +50,14 @@ struct ChatView: View {
                         await store.abort(sessionID: sessionID)
                     }
                 }
+                .accessibilityIdentifier("chat.abort")
 
                 Spacer()
 
                 Text("Status: \(store.statusLabel(for: sessionID))")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                    .accessibilityIdentifier("chat.status")
             }
             .padding(.horizontal, 12)
             .padding(.bottom, 10)

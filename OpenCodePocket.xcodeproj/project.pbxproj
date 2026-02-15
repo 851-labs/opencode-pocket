@@ -20,6 +20,7 @@
 		B7E496831D379578311886CF /* JSONValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56E76A0A4CD05FFDA8D2BBEF /* JSONValue.swift */; };
 		BC7B461C1D77336301F9D74D /* JSONDecodingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD77BF34D8ED8192C6406A29 /* JSONDecodingTests.swift */; };
 		C079C36C986C5C291A4157D5 /* ConnectionStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01A4FE78F261B36005A4B76F /* ConnectionStorage.swift */; };
+		CA9CB20FDCEB25BD8D63BCFC /* OpenCodePocketUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADC557896D3FDDF79E3A3B07 /* OpenCodePocketUITests.swift */; };
 		E02690E3B04E399CB1646C14 /* AppStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5A7FA305D3CB67FDCC55764 /* AppStore.swift */; };
 		E1B350315C65F46FBA264091 /* SSEParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51168867734DC2731DFD99F2 /* SSEParserTests.swift */; };
 		E863135BA0E0315B6792476C /* OpenCodeModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC212D0A4D16E38BD69B1853 /* OpenCodeModels.swift */; };
@@ -29,6 +30,13 @@
 
 /* Begin PBXContainerItemProxy section */
 		34500440E4D0A86F82644E8C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B0CE56A54672DB7FD428C36C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = FE1E485EDE104AE88995EA73;
+			remoteInfo = OpenCodePocket;
+		};
+		A2BAD6D40F4C2AF00176CF8A /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = B0CE56A54672DB7FD428C36C /* Project object */;
 			proxyType = 1;
@@ -47,6 +55,7 @@
 		56E76A0A4CD05FFDA8D2BBEF /* JSONValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSONValue.swift; sourceTree = "<group>"; };
 		5863B4179F814BACC36D0A24 /* LiveServerIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveServerIntegrationTests.swift; sourceTree = "<group>"; };
 		5F2AB2259CAD47AEF8C1F3AA /* OpenCodePocketApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenCodePocketApp.swift; sourceTree = "<group>"; };
+		63F71037BF0C7E8D736AB0EA /* OpenCodePocketUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = OpenCodePocketUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		6C7BFCD6254DAE5C93352594 /* SessionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionsView.swift; sourceTree = "<group>"; };
 		6E0B7D1C84E1310D9D09080B /* OpenCodePocket.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = OpenCodePocket.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		77054C883C43469DFD38B5A5 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
@@ -54,6 +63,7 @@
 		9E7A5853E1410E9674150788 /* OpenCodeError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenCodeError.swift; sourceTree = "<group>"; };
 		A80E49A8772FB36D8B6AF3C6 /* HTTPRequestBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTTPRequestBuilder.swift; sourceTree = "<group>"; };
 		AD77BF34D8ED8192C6406A29 /* JSONDecodingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSONDecodingTests.swift; sourceTree = "<group>"; };
+		ADC557896D3FDDF79E3A3B07 /* OpenCodePocketUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenCodePocketUITests.swift; sourceTree = "<group>"; };
 		BC212D0A4D16E38BD69B1853 /* OpenCodeModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenCodeModels.swift; sourceTree = "<group>"; };
 		C5A7FA305D3CB67FDCC55764 /* AppStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStore.swift; sourceTree = "<group>"; };
 		C69CD8CF636DA57803128B44 /* ConnectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectView.swift; sourceTree = "<group>"; };
@@ -66,8 +76,17 @@
 			children = (
 				6E0B7D1C84E1310D9D09080B /* OpenCodePocket.app */,
 				156C94AEED8216BAB93EF5B3 /* OpenCodePocketTests.xctest */,
+				63F71037BF0C7E8D736AB0EA /* OpenCodePocketUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		2616DC6BDECAE178EA74E098 /* OpenCodePocketUITests */ = {
+			isa = PBXGroup;
+			children = (
+				ADC557896D3FDDF79E3A3B07 /* OpenCodePocketUITests.swift */,
+			);
+			path = OpenCodePocketUITests;
 			sourceTree = "<group>";
 		};
 		2B79A7E374B886799A550469 /* OpenCodePocket */ = {
@@ -88,6 +107,7 @@
 			children = (
 				2B79A7E374B886799A550469 /* OpenCodePocket */,
 				4316D4CE93C5CBEBDC6CBD0D /* OpenCodePocketTests */,
+				2616DC6BDECAE178EA74E098 /* OpenCodePocketUITests */,
 				0C701058CA40D9EE3F9C72DD /* Products */,
 			);
 			sourceTree = "<group>";
@@ -162,6 +182,24 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		8371D91900686E3CB76F7409 /* OpenCodePocketUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AEB4A87E928D206AD05F644D /* Build configuration list for PBXNativeTarget "OpenCodePocketUITests" */;
+			buildPhases = (
+				3160ACC5641567407958C3AD /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				8A54469E3551B327DFB22AD8 /* PBXTargetDependency */,
+			);
+			name = OpenCodePocketUITests;
+			packageProductDependencies = (
+			);
+			productName = OpenCodePocketUITests;
+			productReference = 63F71037BF0C7E8D736AB0EA /* OpenCodePocketUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 		FE1E485EDE104AE88995EA73 /* OpenCodePocket */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 7AA52C302906F1DAC7253EF7 /* Build configuration list for PBXNativeTarget "OpenCodePocket" */;
@@ -206,6 +244,11 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					8371D91900686E3CB76F7409 = {
+						TestTargetID = FE1E485EDE104AE88995EA73;
+					};
+				};
 			};
 			buildConfigurationList = 28705FB595522D94C338F259 /* Build configuration list for PBXProject "OpenCodePocket" */;
 			compatibilityVersion = "Xcode 14.0";
@@ -223,6 +266,7 @@
 			targets = (
 				FE1E485EDE104AE88995EA73 /* OpenCodePocket */,
 				FF1EB8894C4B46E1572E0C95 /* OpenCodePocketTests */,
+				8371D91900686E3CB76F7409 /* OpenCodePocketUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -259,6 +303,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		3160ACC5641567407958C3AD /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CA9CB20FDCEB25BD8D63BCFC /* OpenCodePocketUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		EEE9DF83DD322133505C8887 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -273,6 +325,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		8A54469E3551B327DFB22AD8 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = FE1E485EDE104AE88995EA73 /* OpenCodePocket */;
+			targetProxy = A2BAD6D40F4C2AF00176CF8A /* PBXContainerItemProxy */;
+		};
 		9C7AB2724DCAF04C0B035779 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = FE1E485EDE104AE88995EA73 /* OpenCodePocket */;
@@ -298,6 +355,24 @@
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/OpenCodePocket.app/OpenCodePocket";
 			};
 			name = Release;
+		};
+		198FEDFC34C6988EAE33305C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_NAME = OpenCodePocketUITests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = OpenCodePocket;
+			};
+			name = Debug;
 		};
 		37C55ED06141044D6DF7B3A3 /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -474,6 +549,24 @@
 			};
 			name = Debug;
 		};
+		EC3EDAD927680AD8A077D2F7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_NAME = OpenCodePocketUITests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = OpenCodePocket;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -491,6 +584,15 @@
 			buildConfigurations = (
 				67E3122777516861AF7427D9 /* Debug */,
 				56334D00CE723C5603802926 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		AEB4A87E928D206AD05F644D /* Build configuration list for PBXNativeTarget "OpenCodePocketUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				198FEDFC34C6988EAE33305C /* Debug */,
+				EC3EDAD927680AD8A077D2F7 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
