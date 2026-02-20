@@ -94,8 +94,6 @@ private extension WorkspaceView {
     .toolbar {
       workspaceToolbar
     }
-    .toolbarBackground(.visible, for: .navigationBar)
-    .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
     .safeAreaInset(edge: .bottom) {
       if let selectedSessionID {
         WorkspaceComposer(store: store, sessionID: selectedSessionID)
