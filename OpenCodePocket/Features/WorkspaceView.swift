@@ -431,6 +431,7 @@ private struct WorkspaceComposer: View {
             .interactive(),
           in: .rect(cornerRadius: 22)
         )
+        .scrollEdgeEffectStyle(.soft, for: .bottom)
     }
   }
 
@@ -441,10 +442,6 @@ private struct WorkspaceComposer: View {
           .lineLimit(1 ... 6)
           .padding(.horizontal, 12)
           .padding(.vertical, 10)
-          .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-              .fill(.white.opacity(0.64))
-          )
           .accessibilityIdentifier("composer.input")
 
         Button {
@@ -506,9 +503,6 @@ private struct WorkspaceComposer: View {
       Label(store.selectedAgentName.capitalized, systemImage: "wand.and.stars")
         .font(.caption.weight(.semibold))
         .lineLimit(1)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(Capsule().fill(.white.opacity(0.58)))
     }
     .accessibilityIdentifier("composer.agentMenu")
     .accessibilityLabel("Agent Menu")
@@ -540,9 +534,6 @@ private struct WorkspaceComposer: View {
       Label(store.selectedModelDisplayName, systemImage: "cpu")
         .font(.caption.weight(.semibold))
         .lineLimit(1)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(Capsule().fill(.white.opacity(0.58)))
     }
     .accessibilityIdentifier("composer.modelMenu")
     .accessibilityLabel("Model Menu")
