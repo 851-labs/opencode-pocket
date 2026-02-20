@@ -425,21 +425,14 @@ private struct WorkspaceComposer: View {
   let sessionID: String
 
   var body: some View {
-    Group {
-      if #available(iOS 26.0, *) {
-        GlassEffectContainer(spacing: 0) {
-          composerBody
-            .glassEffect(
-              .regular
-                .tint(Color.white.opacity(0.12))
-                .interactive(),
-              in: .rect(cornerRadius: 22)
-            )
-        }
-      } else {
-        composerBody
-          .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-      }
+    GlassEffectContainer(spacing: 0) {
+      composerBody
+        .glassEffect(
+          .regular
+            .tint(Color.white.opacity(0.12))
+            .interactive(),
+          in: .rect(cornerRadius: 22)
+        )
     }
   }
 
