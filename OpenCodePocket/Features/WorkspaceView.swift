@@ -61,7 +61,7 @@ struct WorkspaceView: View {
       ContentUnavailableView(
         "No Session Selected",
         systemImage: "bubble.left.and.bubble.right",
-        description: Text("Open the drawer and choose a session.")
+        description: Text("Open sessions and choose a session.")
       )
       .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -72,7 +72,7 @@ struct WorkspaceView: View {
 
 private extension WorkspaceView {
   var workspaceRoot: some View {
-    ZStack(alignment: .leading) {
+    ZStack {
       LinearGradient(
         colors: [
           Color(red: 0.93, green: 0.95, blue: 0.99),
@@ -84,15 +84,16 @@ private extension WorkspaceView {
       .ignoresSafeArea()
 
       content
-
-      if isDrawerPresented {
-        drawerBackdrop
-        drawerPanel
-      }
     }
     .navigationBarTitleDisplayMode(.inline)
     .toolbar {
       workspaceToolbar
+    }
+    .sheet(isPresented: $isDrawerPresented) {
+      SessionSheet(store: store, isPresented: $isDrawerPresented)
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+        .accessibilityIdentifier("workspace.drawer")
     }
     .safeAreaInset(edge: .bottom) {
       if let selectedSessionID {
@@ -102,22 +103,6 @@ private extension WorkspaceView {
           .transition(.move(edge: .bottom).combined(with: .opacity))
       }
     }
-  }
-
-  var drawerBackdrop: some View {
-    Color.black.opacity(0.24)
-      .ignoresSafeArea()
-      .onTapGesture {
-        closeDrawer()
-      }
-      .accessibilityIdentifier("workspace.drawer.backdrop")
-  }
-
-  var drawerPanel: some View {
-    SessionDrawer(store: store, isPresented: $isDrawerPresented)
-      .frame(maxWidth: 320)
-      .transition(.move(edge: .leading))
-      .accessibilityIdentifier("workspace.drawer")
   }
 
   @ToolbarContentBuilder
@@ -175,15 +160,7 @@ private extension WorkspaceView {
 
 private extension WorkspaceView {
   func toggleDrawer() {
-    withAnimation(.easeInOut(duration: 0.2)) {
-      isDrawerPresented.toggle()
-    }
-  }
-
-  func closeDrawer() {
-    withAnimation(.easeInOut(duration: 0.2)) {
-      isDrawerPresented = false
-    }
+    isDrawerPresented.toggle()
   }
 
   func prepareRenameSession() {
@@ -219,114 +196,87 @@ private extension WorkspaceView {
   }
 }
 
-private struct SessionDrawer: View {
+private struct SessionSheet: View {
   @Bindable var store: AppStore
   @Binding var isPresented: Bool
 
   var body: some View {
-    VStack(spacing: 0) {
-      HStack {
-        Text("Sessions")
-          .font(.title3.weight(.semibold))
-
-        Spacer()
-
-        Button {
-          withAnimation(.easeInOut(duration: 0.2)) {
-            isPresented = false
+    NavigationStack {
+      List {
+        Section("Actions") {
+          Button {
+            Task {
+              await store.refreshSessions()
+            }
+          } label: {
+            Label("Refresh", systemImage: "arrow.clockwise")
           }
-        } label: {
-          Image(systemName: "xmark")
-            .font(.subheadline.weight(.bold))
-            .frame(width: 28, height: 28)
-            .background(Circle().fill(.white.opacity(0.65)))
-        }
-        .buttonStyle(.plain)
-      }
-      .padding(.horizontal, 14)
-      .padding(.top, 12)
-      .padding(.bottom, 8)
+          .accessibilityIdentifier("drawer.refresh")
 
-      HStack(spacing: 10) {
-        Button {
-          Task {
-            await store.refreshSessions()
+          Button {
+            Task {
+              await store.createSession()
+            }
+          } label: {
+            Label("New Session", systemImage: "plus")
           }
-        } label: {
-          Label("Refresh", systemImage: "arrow.clockwise")
-            .frame(maxWidth: .infinity)
+          .accessibilityIdentifier("drawer.create")
         }
-        .buttonStyle(.bordered)
-        .accessibilityIdentifier("drawer.refresh")
 
-        Button {
-          Task {
-            await store.createSession()
-          }
-        } label: {
-          Label("New", systemImage: "plus")
-            .frame(maxWidth: .infinity)
-        }
-        .buttonStyle(.borderedProminent)
-        .accessibilityIdentifier("drawer.create")
-      }
-      .padding(.horizontal, 14)
-      .padding(.bottom, 10)
-
-      Divider()
-
-      ScrollView {
-        LazyVStack(spacing: 8) {
+        Section("Sessions") {
           ForEach(store.visibleSessions) { session in
             Button {
               Task {
                 await store.selectSession(session.id)
-                withAnimation(.easeInOut(duration: 0.2)) {
-                  isPresented = false
-                }
+                isPresented = false
               }
             } label: {
-              VStack(alignment: .leading, spacing: 4) {
-                Text(session.title)
-                  .font(.subheadline.weight(.semibold))
-                  .lineLimit(1)
-
-                HStack(spacing: 6) {
-                  Text(session.id)
-                    .font(.caption)
+              HStack(spacing: 10) {
+                VStack(alignment: .leading, spacing: 4) {
+                  Text(session.title)
+                    .font(.subheadline.weight(.semibold))
                     .lineLimit(1)
-                    .foregroundStyle(.secondary)
 
-                  Circle()
-                    .fill(Color.secondary.opacity(0.6))
-                    .frame(width: 3, height: 3)
+                  HStack(spacing: 6) {
+                    Text(session.id)
+                      .font(.caption)
+                      .lineLimit(1)
+                      .foregroundStyle(.secondary)
 
-                  Text(store.statusLabel(for: session.id))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    Circle()
+                      .fill(Color.secondary.opacity(0.6))
+                      .frame(width: 3, height: 3)
+
+                    Text(store.statusLabel(for: session.id))
+                      .font(.caption)
+                      .foregroundStyle(.secondary)
+                  }
+                }
+
+                Spacer()
+
+                if store.selectedSessionID == session.id {
+                  Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(.tint)
                 }
               }
-              .frame(maxWidth: .infinity, alignment: .leading)
-              .padding(.horizontal, 10)
-              .padding(.vertical, 10)
-              .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                  .fill(store.selectedSessionID == session.id ? .white.opacity(0.88) : .white.opacity(0.55))
-              )
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("drawer.session.\(session.id)")
           }
         }
-        .padding(12)
       }
+      .listStyle(.insetGrouped)
+      .navigationTitle("Sessions")
+      .toolbar {
+        ToolbarItem(placement: .topBarTrailing) {
+          Button("Done") {
+            isPresented = false
+          }
+        }
+      }
+      .accessibilityIdentifier("workspace.drawer")
     }
-    .frame(maxHeight: .infinity, alignment: .top)
-    .background(
-      Rectangle()
-        .fill(.ultraThinMaterial)
-        .ignoresSafeArea()
-    )
   }
 }
 
