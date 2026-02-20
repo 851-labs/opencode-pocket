@@ -21,22 +21,95 @@ struct WorkspaceView: View {
     }
 
     var body: some View {
-        ZStack(alignment: .leading) {
-            LinearGradient(
-                colors: [
-                    Color(red: 0.93, green: 0.95, blue: 0.99),
-                    Color(red: 0.96, green: 0.98, blue: 0.97)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
+        NavigationStack {
+            ZStack(alignment: .leading) {
+                LinearGradient(
+                    colors: [
+                        Color(red: 0.93, green: 0.95, blue: 0.99),
+                        Color(red: 0.96, green: 0.98, blue: 0.97)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
 
-            VStack(spacing: 0) {
-                toolbar
-                Divider()
                 content
+
+                if isDrawerPresented {
+                    Color.black.opacity(0.24)
+                        .ignoresSafeArea()
+                        .onTapGesture {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                isDrawerPresented = false
+                            }
+                        }
+                        .accessibilityIdentifier("workspace.drawer.backdrop")
+
+                    SessionDrawer(store: store, isPresented: $isDrawerPresented)
+                        .frame(maxWidth: 320)
+                        .transition(.move(edge: .leading))
+                        .accessibilityIdentifier("workspace.drawer")
+                }
             }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            isDrawerPresented.toggle()
+                        }
+                    } label: {
+                        Image(systemName: "line.3.horizontal")
+                            .font(.headline)
+                            .frame(width: 36, height: 36)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("workspace.drawer.toggle")
+                }
+
+                ToolbarItem(placement: .principal) {
+                    Picker("Panel", selection: $selectedPanel) {
+                        ForEach(WorkspacePanel.allCases) { panel in
+                            Text(panel.rawValue).tag(panel)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(maxWidth: 220)
+                    .accessibilityIdentifier("workspace.panel.picker")
+                }
+
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        Button("Rename") {
+                            guard let selectedSessionID else { return }
+                            renameDraft = store.sessionTitle(for: selectedSessionID)
+                            isRenamePromptPresented = true
+                        }
+                        .disabled(selectedSessionID == nil)
+
+                        Button("Archive") {
+                            guard let selectedSessionID else { return }
+                            Task {
+                                await store.archiveSession(sessionID: selectedSessionID)
+                            }
+                        }
+                        .disabled(selectedSessionID == nil)
+
+                        Button("Delete", role: .destructive) {
+                            guard selectedSessionID != nil else { return }
+                            isDeleteConfirmationPresented = true
+                        }
+                        .disabled(selectedSessionID == nil)
+                    } label: {
+                        Image(systemName: "ellipsis")
+                            .font(.headline)
+                            .frame(width: 36, height: 36)
+                    }
+                    .accessibilityIdentifier("workspace.actions.menu")
+                }
+            }
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
             .safeAreaInset(edge: .bottom) {
                 if let selectedSessionID {
                     WorkspaceComposer(store: store, sessionID: selectedSessionID)
@@ -45,122 +118,33 @@ struct WorkspaceView: View {
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
             }
-
-            if isDrawerPresented {
-                Color.black.opacity(0.24)
-                    .ignoresSafeArea()
-                    .onTapGesture {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            isDrawerPresented = false
-                        }
-                    }
-                    .accessibilityIdentifier("workspace.drawer.backdrop")
-
-                SessionDrawer(store: store, isPresented: $isDrawerPresented)
-                    .frame(maxWidth: 320)
-                    .transition(.move(edge: .leading))
-                    .accessibilityIdentifier("workspace.drawer")
+            .animation(.spring(response: 0.3, dampingFraction: 0.82), value: isDrawerPresented)
+            .task {
+                await store.refreshAgentAndModelOptions()
+                await store.refreshSessions()
             }
-        }
-        .animation(.spring(response: 0.3, dampingFraction: 0.82), value: isDrawerPresented)
-        .task {
-            await store.refreshAgentAndModelOptions()
-            await store.refreshSessions()
-        }
-        .alert("Rename Session", isPresented: $isRenamePromptPresented) {
-            TextField("Session title", text: $renameDraft)
-            Button("Cancel", role: .cancel) {}
-            Button("Save") {
-                guard let selectedSessionID else { return }
-                Task {
-                    await store.renameSession(sessionID: selectedSessionID, title: renameDraft)
-                }
-            }
-        }
-        .alert("Delete Session?", isPresented: $isDeleteConfirmationPresented) {
-            Button("Cancel", role: .cancel) {}
-            Button("Delete", role: .destructive) {
-                guard let selectedSessionID else { return }
-                Task {
-                    await store.deleteSession(sessionID: selectedSessionID)
-                }
-            }
-        } message: {
-            Text("This permanently removes the selected chat session.")
-        }
-    }
-
-    private var toolbar: some View {
-        HStack(spacing: 10) {
-            Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    isDrawerPresented.toggle()
-                }
-            } label: {
-                Image(systemName: "line.3.horizontal")
-                    .font(.headline)
-                    .frame(width: 36, height: 36)
-                    .background(
-                        RoundedRectangle(cornerRadius: 11, style: .continuous)
-                            .fill(.white.opacity(0.66))
-                    )
-            }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("workspace.drawer.toggle")
-
-            Picker("Panel", selection: $selectedPanel) {
-                ForEach(WorkspacePanel.allCases) { panel in
-                    Text(panel.rawValue).tag(panel)
-                }
-            }
-            .pickerStyle(.segmented)
-            .accessibilityIdentifier("workspace.panel.picker")
-
-            Menu {
-                Button("Rename") {
-                    guard let selectedSessionID else { return }
-                    renameDraft = store.sessionTitle(for: selectedSessionID)
-                    isRenamePromptPresented = true
-                }
-                .disabled(selectedSessionID == nil)
-
-                Button("Archive") {
+            .alert("Rename Session", isPresented: $isRenamePromptPresented) {
+                TextField("Session title", text: $renameDraft)
+                Button("Cancel", role: .cancel) {}
+                Button("Save") {
                     guard let selectedSessionID else { return }
                     Task {
-                        await store.archiveSession(sessionID: selectedSessionID)
+                        await store.renameSession(sessionID: selectedSessionID, title: renameDraft)
                     }
                 }
-                .disabled(selectedSessionID == nil)
-
-                Button("Delete", role: .destructive) {
-                    guard selectedSessionID != nil else { return }
-                    isDeleteConfirmationPresented = true
-                }
-                .disabled(selectedSessionID == nil)
-            } label: {
-                Image(systemName: "ellipsis")
-                    .font(.headline)
-                    .frame(width: 36, height: 36)
-                    .background(
-                        RoundedRectangle(cornerRadius: 11, style: .continuous)
-                            .fill(.white.opacity(0.66))
-                    )
             }
-            .accessibilityIdentifier("workspace.actions.menu")
+            .alert("Delete Session?", isPresented: $isDeleteConfirmationPresented) {
+                Button("Cancel", role: .cancel) {}
+                Button("Delete", role: .destructive) {
+                    guard let selectedSessionID else { return }
+                    Task {
+                        await store.deleteSession(sessionID: selectedSessionID)
+                    }
+                }
+            } message: {
+                Text("This permanently removes the selected chat session.")
+            }
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 8)
-        .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(.ultraThinMaterial)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(.white.opacity(0.34), lineWidth: 1)
-        )
-        .padding(.horizontal, 14)
-        .padding(.top, 8)
-        .padding(.bottom, 10)
     }
 
     @ViewBuilder
