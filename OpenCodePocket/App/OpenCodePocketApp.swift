@@ -2,11 +2,11 @@ import SwiftUI
 
 @main
 struct OpenCodePocketApp: App {
-    @State private var store = AppStore()
+  @State private var store = AppStore()
 
-    var body: some Scene {
-        WindowGroup {
-            RootView(store: store)
-        }
+  var body: some Scene {
+    WindowGroup {
+      RootView(store: store)
     }
+  }
 }
