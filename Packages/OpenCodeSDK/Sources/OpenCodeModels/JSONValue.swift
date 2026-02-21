@@ -119,4 +119,35 @@ public extension Dictionary where Key == String, Value == JSONValue {
   func object(for key: String) -> [String: JSONValue]? {
     self[key]?.objectValue
   }
+
+  func array(for key: String) -> [JSONValue]? {
+    self[key]?.arrayValue
+  }
+
+  func bool(for key: String) -> Bool? {
+    self[key]?.boolValue
+  }
+
+  func double(for key: String) -> Double? {
+    self[key]?.doubleValue
+  }
+
+  func int(for key: String) -> Int? {
+    guard let value = self[key]?.doubleValue else {
+      return nil
+    }
+    return Int(value)
+  }
+}
+
+public extension JSONValue {
+  func decoded<T: Decodable>(as type: T.Type) -> T? {
+    guard
+      let data = try? JSONEncoder().encode(self),
+      let decoded = try? JSONDecoder().decode(type, from: data)
+    else {
+      return nil
+    }
+    return decoded
+  }
 }

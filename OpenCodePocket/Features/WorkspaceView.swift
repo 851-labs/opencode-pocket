@@ -52,7 +52,10 @@ struct WorkspaceView: View {
     if let selectedSessionID {
       switch selectedPanel {
       case .session:
-        SessionTranscriptPane(messages: store.messagesBySession[selectedSessionID] ?? [])
+        SessionTranscriptPane(
+          messages: store.messagesBySession[selectedSessionID] ?? [],
+          sessionStatus: store.status(for: selectedSessionID)
+        )
           .accessibilityIdentifier("workspace.session.pane")
       case .changes:
         ChangesPane(diffs: store.diffsBySession[selectedSessionID] ?? [])
@@ -283,12 +286,17 @@ private struct SessionSheet: View {
 
 private struct SessionTranscriptPane: View {
   let messages: [MessageEnvelope]
+  let sessionStatus: SessionStatus
+
+  private var turns: [TranscriptTurn] {
+    TranscriptTurn.build(from: messages)
+  }
 
   var body: some View {
     ScrollViewReader { proxy in
       ScrollView {
         LazyVStack(alignment: .leading, spacing: 12) {
-          if messages.isEmpty {
+          if turns.isEmpty {
             ContentUnavailableView(
               "No Messages Yet",
               systemImage: "text.bubble",
@@ -296,22 +304,533 @@ private struct SessionTranscriptPane: View {
             )
             .frame(maxWidth: .infinity, minHeight: 320)
           } else {
-            ForEach(messages) { message in
-              MessageBubble(message: message)
-                .id(message.id)
-                .accessibilityIdentifier("workspace.message.\(message.id)")
+            ForEach(Array(turns.enumerated()), id: \.element.id) { index, turn in
+              TranscriptTurnView(
+                turn: turn,
+                isWorking: index == turns.count - 1 && sessionStatus.isRunning
+              )
+              .id(turn.id)
+              .accessibilityIdentifier("workspace.turn.\(turn.id)")
             }
           }
         }
         .padding(16)
       }
       .onChange(of: messages.count) { _, _ in
-        guard let lastID = messages.last?.id else { return }
+        guard let lastID = turns.last?.id else { return }
         withAnimation(.easeOut(duration: 0.2)) {
           proxy.scrollTo(lastID, anchor: .bottom)
         }
       }
     }
+  }
+}
+
+private struct TranscriptTurn: Identifiable {
+  let id: String
+  let user: MessageEnvelope?
+  let assistantMessages: [MessageEnvelope]
+
+  static func build(from messages: [MessageEnvelope]) -> [TranscriptTurn] {
+    var turns: [TranscriptTurn] = []
+    var index = 0
+
+    while index < messages.count {
+      let current = messages[index]
+
+      if current.info.role == .user {
+        var assistants: [MessageEnvelope] = []
+        var scan = index + 1
+
+        while scan < messages.count {
+          let next = messages[scan]
+          if next.info.role == .user {
+            break
+          }
+
+          if next.info.role == .assistant {
+            if let parentID = next.info.parentID {
+              if parentID == current.id {
+                assistants.append(next)
+              }
+            } else {
+              assistants.append(next)
+            }
+          }
+
+          scan += 1
+        }
+
+        turns.append(
+          TranscriptTurn(
+            id: current.id,
+            user: current,
+            assistantMessages: assistants
+          )
+        )
+        index = scan
+        continue
+      }
+
+      if current.info.role == .assistant {
+        turns.append(
+          TranscriptTurn(
+            id: current.id,
+            user: nil,
+            assistantMessages: [current]
+          )
+        )
+      }
+
+      index += 1
+    }
+
+    return turns
+  }
+}
+
+private struct TranscriptTurnView: View {
+  let turn: TranscriptTurn
+  let isWorking: Bool
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 10) {
+      if let user = turn.user {
+        UserMessageCard(message: user)
+      }
+
+      ForEach(turn.assistantMessages) { assistant in
+        AssistantMessageCard(message: assistant)
+      }
+
+      if isWorking {
+        HStack(spacing: 8) {
+          ProgressView()
+            .controlSize(.small)
+          Text("Thinking...")
+            .font(.caption)
+            .foregroundStyle(.secondary)
+        }
+        .padding(.leading, 8)
+      }
+
+      if
+        let user = turn.user,
+        !user.info.summaryDiffs.isEmpty,
+        !isWorking
+      {
+        TurnDiffSummaryCard(diffs: user.info.summaryDiffs)
+      }
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+  }
+}
+
+private struct UserMessageCard: View {
+  let message: MessageEnvelope
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      Text("You")
+        .font(.caption.weight(.semibold))
+        .foregroundStyle(.secondary)
+
+      MarkdownPartText(text: message.textBody)
+        .font(.body)
+    }
+    .padding(12)
+    .frame(maxWidth: .infinity, alignment: .trailing)
+    .background(
+      RoundedRectangle(cornerRadius: 12, style: .continuous)
+        .fill(Color.accentColor.opacity(0.16))
+    )
+  }
+}
+
+private struct AssistantMessageCard: View {
+  let message: MessageEnvelope
+
+  private var items: [AssistantRenderItem] {
+    let visibleParts = message.parts.filter { part in
+      !(part.type == "tool" && (part.tool == "todowrite" || part.tool == "todoread"))
+    }
+
+    var result: [AssistantRenderItem] = []
+    var contextBuffer: [MessagePart] = []
+
+    for part in visibleParts {
+      if part.isContextTool {
+        contextBuffer.append(part)
+        continue
+      }
+
+      if !contextBuffer.isEmpty {
+        result.append(.context(id: contextBuffer[0].id, tools: contextBuffer))
+        contextBuffer.removeAll(keepingCapacity: true)
+      }
+
+      result.append(.part(part))
+    }
+
+    if !contextBuffer.isEmpty {
+      result.append(.context(id: contextBuffer[0].id, tools: contextBuffer))
+    }
+
+    return result
+  }
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      Text("Assistant")
+        .font(.caption.weight(.semibold))
+        .foregroundStyle(.secondary)
+
+      if items.isEmpty {
+        Text("(Assistant response has no visible parts yet)")
+          .font(.caption)
+          .foregroundStyle(.secondary)
+      }
+
+      ForEach(items) { item in
+        switch item {
+        case let .part(part):
+          AssistantPartView(part: part)
+        case let .context(_, tools):
+          ContextToolGroupCard(parts: tools)
+        }
+      }
+
+      if let errorText = message.info.errorDisplayText {
+        Text(errorText)
+          .font(.caption)
+          .foregroundStyle(.red)
+          .padding(10)
+          .frame(maxWidth: .infinity, alignment: .leading)
+          .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+              .fill(Color.red.opacity(0.08))
+          )
+      }
+    }
+    .padding(12)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .background(
+      RoundedRectangle(cornerRadius: 12, style: .continuous)
+        .fill(Color.white.opacity(0.72))
+    )
+  }
+}
+
+private enum AssistantRenderItem: Identifiable {
+  case part(MessagePart)
+  case context(id: String, tools: [MessagePart])
+
+  var id: String {
+    switch self {
+    case let .part(part):
+      return part.id
+    case let .context(id, _):
+      return "ctx::\(id)"
+    }
+  }
+}
+
+private struct AssistantPartView: View {
+  let part: MessagePart
+
+  var body: some View {
+    switch part.type {
+    case "text":
+      if let text = part.text?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty {
+        MarkdownPartText(text: text)
+          .font(.body)
+      }
+    case "reasoning":
+      if let text = part.text?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty {
+        DisclosureGroup("Reasoning") {
+          MarkdownPartText(text: text)
+            .font(.subheadline)
+            .padding(.top, 6)
+        }
+      }
+    case "tool":
+      ToolPartCard(part: part)
+    default:
+      if let renderedText = part.renderedText {
+        Text(renderedText)
+          .font(.caption)
+          .foregroundStyle(.secondary)
+      }
+    }
+  }
+}
+
+private struct ContextToolGroupCard: View {
+  let parts: [MessagePart]
+  @State private var isExpanded = false
+
+  private var summary: String {
+    let reads = parts.filter { $0.tool == "read" }.count
+    let searches = parts.filter { $0.tool == "glob" || $0.tool == "grep" }.count
+    let lists = parts.filter { $0.tool == "list" }.count
+
+    let chunks = [
+      reads > 0 ? "\(reads) read\(reads == 1 ? "" : "s")" : nil,
+      searches > 0 ? "\(searches) search\(searches == 1 ? "" : "es")" : nil,
+      lists > 0 ? "\(lists) list\(lists == 1 ? "" : "s")" : nil,
+    ]
+    .compactMap { $0 }
+
+    return chunks.joined(separator: ", ")
+  }
+
+  private var hasPendingWork: Bool {
+    parts.contains { $0.toolState?.status.isInFlight == true }
+  }
+
+  var body: some View {
+    DisclosureGroup(isExpanded: $isExpanded) {
+      VStack(alignment: .leading, spacing: 6) {
+        ForEach(parts) { part in
+          HStack(spacing: 6) {
+            Text(toolDisplayName(for: part.tool))
+              .font(.caption.weight(.semibold))
+
+            if let subtitle = toolSubtitle(for: part), !subtitle.isEmpty {
+              Text(subtitle)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+            }
+
+            Spacer(minLength: 0)
+          }
+        }
+      }
+      .padding(.top, 6)
+    } label: {
+      HStack(spacing: 8) {
+        Image(systemName: "magnifyingglass")
+          .font(.caption)
+        Text(hasPendingWork ? "Gathering context..." : "Gathered context")
+          .font(.caption.weight(.semibold))
+        if !summary.isEmpty {
+          Text(summary)
+            .font(.caption)
+            .foregroundStyle(.secondary)
+        }
+        Spacer(minLength: 0)
+      }
+    }
+    .padding(10)
+    .background(
+      RoundedRectangle(cornerRadius: 10, style: .continuous)
+        .fill(Color.secondary.opacity(0.08))
+    )
+  }
+}
+
+private struct ToolPartCard: View {
+  let part: MessagePart
+  @State private var showOutput = false
+
+  private var toolName: String {
+    toolDisplayName(for: part.tool)
+  }
+
+  private var statusText: String {
+    part.toolState?.status.rawValue.capitalized ?? "Pending"
+  }
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      HStack(spacing: 8) {
+        Image(systemName: iconName(for: part.tool))
+          .font(.caption.weight(.semibold))
+          .foregroundStyle(.secondary)
+
+        Text(toolName)
+          .font(.subheadline.weight(.semibold))
+
+        Spacer(minLength: 0)
+
+        Text(statusText)
+          .font(.caption2.weight(.semibold))
+          .foregroundStyle(.secondary)
+      }
+
+      if let subtitle = toolSubtitle(for: part), !subtitle.isEmpty {
+        Text(subtitle)
+          .font(.caption)
+          .foregroundStyle(.secondary)
+          .lineLimit(2)
+      }
+
+      if let error = part.toolState?.error, !error.isEmpty {
+        Text(error)
+          .font(.caption)
+          .foregroundStyle(.red)
+      }
+
+      if let output = part.toolState?.output?.trimmingCharacters(in: .whitespacesAndNewlines), !output.isEmpty {
+        DisclosureGroup("Output", isExpanded: $showOutput) {
+          ScrollView(.horizontal) {
+            Text(output)
+              .font(.system(.caption, design: .monospaced))
+              .textSelection(.enabled)
+              .frame(maxWidth: .infinity, alignment: .leading)
+              .padding(.top, 6)
+          }
+        }
+      }
+    }
+    .padding(10)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .background(
+      RoundedRectangle(cornerRadius: 10, style: .continuous)
+        .fill(Color.secondary.opacity(0.08))
+    )
+  }
+}
+
+private struct MarkdownPartText: View {
+  let text: String
+
+  private var attributed: AttributedString? {
+    try? AttributedString(
+      markdown: text,
+      options: AttributedString.MarkdownParsingOptions(
+        interpretedSyntax: .full,
+        failurePolicy: .returnPartiallyParsedIfPossible
+      )
+    )
+  }
+
+  var body: some View {
+    Group {
+      if let attributed {
+        Text(attributed)
+      } else {
+        Text(text)
+      }
+    }
+    .textSelection(.enabled)
+  }
+}
+
+private struct TurnDiffSummaryCard: View {
+  let diffs: [FileDiff]
+  @State private var isExpanded = false
+
+  var body: some View {
+    DisclosureGroup(isExpanded: $isExpanded) {
+      VStack(spacing: 8) {
+        ForEach(diffs) { diff in
+          HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 4) {
+              Text(diff.file)
+                .font(.caption.weight(.semibold))
+                .lineLimit(2)
+              Text(diff.status?.capitalized ?? "Modified")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            }
+            Spacer()
+            HStack(spacing: 6) {
+              Text("+\(diff.additionsCount)")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.green)
+              Text("-\(diff.deletionsCount)")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.red)
+            }
+          }
+        }
+      }
+      .padding(.top, 6)
+    } label: {
+      HStack(spacing: 8) {
+        Image(systemName: "doc.text")
+          .font(.caption)
+        Text("Modified \(diffs.count) file\(diffs.count == 1 ? "" : "s")")
+          .font(.caption.weight(.semibold))
+        Spacer(minLength: 0)
+      }
+    }
+    .padding(10)
+    .background(
+      RoundedRectangle(cornerRadius: 10, style: .continuous)
+        .fill(Color.secondary.opacity(0.08))
+    )
+  }
+}
+
+private func toolDisplayName(for tool: String?) -> String {
+  switch tool {
+  case "read":
+    return "Read"
+  case "list":
+    return "List"
+  case "glob":
+    return "Glob"
+  case "grep":
+    return "Grep"
+  case "bash":
+    return "Shell"
+  case "edit":
+    return "Edit"
+  case "write":
+    return "Write"
+  case "apply_patch":
+    return "Patch"
+  case "question":
+    return "Question"
+  case "task":
+    return "Task"
+  case let value:
+    return value ?? "Tool"
+  }
+}
+
+private func iconName(for tool: String?) -> String {
+  switch tool {
+  case "bash":
+    return "terminal"
+  case "read", "glob", "grep", "list":
+    return "magnifyingglass"
+  case "write", "edit", "apply_patch":
+    return "doc.text"
+  case "task":
+    return "person.2"
+  case "question":
+    return "questionmark.bubble"
+  default:
+    return "hammer"
+  }
+}
+
+private func toolSubtitle(for part: MessagePart) -> String? {
+  switch part.tool {
+  case "read":
+    return part.toolInputString("filePath")
+  case "list":
+    return part.toolInputString("path")
+  case "glob":
+    return part.toolInputString("pattern")
+  case "grep":
+    return part.toolInputString("pattern")
+  case "bash":
+    return part.toolInputString("description")
+  case "task":
+    return part.toolInputString("description")
+  default:
+    if let title = part.toolState?.title, !title.isEmpty {
+      return title
+    }
+    if let error = part.toolState?.error, !error.isEmpty {
+      return error
+    }
+    return nil
   }
 }
 
@@ -388,6 +907,22 @@ private struct WorkspaceComposer: View {
 
   private var composerBody: some View {
     VStack(spacing: 10) {
+      if let permission = store.currentPermissionRequest(for: sessionID) {
+        PermissionPromptCard(
+          store: store,
+          sessionID: sessionID,
+          request: permission
+        )
+      }
+
+      if let question = store.currentQuestionRequest(for: sessionID) {
+        QuestionPromptCard(
+          store: store,
+          sessionID: sessionID,
+          request: question
+        )
+      }
+
       HStack(alignment: .bottom, spacing: 10) {
         TextField("Message", text: $store.draftMessage, axis: .vertical)
           .lineLimit(1 ... 6)
@@ -491,30 +1026,195 @@ private struct WorkspaceComposer: View {
   }
 }
 
-private struct MessageBubble: View {
-  let message: MessageEnvelope
+private struct PermissionPromptCard: View {
+  @Bindable var store: WorkspaceStore
+  let sessionID: String
+  let request: PermissionRequest
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 6) {
-      Text(message.info.role == .assistant ? "Assistant" : "You")
+    VStack(alignment: .leading, spacing: 8) {
+      Label("Permission Needed", systemImage: "exclamationmark.triangle")
         .font(.caption.weight(.semibold))
-        .foregroundStyle(.secondary)
+        .foregroundStyle(.orange)
 
-      Text(message.textBody)
-        .font(.body)
-        .textSelection(.enabled)
+      Text(request.permission)
+        .font(.subheadline.weight(.semibold))
+
+      if !request.patterns.isEmpty {
+        Text(request.patterns.joined(separator: ", "))
+          .font(.caption)
+          .foregroundStyle(.secondary)
+      }
+
+      HStack(spacing: 8) {
+        Button("Deny", role: .destructive) {
+          Task {
+            await store.respondToPermission(
+              sessionID: sessionID,
+              requestID: request.id,
+              reply: .reject
+            )
+          }
+        }
+        .disabled(store.isRespondingToPermission)
+
+        Button("Allow Always") {
+          Task {
+            await store.respondToPermission(
+              sessionID: sessionID,
+              requestID: request.id,
+              reply: .always
+            )
+          }
+        }
+        .disabled(store.isRespondingToPermission)
+
+        Button("Allow Once") {
+          Task {
+            await store.respondToPermission(
+              sessionID: sessionID,
+              requestID: request.id,
+              reply: .once
+            )
+          }
+        }
+        .buttonStyle(.borderedProminent)
+        .disabled(store.isRespondingToPermission)
+      }
+      .font(.caption)
     }
-    .padding(12)
-    .frame(maxWidth: .infinity, alignment: message.info.role == .assistant ? .leading : .trailing)
+    .padding(10)
+    .frame(maxWidth: .infinity, alignment: .leading)
     .background(
       RoundedRectangle(cornerRadius: 12, style: .continuous)
-        .fill(message.info.role == .assistant ? Color.white.opacity(0.72) : Color.accentColor.opacity(0.18))
+        .fill(Color.orange.opacity(0.08))
     )
+  }
+}
+
+private struct QuestionPromptCard: View {
+  @Bindable var store: WorkspaceStore
+  let sessionID: String
+  let request: QuestionRequest
+
+  @State private var answerDrafts: [String] = []
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 10) {
+      Label("Question", systemImage: "questionmark.bubble")
+        .font(.caption.weight(.semibold))
+        .foregroundStyle(.blue)
+
+      ForEach(Array(request.questions.enumerated()), id: \.offset) { index, question in
+        VStack(alignment: .leading, spacing: 6) {
+          Text(question.question)
+            .font(.caption.weight(.semibold))
+
+          if !question.options.isEmpty {
+            Text(question.options.map(\.label).joined(separator: "  •  "))
+              .font(.caption2)
+              .foregroundStyle(.secondary)
+          }
+
+          TextField(
+            question.multiple == true ? "Type one or more answers (comma-separated)" : "Type your answer",
+            text: draftBinding(at: index)
+          )
+          .textFieldStyle(.roundedBorder)
+        }
+      }
+
+      HStack(spacing: 8) {
+        Button("Dismiss", role: .destructive) {
+          Task {
+            await store.rejectQuestion(sessionID: sessionID, requestID: request.id)
+          }
+        }
+        .disabled(store.isRespondingToQuestion)
+
+        Spacer()
+
+        Button("Submit") {
+          Task {
+            await store.replyToQuestion(
+              sessionID: sessionID,
+              requestID: request.id,
+              answers: parsedAnswers
+            )
+          }
+        }
+        .buttonStyle(.borderedProminent)
+        .disabled(store.isRespondingToQuestion || parsedAnswers.allSatisfy(\.isEmpty))
+      }
+      .font(.caption)
+    }
+    .padding(10)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .background(
+      RoundedRectangle(cornerRadius: 12, style: .continuous)
+        .fill(Color.blue.opacity(0.08))
+    )
+    .onAppear {
+      resetAnswerDrafts()
+    }
+    .onChange(of: request.id) { _, _ in
+      resetAnswerDrafts()
+    }
+  }
+
+  private var parsedAnswers: [QuestionAnswer] {
+    request.questions.enumerated().map { index, question in
+      let raw = answerDrafts[safe: index]?.trimmedForInput ?? ""
+      guard !raw.isEmpty else {
+        return []
+      }
+
+      if question.multiple == true {
+        return raw
+          .split(separator: ",")
+          .map { String($0).trimmedForInput }
+          .filter { !$0.isEmpty }
+      }
+
+      return [raw]
+    }
+  }
+
+  private func draftBinding(at index: Int) -> Binding<String> {
+    Binding(
+      get: {
+        answerDrafts[safe: index] ?? ""
+      },
+      set: { value in
+        ensureDraftCapacity(at: index)
+        answerDrafts[index] = value
+      }
+    )
+  }
+
+  private func ensureDraftCapacity(at index: Int) {
+    if index < answerDrafts.count {
+      return
+    }
+    answerDrafts.append(contentsOf: Array(repeating: "", count: (index - answerDrafts.count) + 1))
+  }
+
+  private func resetAnswerDrafts() {
+    answerDrafts = Array(repeating: "", count: request.questions.count)
   }
 }
 
 private extension String {
   var trimmedForInput: String {
     trimmingCharacters(in: .whitespacesAndNewlines)
+  }
+}
+
+private extension Array {
+  subscript(safe index: Index) -> Element? {
+    guard indices.contains(index) else {
+      return nil
+    }
+    return self[index]
   }
 }

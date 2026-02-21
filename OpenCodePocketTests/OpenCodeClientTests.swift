@@ -59,6 +59,16 @@ final class OpenCodeClientTests: XCTestCase {
         return try makeJSONResponse(request: request, json: "{}")
       case ("POST", let path) where path?.hasSuffix("/abort") == true:
         return try makeJSONResponse(request: request, json: "true")
+      case ("GET", "/permission"):
+        return try makeJSONResponse(request: request, json: "[{\"id\":\"perm_1\",\"sessionID\":\"ses_1\",\"permission\":\"bash\",\"patterns\":[\"src/**\"],\"metadata\":{},\"always\":[],\"tool\":{\"messageID\":\"msg_1\",\"callID\":\"call_1\"}}]")
+      case ("POST", let path) where path?.hasPrefix("/permission/") == true && path?.hasSuffix("/reply") == true:
+        return try makeJSONResponse(request: request, json: "true")
+      case ("GET", "/question"):
+        return try makeJSONResponse(request: request, json: "[{\"id\":\"q_1\",\"sessionID\":\"ses_1\",\"questions\":[{\"question\":\"Pick one\",\"header\":\"Confirm\",\"options\":[{\"label\":\"Yes\",\"description\":\"Proceed\"}],\"multiple\":false}],\"tool\":{\"messageID\":\"msg_1\",\"callID\":\"call_2\"}}]")
+      case ("POST", let path) where path?.hasPrefix("/question/") == true && path?.hasSuffix("/reply") == true:
+        return try makeJSONResponse(request: request, json: "true")
+      case ("POST", let path) where path?.hasPrefix("/question/") == true && path?.hasSuffix("/reject") == true:
+        return try makeJSONResponse(request: request, json: "true")
       default:
         XCTFail("Unexpected request: \(request.httpMethod ?? "?") \(request.url?.absoluteString ?? "nil")")
         return try makeStatusResponse(request: request, code: 500, body: Data())
@@ -109,12 +119,32 @@ final class OpenCodeClientTests: XCTestCase {
     let aborted = try await client.abortSession(sessionID: "ses_1")
     XCTAssertTrue(aborted)
 
+    let permissions = try await client.listPermissions()
+    XCTAssertEqual(permissions.first?.id, "perm_1")
+
+    let permissionReply = try await client.replyPermission(requestID: "perm_1", reply: .once)
+    XCTAssertTrue(permissionReply)
+
+    let questions = try await client.listQuestions()
+    XCTAssertEqual(questions.first?.id, "q_1")
+
+    let questionReply = try await client.replyQuestion(requestID: "q_1", answers: [["Yes"]])
+    XCTAssertTrue(questionReply)
+
+    let questionReject = try await client.rejectQuestion(requestID: "q_1")
+    XCTAssertTrue(questionReject)
+
     let requests = URLProtocolStub.recordedRequests
     XCTAssertTrue(requests.contains { $0.url?.path == "/session" && $0.httpMethod == "GET" })
     XCTAssertTrue(requests.contains { $0.url?.path == "/session" && $0.url?.query?.contains("directory=/tmp/default") == true })
     XCTAssertTrue(requests.contains { $0.url?.path.contains("/session/ses") == true && $0.httpMethod == "GET" })
     XCTAssertTrue(requests.contains { $0.url?.absoluteString.contains("limit=5") == true })
     XCTAssertTrue(requests.contains { $0.url?.absoluteString.contains("messageID=msg_1") == true })
+    XCTAssertTrue(requests.contains { $0.url?.path == "/permission" && $0.httpMethod == "GET" })
+    XCTAssertTrue(requests.contains { $0.url?.path == "/permission/perm_1/reply" && $0.httpMethod == "POST" })
+    XCTAssertTrue(requests.contains { $0.url?.path == "/question" && $0.httpMethod == "GET" })
+    XCTAssertTrue(requests.contains { $0.url?.path == "/question/q_1/reply" && $0.httpMethod == "POST" })
+    XCTAssertTrue(requests.contains { $0.url?.path == "/question/q_1/reject" && $0.httpMethod == "POST" })
   }
 
   func testDirectoryQueryOverride() async throws {

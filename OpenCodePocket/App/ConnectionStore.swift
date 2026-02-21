@@ -130,6 +130,9 @@ final class ConnectionStore {
     workspace?.stopEventSubscriptionLoop()
     workspace?.clearSessionRefreshState()
     workspace?.sessionStatuses.removeAll()
+    workspace?.permissionsBySession.removeAll()
+    workspace?.questionsBySession.removeAll()
+    workspace?.todosBySession.removeAll()
     client = nil
     isConnected = false
     eventConnectionState = "Disconnected"

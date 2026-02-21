@@ -10,7 +10,10 @@ final class WorkspaceStore {
   var selectedSessionID: String?
   var messagesBySession: [String: [MessageEnvelope]] = [:]
   var diffsBySession: [String: [FileDiff]] = [:]
-  var sessionStatuses: [String: String] = [:]
+  var sessionStatuses: [String: SessionStatus] = [:]
+  var permissionsBySession: [String: [PermissionRequest]] = [:]
+  var questionsBySession: [String: [QuestionRequest]] = [:]
+  var todosBySession: [String: [TodoItem]] = [:]
 
   var availableAgents: [AgentDescriptor] = []
   var availableModels: [ModelOption] = []
@@ -21,6 +24,8 @@ final class WorkspaceStore {
   var isSending = false
   var isCreatingSession = false
   var isRefreshingSessions = false
+  var isRespondingToPermission = false
+  var isRespondingToQuestion = false
 
   private let connection: ConnectionStore
   private var eventsTask: Task<Void, Never>?
@@ -41,6 +46,21 @@ final class WorkspaceStore {
   var selectedDiffs: [FileDiff] {
     guard let selectedSessionID else { return [] }
     return diffsBySession[selectedSessionID] ?? []
+  }
+
+  var selectedPermissions: [PermissionRequest] {
+    guard let selectedSessionID else { return [] }
+    return permissionsBySession[selectedSessionID] ?? []
+  }
+
+  var selectedQuestions: [QuestionRequest] {
+    guard let selectedSessionID else { return [] }
+    return questionsBySession[selectedSessionID] ?? []
+  }
+
+  var selectedTodos: [TodoItem] {
+    guard let selectedSessionID else { return [] }
+    return todosBySession[selectedSessionID] ?? []
   }
 
   var visibleSessions: [Session] {
@@ -104,6 +124,13 @@ final class WorkspaceStore {
       nextSessions.sort { $0.sortTimestamp > $1.sortTimestamp }
 
       sessions = nextSessions
+      let validSessionIDs = Set(nextSessions.map(\.id))
+      messagesBySession = messagesBySession.filter { validSessionIDs.contains($0.key) }
+      diffsBySession = diffsBySession.filter { validSessionIDs.contains($0.key) }
+      sessionStatuses = sessionStatuses.filter { validSessionIDs.contains($0.key) }
+      permissionsBySession = permissionsBySession.filter { validSessionIDs.contains($0.key) }
+      questionsBySession = questionsBySession.filter { validSessionIDs.contains($0.key) }
+      todosBySession = todosBySession.filter { validSessionIDs.contains($0.key) }
       let nextVisible = visibleSessions
 
       if let selectedSessionID, nextVisible.contains(where: { $0.id == selectedSessionID }) {
@@ -116,6 +143,8 @@ final class WorkspaceStore {
           await loadDiffs(sessionID: selectedSessionID)
         }
       }
+
+      await refreshPendingPrompts()
     } catch {
       connection.connectionError = error.localizedDescription
     }
@@ -141,6 +170,7 @@ final class WorkspaceStore {
       selectedSessionID = created.id
       messagesBySession[created.id] = []
       diffsBySession[created.id] = []
+      sessionStatuses[created.id] = .idle
       return
     }
 
@@ -242,14 +272,14 @@ final class WorkspaceStore {
 
   func abort(sessionID: String) async {
     if connection.isMockWorkspace {
-      sessionStatuses[sessionID] = "idle"
+      sessionStatuses[sessionID] = .idle
       return
     }
 
     guard let client = connection.client else { return }
     do {
       _ = try await client.abortSession(sessionID: sessionID, directory: connection.resolvedDirectory)
-      sessionStatuses[sessionID] = "idle"
+      sessionStatuses[sessionID] = .idle
     } catch {
       connection.connectionError = error.localizedDescription
     }
@@ -260,16 +290,15 @@ final class WorkspaceStore {
   }
 
   func statusLabel(for sessionID: String) -> String {
-    sessionStatuses[sessionID] ?? "idle"
+    sessionStatuses[sessionID]?.displayLabel ?? SessionStatus.idle.displayLabel
+  }
+
+  func status(for sessionID: String) -> SessionStatus {
+    sessionStatuses[sessionID] ?? .idle
   }
 
   func isSessionRunning(_ sessionID: String) -> Bool {
-    switch statusLabel(for: sessionID) {
-    case "busy", "retry":
-      return true
-    default:
-      return false
-    }
+    status(for: sessionID).isRunning
   }
 
   func refreshAgentAndModelOptions() async {
@@ -338,6 +367,111 @@ final class WorkspaceStore {
   func selectModel(_ option: ModelOption) {
     selectedModel = option.selector
     connection.persistSettingsBestEffort(selectedAgentName: selectedAgentName, selectedModel: selectedModel)
+  }
+
+  func currentPermissionRequest(for sessionID: String) -> PermissionRequest? {
+    permissionsBySession[sessionID]?.first
+  }
+
+  func currentQuestionRequest(for sessionID: String) -> QuestionRequest? {
+    questionsBySession[sessionID]?.first
+  }
+
+  func refreshPendingPrompts() async {
+    if connection.isMockWorkspace {
+      return
+    }
+
+    guard let client = connection.client else { return }
+
+    do {
+      let permissions = try await client.listPermissions(directory: connection.resolvedDirectory)
+      permissionsBySession = Dictionary(grouping: permissions, by: \.sessionID)
+    } catch {
+      connection.connectionError = error.localizedDescription
+    }
+
+    do {
+      let questions = try await client.listQuestions(directory: connection.resolvedDirectory)
+      questionsBySession = Dictionary(grouping: questions, by: \.sessionID)
+    } catch {
+      connection.connectionError = error.localizedDescription
+    }
+  }
+
+  func respondToPermission(sessionID: String, requestID: String, reply: PermissionReply, message: String? = nil) async {
+    if connection.isMockWorkspace {
+      permissionsBySession[sessionID]?.removeAll { $0.id == requestID }
+      return
+    }
+
+    guard let client = connection.client else { return }
+    guard !isRespondingToPermission else { return }
+
+    isRespondingToPermission = true
+    defer {
+      isRespondingToPermission = false
+    }
+
+    do {
+      _ = try await client.replyPermission(
+        requestID: requestID,
+        reply: reply,
+        message: message,
+        directory: connection.resolvedDirectory
+      )
+      permissionsBySession[sessionID]?.removeAll { $0.id == requestID }
+    } catch {
+      connection.connectionError = error.localizedDescription
+    }
+  }
+
+  func replyToQuestion(sessionID: String, requestID: String, answers: [QuestionAnswer]) async {
+    if connection.isMockWorkspace {
+      questionsBySession[sessionID]?.removeAll { $0.id == requestID }
+      return
+    }
+
+    guard let client = connection.client else { return }
+    guard !isRespondingToQuestion else { return }
+
+    isRespondingToQuestion = true
+    defer {
+      isRespondingToQuestion = false
+    }
+
+    do {
+      _ = try await client.replyQuestion(
+        requestID: requestID,
+        answers: answers,
+        directory: connection.resolvedDirectory
+      )
+      questionsBySession[sessionID]?.removeAll { $0.id == requestID }
+    } catch {
+      connection.connectionError = error.localizedDescription
+    }
+  }
+
+  func rejectQuestion(sessionID: String, requestID: String) async {
+    if connection.isMockWorkspace {
+      questionsBySession[sessionID]?.removeAll { $0.id == requestID }
+      return
+    }
+
+    guard let client = connection.client else { return }
+    guard !isRespondingToQuestion else { return }
+
+    isRespondingToQuestion = true
+    defer {
+      isRespondingToQuestion = false
+    }
+
+    do {
+      _ = try await client.rejectQuestion(requestID: requestID, directory: connection.resolvedDirectory)
+      questionsBySession[sessionID]?.removeAll { $0.id == requestID }
+    } catch {
+      connection.connectionError = error.localizedDescription
+    }
   }
 
   func renameSession(sessionID: String, title: String) async {
@@ -424,6 +558,9 @@ final class WorkspaceStore {
       messagesBySession[sessionID] = nil
       diffsBySession[sessionID] = nil
       sessionStatuses[sessionID] = nil
+      permissionsBySession[sessionID] = nil
+      questionsBySession[sessionID] = nil
+      todosBySession[sessionID] = nil
       if selectedSessionID == sessionID {
         selectedSessionID = visibleSessions.first?.id
       }
@@ -436,6 +573,9 @@ final class WorkspaceStore {
       messagesBySession[sessionID] = nil
       diffsBySession[sessionID] = nil
       sessionStatuses[sessionID] = nil
+      permissionsBySession[sessionID] = nil
+      questionsBySession[sessionID] = nil
+      todosBySession[sessionID] = nil
       await refreshSessions()
     } catch {
       connection.connectionError = error.localizedDescription
@@ -449,6 +589,7 @@ final class WorkspaceStore {
 
     eventsTask = Task { [weak self] in
       guard let self else { return }
+      await self.refreshPendingPrompts()
       let stream = client.subscribeEvents(directory: self.connection.resolvedDirectory)
 
       for await event in stream {
@@ -478,7 +619,7 @@ final class WorkspaceStore {
 
     case "session.idle":
       if let sessionID = event.properties.objectValue?.string(for: "sessionID") {
-        sessionStatuses[sessionID] = "idle"
+        sessionStatuses[sessionID] = .idle
         scheduleSessionRefresh(sessionID: sessionID)
       }
 
@@ -490,15 +631,19 @@ final class WorkspaceStore {
         return
       }
 
-      let status = properties
-        .object(for: "status")?
-        .string(for: "type") ?? "unknown"
-      sessionStatuses[sessionID] = status
+      if
+        let statusValue = properties["status"],
+        let decodedStatus = statusValue.decoded(as: SessionStatus.self)
+      {
+        sessionStatuses[sessionID] = decodedStatus
+      } else {
+        sessionStatuses[sessionID] = SessionStatus(type: .unknown("unknown"))
+      }
 
     case "session.error":
       guard let properties = event.properties.objectValue else { return }
       if let sessionID = properties.string(for: "sessionID") {
-        sessionStatuses[sessionID] = "error"
+        sessionStatuses[sessionID] = .idle
       }
       if let errorObject = properties.object(for: "error") {
         connection.connectionError = JSONValue.object(errorObject).compactDescription
@@ -512,15 +657,55 @@ final class WorkspaceStore {
         return
       }
 
-      if
-        let diffValue = properties["diff"],
-        let data = try? JSONEncoder().encode(diffValue),
-        let decoded = try? JSONDecoder().decode([FileDiff].self, from: data)
-      {
+      if let decoded = properties["diff"]?.decoded(as: [FileDiff].self) {
         diffsBySession[sessionID] = decoded
       } else {
         scheduleSessionRefresh(sessionID: sessionID)
       }
+
+    case "todo.updated":
+      guard
+        let properties = event.properties.objectValue,
+        let sessionID = properties.string(for: "sessionID")
+      else {
+        return
+      }
+
+      if let decoded = properties["todos"]?.decoded(as: [TodoItem].self) {
+        todosBySession[sessionID] = decoded
+      }
+
+    case "permission.asked":
+      guard let permission = event.decodeProperties(as: PermissionRequest.self) else {
+        return
+      }
+      upsertPermission(permission)
+
+    case "permission.replied":
+      guard
+        let properties = event.properties.objectValue,
+        let sessionID = properties.string(for: "sessionID"),
+        let requestID = properties.string(for: "requestID")
+      else {
+        return
+      }
+      permissionsBySession[sessionID]?.removeAll { $0.id == requestID }
+
+    case "question.asked":
+      guard let question = event.decodeProperties(as: QuestionRequest.self) else {
+        return
+      }
+      upsertQuestion(question)
+
+    case "question.replied", "question.rejected":
+      guard
+        let properties = event.properties.objectValue,
+        let sessionID = properties.string(for: "sessionID"),
+        let requestID = properties.string(for: "requestID")
+      else {
+        return
+      }
+      questionsBySession[sessionID]?.removeAll { $0.id == requestID }
 
     case "message.part.delta":
       guard
@@ -536,7 +721,29 @@ final class WorkspaceStore {
         scheduleSessionRefresh(sessionID: sessionID)
       }
 
-    case "message.updated", "message.part.updated", "message.part.removed", "message.removed":
+    case "message.part.updated":
+      guard let properties = event.properties.objectValue else {
+        return
+      }
+
+      if applyMessagePartUpdated(properties: properties) {
+        scheduleSessionRefresh(sessionID: properties.object(for: "part")?.string(for: "sessionID"), includeDiffs: false)
+      } else {
+        scheduleSessionRefresh(sessionID: properties.object(for: "part")?.string(for: "sessionID"))
+      }
+
+    case "message.part.removed":
+      guard let properties = event.properties.objectValue else {
+        return
+      }
+
+      if applyMessagePartRemoval(properties: properties) {
+        scheduleSessionRefresh(sessionID: properties.string(for: "sessionID"), includeDiffs: false)
+      } else {
+        scheduleSessionRefresh(sessionID: properties.string(for: "sessionID"))
+      }
+
+    case "message.updated", "message.removed":
       let sessionID = event.properties.objectValue?.string(for: "sessionID") ?? selectedSessionID
       scheduleSessionRefresh(sessionID: sessionID)
 
@@ -598,6 +805,71 @@ final class WorkspaceStore {
     return true
   }
 
+  private func applyMessagePartUpdated(properties: [String: JSONValue]) -> Bool {
+    guard
+      let partValue = properties["part"],
+      let part = partValue.decoded(as: MessagePart.self),
+      var messages = messagesBySession[part.sessionID],
+      let messageIndex = messages.firstIndex(where: { $0.info.id == part.messageID })
+    else {
+      return false
+    }
+
+    var updatedParts = messages[messageIndex].parts
+    if let partIndex = updatedParts.firstIndex(where: { $0.id == part.id }) {
+      updatedParts[partIndex] = part
+    } else {
+      updatedParts.append(part)
+    }
+
+    messages[messageIndex] = MessageEnvelope(info: messages[messageIndex].info, parts: updatedParts)
+    messagesBySession[part.sessionID] = messages
+    return true
+  }
+
+  private func applyMessagePartRemoval(properties: [String: JSONValue]) -> Bool {
+    guard
+      let sessionID = properties.string(for: "sessionID"),
+      let messageID = properties.string(for: "messageID"),
+      let partID = properties.string(for: "partID"),
+      var messages = messagesBySession[sessionID],
+      let messageIndex = messages.firstIndex(where: { $0.info.id == messageID })
+    else {
+      return false
+    }
+
+    var updatedParts = messages[messageIndex].parts
+    let originalCount = updatedParts.count
+    updatedParts.removeAll { $0.id == partID }
+    guard updatedParts.count != originalCount else {
+      return false
+    }
+
+    messages[messageIndex] = MessageEnvelope(info: messages[messageIndex].info, parts: updatedParts)
+    messagesBySession[sessionID] = messages
+    return true
+  }
+
+  private func upsertPermission(_ permission: PermissionRequest) {
+    var next = permissionsBySession[permission.sessionID] ?? []
+    if let index = next.firstIndex(where: { $0.id == permission.id }) {
+      next[index] = permission
+    } else {
+      next.append(permission)
+    }
+    permissionsBySession[permission.sessionID] = next.sorted { $0.id < $1.id }
+  }
+
+  private func upsertQuestion(_ question: QuestionRequest) {
+    var next = questionsBySession[question.sessionID] ?? []
+    if let index = next.firstIndex(where: { $0.id == question.id }) {
+      next[index] = question
+    } else {
+      next.append(question)
+    }
+    questionsBySession[question.sessionID] = next.sorted { $0.id < $1.id }
+  }
+
   private func reconcileSelectedModel(using defaultModels: [String: String]) {
     if
       let selectedModel,
@@ -651,8 +923,8 @@ final class WorkspaceStore {
 
     sessions = [primary, secondary]
     selectedSessionID = primary.id
-    sessionStatuses[primary.id] = "idle"
-    sessionStatuses[secondary.id] = "idle"
+    sessionStatuses[primary.id] = .idle
+    sessionStatuses[secondary.id] = .idle
     diffsBySession[primary.id] = [
       FileDiff(file: "OpenCodePocket/App/AppStore.swift", before: "", after: "", additions: 24, deletions: 9, status: "modified"),
       FileDiff(file: "OpenCodePocket/Features/WorkspaceView.swift", before: "", after: "", additions: 108, deletions: 0, status: "added"),

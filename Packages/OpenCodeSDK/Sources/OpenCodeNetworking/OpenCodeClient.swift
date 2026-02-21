@@ -148,6 +148,62 @@ public final class OpenCodeClient {
     )
   }
 
+  public func listPermissions(directory: String? = nil) async throws -> [OpenCodeModels.PermissionRequest] {
+    try await request(
+      .get,
+      path: "/permission",
+      query: mergedDirectoryQuery(directory),
+      response: [OpenCodeModels.PermissionRequest].self
+    )
+  }
+
+  public func replyPermission(
+    requestID: String,
+    reply: OpenCodeModels.PermissionReply,
+    message: String? = nil,
+    directory: String? = nil
+  ) async throws -> Bool {
+    try await request(
+      .post,
+      path: "/permission/\(escapedPathComponent(requestID))/reply",
+      query: mergedDirectoryQuery(directory),
+      body: AnyEncodable(OpenCodeModels.PermissionReplyRequest(reply: reply, message: message)),
+      response: Bool.self
+    )
+  }
+
+  public func listQuestions(directory: String? = nil) async throws -> [OpenCodeModels.QuestionRequest] {
+    try await request(
+      .get,
+      path: "/question",
+      query: mergedDirectoryQuery(directory),
+      response: [OpenCodeModels.QuestionRequest].self
+    )
+  }
+
+  public func replyQuestion(
+    requestID: String,
+    answers: [OpenCodeModels.QuestionAnswer],
+    directory: String? = nil
+  ) async throws -> Bool {
+    try await request(
+      .post,
+      path: "/question/\(escapedPathComponent(requestID))/reply",
+      query: mergedDirectoryQuery(directory),
+      body: AnyEncodable(OpenCodeModels.QuestionReplyRequest(answers: answers)),
+      response: Bool.self
+    )
+  }
+
+  public func rejectQuestion(requestID: String, directory: String? = nil) async throws -> Bool {
+    try await request(
+      .post,
+      path: "/question/\(escapedPathComponent(requestID))/reject",
+      query: mergedDirectoryQuery(directory),
+      response: Bool.self
+    )
+  }
+
   public func subscribeEvents(directory: String? = nil) -> AsyncStream<ServerEvent> {
     AsyncStream { continuation in
       let task = Task {

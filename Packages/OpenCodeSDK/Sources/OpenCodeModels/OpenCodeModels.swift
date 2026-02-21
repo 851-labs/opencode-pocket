@@ -240,6 +240,346 @@ public struct SessionUpdateTime: Encodable, Sendable {
   }
 }
 
+public enum SessionStatusType: Hashable, Sendable {
+  case idle
+  case busy
+  case retry
+  case unknown(String)
+
+  public var rawValue: String {
+    switch self {
+    case .idle:
+      return "idle"
+    case .busy:
+      return "busy"
+    case .retry:
+      return "retry"
+    case let .unknown(value):
+      return value
+    }
+  }
+
+  public var displayLabel: String {
+    rawValue
+  }
+
+  public var isRunning: Bool {
+    switch self {
+    case .busy, .retry:
+      return true
+    default:
+      return false
+    }
+  }
+
+  public init(rawValue: String) {
+    switch rawValue {
+    case "idle":
+      self = .idle
+    case "busy":
+      self = .busy
+    case "retry":
+      self = .retry
+    default:
+      self = .unknown(rawValue)
+    }
+  }
+}
+
+extension SessionStatusType: Codable {
+  public init(from decoder: Decoder) throws {
+    let container = try decoder.singleValueContainer()
+    let value = try container.decode(String.self)
+
+    switch value {
+    case "idle":
+      self = .idle
+    case "busy":
+      self = .busy
+    case "retry":
+      self = .retry
+    default:
+      self = .unknown(value)
+    }
+  }
+
+  public func encode(to encoder: Encoder) throws {
+    var container = encoder.singleValueContainer()
+    try container.encode(rawValue)
+  }
+}
+
+public struct SessionStatus: Codable, Hashable, Sendable {
+  public static let idle = SessionStatus(type: .idle)
+
+  public let type: SessionStatusType
+  public let attempt: Int?
+  public let message: String?
+  public let next: Double?
+  public let raw: JSONValue
+
+  public var displayLabel: String {
+    type.displayLabel
+  }
+
+  public var isRunning: Bool {
+    type.isRunning
+  }
+
+  public init(type: SessionStatusType, attempt: Int? = nil, message: String? = nil, next: Double? = nil) {
+    self.type = type
+    self.attempt = attempt
+    self.message = message
+    self.next = next
+
+    var object: [String: JSONValue] = [
+      "type": .string(type.rawValue),
+    ]
+    if let attempt {
+      object["attempt"] = .number(Double(attempt))
+    }
+    if let message {
+      object["message"] = .string(message)
+    }
+    if let next {
+      object["next"] = .number(next)
+    }
+    raw = .object(object)
+  }
+
+  public init(from decoder: Decoder) throws {
+    let raw = try JSONValue(from: decoder)
+    guard let object = raw.objectValue else {
+      throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "Session status is not an object"))
+    }
+
+    type = SessionStatusType(rawValue: object.string(for: "type") ?? "unknown")
+    attempt = object.int(for: "attempt")
+    message = object.string(for: "message")
+    next = object.double(for: "next")
+    self.raw = raw
+  }
+
+  public func encode(to encoder: Encoder) throws {
+    try raw.encode(to: encoder)
+  }
+}
+
+public enum ToolExecutionStatus: Hashable, Sendable {
+  case pending
+  case running
+  case completed
+  case error
+  case unknown(String)
+
+  public var rawValue: String {
+    switch self {
+    case .pending:
+      return "pending"
+    case .running:
+      return "running"
+    case .completed:
+      return "completed"
+    case .error:
+      return "error"
+    case let .unknown(value):
+      return value
+    }
+  }
+
+  public var isInFlight: Bool {
+    switch self {
+    case .pending, .running:
+      return true
+    default:
+      return false
+    }
+  }
+
+  public init(rawValue: String) {
+    switch rawValue {
+    case "pending":
+      self = .pending
+    case "running":
+      self = .running
+    case "completed":
+      self = .completed
+    case "error":
+      self = .error
+    default:
+      self = .unknown(rawValue)
+    }
+  }
+}
+
+extension ToolExecutionStatus: Codable {
+  public init(from decoder: Decoder) throws {
+    let container = try decoder.singleValueContainer()
+    let value = try container.decode(String.self)
+
+    switch value {
+    case "pending":
+      self = .pending
+    case "running":
+      self = .running
+    case "completed":
+      self = .completed
+    case "error":
+      self = .error
+    default:
+      self = .unknown(value)
+    }
+  }
+
+  public func encode(to encoder: Encoder) throws {
+    var container = encoder.singleValueContainer()
+    try container.encode(rawValue)
+  }
+}
+
+public struct ToolExecutionTime: Codable, Hashable, Sendable {
+  public let start: Double?
+  public let end: Double?
+  public let compacted: Double?
+
+  public init(start: Double?, end: Double?, compacted: Double?) {
+    self.start = start
+    self.end = end
+    self.compacted = compacted
+  }
+}
+
+public struct ToolState: Codable, Hashable, Sendable {
+  public let status: ToolExecutionStatus
+  public let input: [String: JSONValue]
+  public let output: String?
+  public let title: String?
+  public let error: String?
+  public let metadata: [String: JSONValue]?
+  public let time: ToolExecutionTime?
+  public let raw: JSONValue
+
+  public init(from decoder: Decoder) throws {
+    let raw = try JSONValue(from: decoder)
+    guard let object = raw.objectValue else {
+      throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "Tool state is not an object"))
+    }
+
+    status = ToolExecutionStatus(rawValue: object.string(for: "status") ?? "unknown")
+    input = object.object(for: "input") ?? [:]
+    output = object.string(for: "output")
+    title = object.string(for: "title")
+    error = object.string(for: "error")
+    metadata = object.object(for: "metadata")
+
+    if let timeObject = object.object(for: "time") {
+      time = ToolExecutionTime(
+        start: timeObject.double(for: "start"),
+        end: timeObject.double(for: "end"),
+        compacted: timeObject.double(for: "compacted")
+      )
+    } else {
+      time = nil
+    }
+
+    self.raw = raw
+  }
+
+  public init(
+    status: ToolExecutionStatus,
+    input: [String: JSONValue],
+    output: String?,
+    title: String?,
+    error: String?,
+    metadata: [String: JSONValue]?,
+    time: ToolExecutionTime?
+  ) {
+    self.status = status
+    self.input = input
+    self.output = output
+    self.title = title
+    self.error = error
+    self.metadata = metadata
+    self.time = time
+
+    var object: [String: JSONValue] = [
+      "status": .string(status.rawValue),
+      "input": .object(input),
+    ]
+    if let output {
+      object["output"] = .string(output)
+    }
+    if let title {
+      object["title"] = .string(title)
+    }
+    if let error {
+      object["error"] = .string(error)
+    }
+    if let metadata {
+      object["metadata"] = .object(metadata)
+    }
+    if let time {
+      var timeObject: [String: JSONValue] = [:]
+      if let start = time.start {
+        timeObject["start"] = .number(start)
+      }
+      if let end = time.end {
+        timeObject["end"] = .number(end)
+      }
+      if let compacted = time.compacted {
+        timeObject["compacted"] = .number(compacted)
+      }
+      object["time"] = .object(timeObject)
+    }
+    raw = .object(object)
+  }
+
+  public func encode(to encoder: Encoder) throws {
+    try raw.encode(to: encoder)
+  }
+}
+
+public struct MessageFailure: Codable, Hashable, Sendable {
+  public let name: String
+  public let message: String?
+  public let raw: JSONValue
+
+  public var displayMessage: String {
+    if let message, !message.isEmpty {
+      return message
+    }
+    return name
+  }
+
+  public init(from decoder: Decoder) throws {
+    let raw = try JSONValue(from: decoder)
+    guard let object = raw.objectValue else {
+      throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "Message error is not an object"))
+    }
+
+    name = object.string(for: "name") ?? "UnknownError"
+    message = object.object(for: "data")?.string(for: "message") ?? object.string(for: "message")
+    self.raw = raw
+  }
+
+  public init(name: String, message: String?) {
+    self.name = name
+    self.message = message
+
+    var object: [String: JSONValue] = [
+      "name": .string(name),
+    ]
+    if let message {
+      object["data"] = .object(["message": .string(message)])
+    }
+    raw = .object(object)
+  }
+
+  public func encode(to encoder: Encoder) throws {
+    try raw.encode(to: encoder)
+  }
+}
+
 public struct MessageEnvelope: Codable, Hashable, Identifiable, Sendable {
   public let info: MessageInfo
   public let parts: [MessagePart]
@@ -277,7 +617,15 @@ public struct MessageInfo: Codable, Hashable, Identifiable, Sendable {
   public let providerID: String?
   public let modelID: String?
   public let parentID: String?
+  public let createdAt: Double?
+  public let completedAt: Double?
+  public let error: MessageFailure?
+  public let summaryDiffs: [FileDiff]
   public let raw: JSONValue
+
+  public var errorDisplayText: String? {
+    error?.displayMessage
+  }
 
   public init(from decoder: Decoder) throws {
     let raw = try JSONValue(from: decoder)
@@ -295,9 +643,30 @@ public struct MessageInfo: Codable, Hashable, Identifiable, Sendable {
     agent = object.string(for: "agent")
     parentID = object.string(for: "parentID")
 
+    let time = object.object(for: "time")
+    createdAt = time?.double(for: "created")
+    completedAt = time?.double(for: "completed")
+
     let nestedModel = object.object(for: "model")
     providerID = object.string(for: "providerID") ?? nestedModel?.string(for: "providerID")
     modelID = object.string(for: "modelID") ?? nestedModel?.string(for: "modelID")
+
+    if let errorValue = object["error"] {
+      error = errorValue.decoded(as: MessageFailure.self)
+    } else {
+      error = nil
+    }
+
+    if
+      let summary = object.object(for: "summary"),
+      let diffsValue = summary["diffs"],
+      let decodedDiffs = diffsValue.decoded(as: [FileDiff].self)
+    {
+      summaryDiffs = decodedDiffs
+    } else {
+      summaryDiffs = []
+    }
+
     self.raw = raw
   }
 
@@ -309,6 +678,10 @@ public struct MessageInfo: Codable, Hashable, Identifiable, Sendable {
     providerID: String?,
     modelID: String?,
     parentID: String?,
+    createdAt: Double? = nil,
+    completedAt: Double? = nil,
+    error: MessageFailure? = nil,
+    summaryDiffs: [FileDiff] = [],
     raw: JSONValue
   ) {
     self.id = id
@@ -318,6 +691,10 @@ public struct MessageInfo: Codable, Hashable, Identifiable, Sendable {
     self.providerID = providerID
     self.modelID = modelID
     self.parentID = parentID
+    self.createdAt = createdAt
+    self.completedAt = completedAt
+    self.error = error
+    self.summaryDiffs = summaryDiffs
     self.raw = raw
   }
 
@@ -333,7 +710,47 @@ public struct MessagePart: Codable, Hashable, Identifiable, Sendable {
   public let type: String
   public let text: String?
   public let tool: String?
+  public let callID: String?
+  public let toolState: ToolState?
+  public let metadata: [String: JSONValue]?
+  public let hash: String?
+  public let files: [String]
+  public let reason: String?
+  public let attempt: Int?
+  public let auto: Bool?
+  public let agentName: String?
+  public let subtaskPrompt: String?
+  public let subtaskDescription: String?
+  public let subtaskAgent: String?
+  public let subtaskCommand: String?
+  public let subtaskModel: ModelSelector?
+  public let fileMime: String?
+  public let fileName: String?
+  public let fileURL: String?
   public let raw: JSONValue
+
+  public var isContextTool: Bool {
+    guard type == "tool", let tool else {
+      return false
+    }
+    return tool == "read" || tool == "glob" || tool == "grep" || tool == "list"
+  }
+
+  public var isToolRunning: Bool {
+    toolState?.status.isInFlight == true
+  }
+
+  public var toolInput: [String: JSONValue] {
+    toolState?.input ?? [:]
+  }
+
+  public func toolInputString(_ key: String) -> String? {
+    toolInput[key]?.stringValue
+  }
+
+  public func toolInputNumber(_ key: String) -> Double? {
+    toolInput[key]?.doubleValue
+  }
 
   public init(from decoder: Decoder) throws {
     let raw = try JSONValue(from: decoder)
@@ -356,6 +773,41 @@ public struct MessagePart: Codable, Hashable, Identifiable, Sendable {
     self.type = type
     text = object.string(for: "text")
     tool = object.string(for: "tool")
+    callID = object.string(for: "callID")
+    metadata = object.object(for: "metadata")
+
+    if let stateValue = object["state"] {
+      toolState = stateValue.decoded(as: ToolState.self)
+    } else {
+      toolState = nil
+    }
+
+    hash = object.string(for: "hash")
+    files = object.array(for: "files")?.compactMap(\.stringValue) ?? []
+    reason = object.string(for: "reason")
+    attempt = object.int(for: "attempt")
+    auto = object.bool(for: "auto")
+    agentName = object.string(for: "name")
+
+    subtaskPrompt = object.string(for: "prompt")
+    subtaskDescription = object.string(for: "description")
+    subtaskAgent = object.string(for: "agent")
+    subtaskCommand = object.string(for: "command")
+
+    if
+      let model = object.object(for: "model"),
+      let providerID = model.string(for: "providerID"),
+      let modelID = model.string(for: "modelID")
+    {
+      subtaskModel = ModelSelector(providerID: providerID, modelID: modelID)
+    } else {
+      subtaskModel = nil
+    }
+
+    fileMime = object.string(for: "mime")
+    fileName = object.string(for: "filename")
+    fileURL = object.string(for: "url")
+
     self.raw = raw
   }
 
@@ -366,6 +818,23 @@ public struct MessagePart: Codable, Hashable, Identifiable, Sendable {
     type: String,
     text: String?,
     tool: String?,
+    callID: String? = nil,
+    toolState: ToolState? = nil,
+    metadata: [String: JSONValue]? = nil,
+    hash: String? = nil,
+    files: [String] = [],
+    reason: String? = nil,
+    attempt: Int? = nil,
+    auto: Bool? = nil,
+    agentName: String? = nil,
+    subtaskPrompt: String? = nil,
+    subtaskDescription: String? = nil,
+    subtaskAgent: String? = nil,
+    subtaskCommand: String? = nil,
+    subtaskModel: ModelSelector? = nil,
+    fileMime: String? = nil,
+    fileName: String? = nil,
+    fileURL: String? = nil,
     raw: JSONValue
   ) {
     self.id = id
@@ -374,6 +843,23 @@ public struct MessagePart: Codable, Hashable, Identifiable, Sendable {
     self.type = type
     self.text = text
     self.tool = tool
+    self.callID = callID
+    self.toolState = toolState
+    self.metadata = metadata
+    self.hash = hash
+    self.files = files
+    self.reason = reason
+    self.attempt = attempt
+    self.auto = auto
+    self.agentName = agentName
+    self.subtaskPrompt = subtaskPrompt
+    self.subtaskDescription = subtaskDescription
+    self.subtaskAgent = subtaskAgent
+    self.subtaskCommand = subtaskCommand
+    self.subtaskModel = subtaskModel
+    self.fileMime = fileMime
+    self.fileName = fileName
+    self.fileURL = fileURL
     self.raw = raw
   }
 
@@ -386,15 +872,44 @@ public struct MessagePart: Codable, Hashable, Identifiable, Sendable {
     case "text", "reasoning":
       return text
     case "tool":
-      return "[Tool: \(tool ?? "unknown")]"
+      if let tool {
+        return "[Tool: \(tool)]"
+      }
+      return "[Tool]"
     case "step-start":
       return "[Step started]"
     case "step-finish":
+      if let reason, !reason.isEmpty {
+        return "[Step finished: \(reason)]"
+      }
       return "[Step finished]"
     case "retry":
+      if let attempt {
+        return "[Retrying request #\(attempt)]"
+      }
       return "[Retrying request]"
     case "compaction":
       return "[Context compacted]"
+    case "patch":
+      if !files.isEmpty {
+        return "[Patch for \(files.count) file(s)]"
+      }
+      return "[Patch applied]"
+    case "agent":
+      if let agentName, !agentName.isEmpty {
+        return "[Agent: \(agentName)]"
+      }
+      return "[Agent selected]"
+    case "subtask":
+      if let subtaskDescription, !subtaskDescription.isEmpty {
+        return "[Subtask: \(subtaskDescription)]"
+      }
+      return "[Subtask created]"
+    case "file":
+      if let fileName, !fileName.isEmpty {
+        return "[File: \(fileName)]"
+      }
+      return "[File attached]"
     default:
       return nil
     }
@@ -405,23 +920,161 @@ public struct MessagePart: Codable, Hashable, Identifiable, Sendable {
       return nil
     }
 
-    let currentValue = object[field]?.stringValue ?? ""
-    let nextValue = currentValue + delta
-    object[field] = .string(nextValue)
+    guard appendDelta(delta, to: field, in: &object) else {
+      return nil
+    }
 
-    let nextText = field == "text" ? nextValue : text
-    let nextTool = field == "tool" ? nextValue : tool
-
-    return MessagePart(
-      id: id,
-      sessionID: sessionID,
-      messageID: messageID,
-      type: type,
-      text: nextText,
-      tool: nextTool,
-      raw: .object(object)
-    )
+    return JSONValue.object(object).decoded(as: MessagePart.self)
   }
+}
+
+public enum PermissionReply: String, Codable, Hashable, Sendable {
+  case once
+  case always
+  case reject
+}
+
+public struct PermissionToolReference: Codable, Hashable, Sendable {
+  public let messageID: String
+  public let callID: String
+
+  public init(messageID: String, callID: String) {
+    self.messageID = messageID
+    self.callID = callID
+  }
+}
+
+public struct PermissionRequest: Codable, Hashable, Identifiable, Sendable {
+  public let id: String
+  public let sessionID: String
+  public let permission: String
+  public let patterns: [String]
+  public let metadata: [String: JSONValue]
+  public let always: [String]
+  public let tool: PermissionToolReference?
+
+  public init(
+    id: String,
+    sessionID: String,
+    permission: String,
+    patterns: [String],
+    metadata: [String: JSONValue],
+    always: [String],
+    tool: PermissionToolReference?
+  ) {
+    self.id = id
+    self.sessionID = sessionID
+    self.permission = permission
+    self.patterns = patterns
+    self.metadata = metadata
+    self.always = always
+    self.tool = tool
+  }
+}
+
+public struct QuestionOption: Codable, Hashable, Sendable {
+  public let label: String
+  public let description: String
+
+  public init(label: String, description: String) {
+    self.label = label
+    self.description = description
+  }
+}
+
+public struct QuestionInfo: Codable, Hashable, Sendable {
+  public let question: String
+  public let header: String
+  public let options: [QuestionOption]
+  public let multiple: Bool?
+  public let custom: Bool?
+
+  public init(question: String, header: String, options: [QuestionOption], multiple: Bool?, custom: Bool?) {
+    self.question = question
+    self.header = header
+    self.options = options
+    self.multiple = multiple
+    self.custom = custom
+  }
+}
+
+public struct QuestionRequest: Codable, Hashable, Identifiable, Sendable {
+  public let id: String
+  public let sessionID: String
+  public let questions: [QuestionInfo]
+  public let tool: PermissionToolReference?
+
+  public init(id: String, sessionID: String, questions: [QuestionInfo], tool: PermissionToolReference?) {
+    self.id = id
+    self.sessionID = sessionID
+    self.questions = questions
+    self.tool = tool
+  }
+}
+
+public typealias QuestionAnswer = [String]
+
+public struct PermissionReplyRequest: Encodable, Sendable {
+  public let reply: PermissionReply
+  public let message: String?
+
+  public init(reply: PermissionReply, message: String? = nil) {
+    self.reply = reply
+    self.message = message
+  }
+}
+
+public struct QuestionReplyRequest: Encodable, Sendable {
+  public let answers: [QuestionAnswer]
+
+  public init(answers: [QuestionAnswer]) {
+    self.answers = answers
+  }
+}
+
+public struct TodoItem: Codable, Hashable, Identifiable, Sendable {
+  public let content: String
+  public let status: String
+  public let priority: String
+
+  public var id: String {
+    "\(content)::\(status)::\(priority)"
+  }
+
+  public init(content: String, status: String, priority: String) {
+    self.content = content
+    self.status = status
+    self.priority = priority
+  }
+}
+
+private func appendDelta(_ delta: String, to field: String, in object: inout [String: JSONValue]) -> Bool {
+  let path = field
+    .split(separator: ".")
+    .map(String.init)
+
+  guard !path.isEmpty else {
+    return false
+  }
+
+  return appendDelta(delta, path: ArraySlice(path), in: &object)
+}
+
+private func appendDelta(_ delta: String, path: ArraySlice<String>, in object: inout [String: JSONValue]) -> Bool {
+  guard let key = path.first else {
+    return false
+  }
+
+  if path.count == 1 {
+    let currentValue = object[key]?.stringValue ?? ""
+    object[key] = .string(currentValue + delta)
+    return true
+  }
+
+  var child = object[key]?.objectValue ?? [:]
+  let didAppend = appendDelta(delta, path: path.dropFirst(), in: &child)
+  object[key] = .object(child)
+  return didAppend
 }
 
 public struct PromptRequest: Encodable, Sendable {
@@ -535,5 +1188,11 @@ public struct ServerEvent: Decodable, Hashable, Sendable {
   public init(type: String, properties: JSONValue) {
     self.type = type
     self.properties = properties
+  }
+}
+
+public extension ServerEvent {
+  func decodeProperties<T: Decodable>(as type: T.Type) -> T? {
+    properties.decoded(as: type)
   }
 }
