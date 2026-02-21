@@ -264,6 +264,9 @@ private struct MacTranscriptPane: View {
   let messages: [MessageEnvelope]
   let sessionStatus: SessionStatus
 
+  @State private var followTail = true
+  @State private var hasPendingTail = false
+
   private var turns: [MacTranscriptTurn] {
     MacTranscriptTurn.build(from: messages)
   }
@@ -276,16 +279,69 @@ private struct MacTranscriptPane: View {
         description: Text("Send a message to start this session.")
       )
     } else {
-      ScrollView {
-        LazyVStack(alignment: .leading, spacing: 12) {
-          ForEach(Array(turns.enumerated()), id: \.element.id) { index, turn in
-            MacTurnView(
-              turn: turn,
-              isWorking: index == turns.count - 1 && sessionStatus.isRunning
-            )
+      ScrollViewReader { proxy in
+        ZStack(alignment: .bottomTrailing) {
+          ScrollView {
+            LazyVStack(alignment: .leading, spacing: 12) {
+              ForEach(Array(turns.enumerated()), id: \.element.id) { index, turn in
+                MacTurnView(
+                  turn: turn,
+                  isWorking: index == turns.count - 1 && sessionStatus.isRunning
+                )
+                .id(turn.id)
+              }
+            }
+            .padding(16)
+          }
+          .simultaneousGesture(
+            DragGesture(minimumDistance: 8)
+              .onChanged { value in
+                if value.translation.height > 16 {
+                  followTail = false
+                }
+              }
+          )
+          .onChange(of: messages.count) { _, _ in
+            guard let lastID = turns.last?.id else { return }
+            if followTail {
+              withAnimation(.easeOut(duration: 0.2)) {
+                proxy.scrollTo(lastID, anchor: .bottom)
+              }
+              hasPendingTail = false
+              return
+            }
+            hasPendingTail = true
+          }
+          .onChange(of: followTail) { _, shouldFollow in
+            guard shouldFollow, let lastID = turns.last?.id else {
+              return
+            }
+            withAnimation(.easeOut(duration: 0.2)) {
+              proxy.scrollTo(lastID, anchor: .bottom)
+            }
+            hasPendingTail = false
+          }
+
+          if hasPendingTail {
+            Button {
+              followTail = true
+            } label: {
+              Label("Jump to latest", systemImage: "arrow.down.circle.fill")
+                .font(.caption.weight(.semibold))
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
+                .foregroundStyle(.white)
+                .background(
+                  Capsule(style: .continuous)
+                    .fill(Color.accentColor)
+                )
+            }
+            .buttonStyle(.plain)
+            .padding(.trailing, 14)
+            .padding(.bottom, 14)
+            .accessibilityIdentifier("workspace.transcript.resume")
           }
         }
-        .padding(16)
       }
     }
   }
@@ -352,8 +408,11 @@ private struct MacTurnView: View {
         MacUserMessageCard(message: user)
       }
 
-      ForEach(turn.assistantMessages) { assistant in
-        MacAssistantMessageCard(message: assistant)
+      ForEach(Array(turn.assistantMessages.enumerated()), id: \.element.id) { index, assistant in
+        MacAssistantMessageCard(
+          message: assistant,
+          busy: isWorking && index == turn.assistantMessages.count - 1
+        )
       }
 
       if isWorking {
@@ -401,6 +460,7 @@ private struct MacUserMessageCard: View {
 
 private struct MacAssistantMessageCard: View {
   let message: MessageEnvelope
+  let busy: Bool
 
   private var groupedParts: [MacAssistantItem] {
     let visibleParts = message.parts.filter { part in
@@ -455,12 +515,12 @@ private struct MacAssistantMessageCard: View {
           .foregroundStyle(.secondary)
       }
 
-      ForEach(groupedParts) { item in
+      ForEach(Array(groupedParts.enumerated()), id: \.element.id) { index, item in
         switch item {
         case let .part(part):
           MacAssistantPartView(part: part)
         case let .context(_, tools):
-          MacContextToolGroupCard(parts: tools)
+          MacContextToolGroupCard(parts: tools, busy: busy && index == groupedParts.count - 1)
         }
       }
 
@@ -531,6 +591,7 @@ private struct MacAssistantPartView: View {
 
 private struct MacContextToolGroupCard: View {
   let parts: [MessagePart]
+  let busy: Bool
   @State private var isExpanded = false
 
   private var summary: String {
@@ -549,20 +610,30 @@ private struct MacContextToolGroupCard: View {
   }
 
   private var hasPendingWork: Bool {
-    parts.contains { $0.toolState?.status.isInFlight == true }
+    busy || parts.contains { $0.toolState?.status.isInFlight == true }
   }
 
   var body: some View {
     DisclosureGroup(isExpanded: $isExpanded) {
       VStack(alignment: .leading, spacing: 6) {
         ForEach(parts) { part in
+          let running = part.toolState?.status.isInFlight == true || (busy && part.id == parts.last?.id)
+          let args = macContextToolArgs(for: part)
           HStack(spacing: 6) {
             Text(macToolDisplayName(for: part.tool))
               .font(.caption.weight(.semibold))
+              .redacted(reason: running ? .placeholder : [])
 
-            if let subtitle = macToolSubtitle(for: part), !subtitle.isEmpty {
+            if !running, let subtitle = macContextToolSubtitle(for: part), !subtitle.isEmpty {
               Text(subtitle)
                 .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+            }
+
+            if !running, !args.isEmpty {
+              Text(args.joined(separator: " "))
+                .font(.caption2)
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
             }
@@ -844,29 +915,60 @@ private struct MacTurnDiffSummaryCard: View {
   let diffs: [FileDiff]
   @State private var isExpanded = false
 
+  private var dedupedDiffs: [FileDiff] {
+    var seen: Set<String> = []
+    return diffs
+      .reversed()
+      .filter { seen.insert($0.file).inserted }
+      .reversed()
+  }
+
+  @State private var expandedFiles: Set<String> = []
+
+  private func isExpandedBinding(for file: String) -> Binding<Bool> {
+    Binding(
+      get: {
+        expandedFiles.contains(file)
+      },
+      set: { value in
+        if value {
+          expandedFiles.insert(file)
+          return
+        }
+        expandedFiles.remove(file)
+      }
+    )
+  }
+
   var body: some View {
     DisclosureGroup(isExpanded: $isExpanded) {
       VStack(spacing: 8) {
-        ForEach(diffs) { diff in
-          HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 2) {
-              Text(diff.file)
-                .font(.caption.weight(.semibold))
-                .lineLimit(2)
-              Text(diff.status?.capitalized ?? "Modified")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
+        ForEach(dedupedDiffs) { diff in
+          DisclosureGroup(isExpanded: isExpandedBinding(for: diff.file)) {
+            VStack(alignment: .leading, spacing: 8) {
+              MacDiffSnippet(title: "Before", text: diff.before)
+              MacDiffSnippet(title: "After", text: diff.after)
             }
+            .padding(.top, 6)
+          } label: {
+            HStack(alignment: .top) {
+              VStack(alignment: .leading, spacing: 2) {
+                MacDiffPathLabel(path: diff.file)
+                Text(diff.status?.capitalized ?? "Modified")
+                  .font(.caption2)
+                  .foregroundStyle(.secondary)
+              }
 
-            Spacer()
+              Spacer()
 
-            HStack(spacing: 6) {
-              Text("+\(diff.additionsCount)")
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(.green)
-              Text("-\(diff.deletionsCount)")
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(.red)
+              HStack(spacing: 6) {
+                Text("+\(diff.additionsCount)")
+                  .font(.caption2.weight(.semibold))
+                  .foregroundStyle(.green)
+                Text("-\(diff.deletionsCount)")
+                  .font(.caption2.weight(.semibold))
+                  .foregroundStyle(.red)
+              }
             }
           }
         }
@@ -876,7 +978,7 @@ private struct MacTurnDiffSummaryCard: View {
       HStack(spacing: 8) {
         Image(systemName: "doc.text")
           .font(.caption)
-        Text("Modified \(diffs.count) file\(diffs.count == 1 ? "" : "s")")
+        Text("Modified \(dedupedDiffs.count) file\(dedupedDiffs.count == 1 ? "" : "s")")
           .font(.caption.weight(.semibold))
         Spacer(minLength: 0)
       }
@@ -886,6 +988,68 @@ private struct MacTurnDiffSummaryCard: View {
       RoundedRectangle(cornerRadius: 8, style: .continuous)
         .fill(Color.secondary.opacity(0.08))
     )
+  }
+}
+
+private struct MacDiffPathLabel: View {
+  let path: String
+
+  private var split: (directory: String?, fileName: String) {
+    let parts = path.split(separator: "/", omittingEmptySubsequences: false)
+    guard let last = parts.last else {
+      return (nil, path)
+    }
+
+    let fileName = String(last)
+    let prefix = parts.dropLast().joined(separator: "/")
+    if prefix.isEmpty {
+      return (nil, fileName)
+    }
+    return (prefix + "/", fileName)
+  }
+
+  var body: some View {
+    HStack(spacing: 0) {
+      if let directory = split.directory {
+        Text(directory)
+          .font(.caption)
+          .foregroundStyle(.secondary)
+          .lineLimit(1)
+          .truncationMode(.middle)
+      }
+
+      Text(split.fileName)
+        .font(.caption.weight(.semibold))
+        .lineLimit(1)
+        .truncationMode(.middle)
+    }
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel(path)
+  }
+}
+
+private struct MacDiffSnippet: View {
+  let title: String
+  let text: String
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 4) {
+      Text(title)
+        .font(.caption2.weight(.semibold))
+        .foregroundStyle(.secondary)
+
+      ScrollView(.horizontal) {
+        Text(text)
+          .font(.system(.caption, design: .monospaced))
+          .textSelection(.enabled)
+          .frame(maxWidth: .infinity, alignment: .leading)
+      }
+      .padding(8)
+      .background(
+        RoundedRectangle(cornerRadius: 8, style: .continuous)
+          .fill(Color.secondary.opacity(0.07))
+      )
+    }
   }
 }
 
@@ -972,6 +1136,59 @@ private func macToolSubtitle(for part: MessagePart) -> String? {
   }
 }
 
+private func macContextToolSubtitle(for part: MessagePart) -> String? {
+  switch part.tool {
+  case "read":
+    return macDisplayPathComponent(part.toolInputString("filePath"))
+  case "list", "glob", "grep":
+    return part.toolInputString("path")
+  default:
+    return macToolSubtitle(for: part)
+  }
+}
+
+private func macContextToolArgs(for part: MessagePart) -> [String] {
+  switch part.tool {
+  case "read":
+    var args: [String] = []
+    if let offset = macFormattedToolNumber(part.toolInputNumber("offset")) {
+      args.append("offset=\(offset)")
+    }
+    if let limit = macFormattedToolNumber(part.toolInputNumber("limit")) {
+      args.append("limit=\(limit)")
+    }
+    return args
+  case "glob":
+    if let pattern = part.toolInputString("pattern"), !pattern.isEmpty {
+      return ["pattern=\(pattern)"]
+    }
+    return []
+  case "grep":
+    var args: [String] = []
+    if let pattern = part.toolInputString("pattern"), !pattern.isEmpty {
+      args.append("pattern=\(pattern)")
+    }
+    if let include = part.toolInputString("include"), !include.isEmpty {
+      args.append("include=\(include)")
+    }
+    return args
+  default:
+    return []
+  }
+}
+
+private func macFormattedToolNumber(_ number: Double?) -> String? {
+  guard let number else {
+    return nil
+  }
+
+  let rounded = number.rounded()
+  if abs(number - rounded) < 0.000_001 {
+    return String(Int(rounded))
+  }
+  return String(number)
+}
+
 private func macDisplayPathComponent(_ rawPath: String?) -> String? {
   guard let rawPath else {
     return nil
@@ -1005,6 +1222,7 @@ private struct MacChangesPane: View {
           VStack(alignment: .leading, spacing: 4) {
             Text(diff.file)
               .font(.subheadline.weight(.semibold))
+              .lineLimit(2)
             Text(diff.status?.capitalized ?? "Modified")
               .font(.caption)
               .foregroundStyle(.secondary)
@@ -1040,6 +1258,11 @@ private struct MacComposerView: View {
 
       if let question = store.currentQuestionRequest(for: sessionID) {
         MacQuestionPromptCard(store: store, sessionID: sessionID, request: question)
+      }
+
+      let todos = store.todosBySession[sessionID] ?? []
+      if !todos.isEmpty {
+        MacTodoDockCard(todos: todos)
       }
 
       let composerBlocked = store.isComposerBlocked(for: sessionID)
@@ -1136,10 +1359,125 @@ private struct MacComposerView: View {
   }
 }
 
+private struct MacTodoDockCard: View {
+  let todos: [TodoItem]
+  @State private var isCollapsed = false
+
+  private var completedCount: Int {
+    todos.filter { $0.status == "completed" }.count
+  }
+
+  private var allDone: Bool {
+    !todos.isEmpty && todos.allSatisfy { $0.status == "completed" || $0.status == "cancelled" }
+  }
+
+  private var summary: String {
+    "\(completedCount) of \(todos.count) tasks completed"
+  }
+
+  private var preview: String {
+    todos.first(where: { $0.status == "in_progress" })?.content
+      ?? todos.first(where: { $0.status == "pending" })?.content
+      ?? todos.last?.content
+      ?? ""
+  }
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      HStack(spacing: 8) {
+        Text(summary)
+          .font(.caption)
+          .foregroundStyle(.secondary)
+
+        if isCollapsed && !preview.isEmpty {
+          Text(preview)
+            .font(.caption)
+            .lineLimit(1)
+            .foregroundStyle(.secondary)
+        }
+
+        Spacer(minLength: 0)
+
+        Button {
+          withAnimation(.easeInOut(duration: 0.2)) {
+            isCollapsed.toggle()
+          }
+        } label: {
+          Image(systemName: "chevron.down")
+            .font(.caption.weight(.semibold))
+            .rotationEffect(.degrees(isCollapsed ? 0 : 180))
+        }
+        .buttonStyle(.plain)
+      }
+
+      if !isCollapsed {
+        VStack(alignment: .leading, spacing: 6) {
+          ForEach(todos) { todo in
+            HStack(alignment: .top, spacing: 8) {
+              Image(systemName: todoIconName(todo.status))
+                .font(.caption)
+                .foregroundStyle(todoIconColor(todo.status))
+
+              Text(todo.content)
+                .font(.caption)
+                .foregroundStyle(todo.status == "completed" || todo.status == "cancelled" ? .secondary : .primary)
+                .strikethrough(todo.status == "completed" || todo.status == "cancelled")
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+          }
+        }
+      }
+    }
+    .padding(10)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .background(
+      RoundedRectangle(cornerRadius: 10, style: .continuous)
+        .fill(Color.secondary.opacity(0.08))
+    )
+    .onChange(of: allDone) { _, done in
+      if done {
+        withAnimation(.easeInOut(duration: 0.25)) {
+          isCollapsed = true
+        }
+      }
+    }
+  }
+
+  private func todoIconName(_ status: String) -> String {
+    switch status {
+    case "completed":
+      return "checkmark.circle.fill"
+    case "in_progress":
+      return "circle.fill"
+    case "cancelled":
+      return "xmark.circle"
+    default:
+      return "circle"
+    }
+  }
+
+  private func todoIconColor(_ status: String) -> Color {
+    switch status {
+    case "completed":
+      return .green
+    case "in_progress":
+      return .blue
+    case "cancelled":
+      return .secondary
+    default:
+      return .secondary
+    }
+  }
+}
+
 private struct MacPermissionPromptCard: View {
   @Bindable var store: WorkspaceStore
   let sessionID: String
   let request: PermissionRequest
+
+  private var hint: String? {
+    macPermissionHint(for: request.permission)
+  }
 
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
@@ -1150,10 +1488,27 @@ private struct MacPermissionPromptCard: View {
       Text(request.permission)
         .font(.subheadline.weight(.semibold))
 
-      if !request.patterns.isEmpty {
-        Text(request.patterns.joined(separator: ", "))
+      if let hint {
+        Text(hint)
           .font(.caption)
           .foregroundStyle(.secondary)
+      }
+
+      if !request.patterns.isEmpty {
+        VStack(alignment: .leading, spacing: 4) {
+          ForEach(request.patterns, id: \.self) { pattern in
+            Text(pattern)
+              .font(.system(.caption, design: .monospaced))
+              .textSelection(.enabled)
+              .padding(.horizontal, 8)
+              .padding(.vertical, 4)
+              .frame(maxWidth: .infinity, alignment: .leading)
+              .background(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                  .fill(Color.secondary.opacity(0.08))
+              )
+          }
+        }
       }
 
       HStack(spacing: 8) {
@@ -1190,62 +1545,213 @@ private struct MacPermissionPromptCard: View {
   }
 }
 
+private func macPermissionHint(for permission: String) -> String? {
+  switch permission {
+  case "read":
+    return "Allow the assistant to read files from your workspace."
+  case "write":
+    return "Allow the assistant to create new files in your workspace."
+  case "edit":
+    return "Allow the assistant to modify existing files."
+  case "bash":
+    return "Allow the assistant to run shell commands."
+  case "webfetch":
+    return "Allow the assistant to fetch content from external URLs."
+  case "task":
+    return "Allow the assistant to launch sub-agents for delegated tasks."
+  default:
+    return nil
+  }
+}
+
 private struct MacQuestionPromptCard: View {
   @Bindable var store: WorkspaceStore
   let sessionID: String
   let request: QuestionRequest
 
-  @State private var answerDrafts: [String] = []
+  @State private var tab = 0
+  @State private var answers: [QuestionAnswer] = []
+  @State private var customAnswers: [String] = []
+  @State private var isEditingCustom = false
+
+  private var total: Int {
+    request.questions.count
+  }
+
+  private var question: QuestionInfo? {
+    guard request.questions.indices.contains(tab) else {
+      return nil
+    }
+    return request.questions[tab]
+  }
+
+  private var options: [QuestionOption] {
+    question?.options ?? []
+  }
+
+  private var isMultiple: Bool {
+    question?.multiple == true
+  }
+
+  private var isSending: Bool {
+    store.isRespondingToQuestion(requestID: request.id)
+  }
+
+  private var isLastQuestion: Bool {
+    tab >= total - 1
+  }
+
+  private var summary: String {
+    guard total > 0 else {
+      return "0 of 0 questions"
+    }
+    let current = min(tab + 1, total)
+    return "\(current) of \(total) questions"
+  }
+
+  private var customInput: String {
+    customAnswers[safe: tab] ?? ""
+  }
+
+  private var selectedAnswers: [String] {
+    answers[safe: tab] ?? []
+  }
+
+  private var parsedAnswers: [QuestionAnswer] {
+    request.questions.enumerated().map { index, _ in
+      let raw = answers[safe: index] ?? []
+      var unique: [String] = []
+      for value in raw.map(\.trimmedForInput).filter({ !$0.isEmpty }) where !unique.contains(value) {
+        unique.append(value)
+      }
+      return unique
+    }
+  }
 
   var body: some View {
     VStack(alignment: .leading, spacing: 10) {
-      Label("Question", systemImage: "questionmark.bubble")
-        .font(.caption.weight(.semibold))
-        .foregroundStyle(.blue)
+      HStack(alignment: .center, spacing: 10) {
+        Text(summary)
+          .font(.caption.weight(.semibold))
 
-      ForEach(Array(request.questions.enumerated()), id: \.offset) { index, question in
-        VStack(alignment: .leading, spacing: 6) {
-          Text(question.question)
-            .font(.caption.weight(.semibold))
+        Spacer(minLength: 0)
 
-          if !question.options.isEmpty {
-            let selected = selectedLabels(at: index)
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 130), spacing: 6)], spacing: 6) {
-              ForEach(question.options, id: \.label) { option in
-                let isSelected = selected.contains(option.label)
-
-                Button {
-                  selectOption(option.label, at: index, multiple: question.multiple == true)
-                } label: {
-                  VStack(alignment: .leading, spacing: 2) {
-                    Text(option.label)
-                      .font(.caption.weight(.semibold))
-                      .lineLimit(1)
-
-                    if !option.description.isEmpty {
-                      Text(option.description)
-                        .font(.caption2)
-                        .lineLimit(2)
-                    }
-                  }
-                  .frame(maxWidth: .infinity, alignment: .leading)
-                  .padding(.horizontal, 8)
-                  .padding(.vertical, 6)
-                  .background(
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                      .fill(isSelected ? Color.accentColor.opacity(0.2) : Color.secondary.opacity(0.08))
-                  )
-                }
-                .buttonStyle(.plain)
-              }
+        HStack(spacing: 6) {
+          ForEach(Array(request.questions.enumerated()), id: \.offset) { index, _ in
+            let answered = (answers[safe: index]?.isEmpty == false)
+            let active = index == tab
+            Button {
+              guard !isSending else { return }
+              tab = index
+              isEditingCustom = false
+            } label: {
+              Capsule(style: .continuous)
+                .fill(active ? Color.primary : (answered ? Color.accentColor : Color.secondary.opacity(0.35)))
+                .frame(width: 16, height: 3)
             }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("question.progress.\(index)")
+          }
+        }
+      }
+
+      if let question {
+        Text(question.question)
+          .font(.caption.weight(.semibold))
+
+        Text(isMultiple ? "Choose one or more options." : "Choose one option.")
+          .font(.caption)
+          .foregroundStyle(.secondary)
+
+        VStack(alignment: .leading, spacing: 6) {
+          ForEach(options, id: \.label) { option in
+            let isSelected = selectedAnswers.contains(option.label)
+
+            Button {
+              guard !isSending else { return }
+              selectOption(option.label)
+            } label: {
+              HStack(alignment: .top, spacing: 10) {
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                  .font(.caption)
+                  .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
+
+                VStack(alignment: .leading, spacing: 2) {
+                  Text(option.label)
+                    .font(.caption.weight(.semibold))
+                    .lineLimit(1)
+
+                  if !option.description.isEmpty {
+                    Text(option.description)
+                      .font(.caption2)
+                      .lineLimit(2)
+                  }
+                }
+
+                Spacer(minLength: 0)
+              }
+              .padding(.horizontal, 8)
+              .padding(.vertical, 8)
+              .background(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                  .fill(isSelected ? Color.accentColor.opacity(0.2) : Color.secondary.opacity(0.08))
+              )
+            }
+            .buttonStyle(.plain)
+            .disabled(isSending)
           }
 
-          TextField(
-            question.multiple == true ? "Type one or more answers (comma-separated)" : "Type your answer",
-            text: draftBinding(at: index)
-          )
-          .textFieldStyle(.roundedBorder)
+          if isEditingCustom {
+            HStack(spacing: 8) {
+              TextField("Type your answer", text: customBinding)
+                .textFieldStyle(.roundedBorder)
+                .disabled(isSending)
+
+              Button("Add") {
+                commitCustomAnswer()
+              }
+              .buttonStyle(.borderedProminent)
+              .disabled(isSending)
+
+              Button("Cancel") {
+                isEditingCustom = false
+              }
+              .disabled(isSending)
+            }
+          } else {
+            let picked = selectedAnswers.contains(customInput.trimmedForInput) && !customInput.trimmedForInput.isEmpty
+            Button {
+              guard !isSending else { return }
+              isEditingCustom = true
+            } label: {
+              HStack(spacing: 10) {
+                Image(systemName: picked ? "checkmark.circle.fill" : "circle")
+                  .font(.caption)
+                  .foregroundStyle(picked ? Color.accentColor : Color.secondary)
+
+                VStack(alignment: .leading, spacing: 2) {
+                  Text("Type your own answer")
+                    .font(.caption.weight(.semibold))
+                  if !customInput.trimmedForInput.isEmpty {
+                    Text(customInput)
+                      .font(.caption2)
+                      .foregroundStyle(.secondary)
+                      .lineLimit(2)
+                  }
+                }
+
+                Spacer(minLength: 0)
+              }
+              .padding(.horizontal, 8)
+              .padding(.vertical, 8)
+              .background(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                  .fill(Color.secondary.opacity(0.08))
+              )
+            }
+            .buttonStyle(.plain)
+            .disabled(isSending)
+          }
         }
       }
 
@@ -1255,21 +1761,36 @@ private struct MacQuestionPromptCard: View {
             await store.rejectQuestion(sessionID: sessionID, requestID: request.id)
           }
         }
-        .disabled(store.isRespondingToQuestion(requestID: request.id))
+        .disabled(isSending)
+
+        if tab > 0 {
+          Button("Back") {
+            guard !isSending else { return }
+            tab -= 1
+            isEditingCustom = false
+          }
+          .disabled(isSending)
+        }
 
         Spacer()
 
-        Button("Submit") {
+        Button(isLastQuestion ? "Submit" : "Next") {
+          if isEditingCustom {
+            commitCustomAnswer()
+          }
+
+          if !isLastQuestion {
+            tab += 1
+            isEditingCustom = false
+            return
+          }
+
           Task {
-            await store.replyToQuestion(
-              sessionID: sessionID,
-              requestID: request.id,
-              answers: parsedAnswers
-            )
+            await store.replyToQuestion(sessionID: sessionID, requestID: request.id, answers: parsedAnswers)
           }
         }
         .buttonStyle(.borderedProminent)
-        .disabled(store.isRespondingToQuestion(requestID: request.id) || parsedAnswers.allSatisfy(\.isEmpty))
+        .disabled(isSending || parsedAnswers.allSatisfy(\.isEmpty))
       }
       .font(.caption)
     }
@@ -1280,81 +1801,81 @@ private struct MacQuestionPromptCard: View {
         .fill(Color.blue.opacity(0.08))
     )
     .onAppear {
-      resetAnswerDrafts()
+      resetState()
     }
     .onChange(of: request.id) { _, _ in
-      resetAnswerDrafts()
+      resetState()
     }
   }
 
-  private var parsedAnswers: [QuestionAnswer] {
-    request.questions.enumerated().map { index, question in
-      let raw = answerDrafts[safe: index]?.trimmedForInput ?? ""
-      guard !raw.isEmpty else {
-        return []
-      }
-
-      if question.multiple == true {
-        return raw
-          .split(separator: ",")
-          .map { String($0).trimmedForInput }
-          .filter { !$0.isEmpty }
-      }
-
-      return [raw]
-    }
-  }
-
-  private func draftBinding(at index: Int) -> Binding<String> {
+  private var customBinding: Binding<String> {
     Binding(
       get: {
-        answerDrafts[safe: index] ?? ""
+        customAnswers[safe: tab] ?? ""
       },
       set: { value in
-        ensureDraftCapacity(at: index)
-        answerDrafts[index] = value
+        ensureCapacity(for: tab)
+        customAnswers[tab] = value
       }
     )
   }
 
-  private func selectedLabels(at index: Int) -> [String] {
-    let raw = answerDrafts[safe: index]?.trimmedForInput ?? ""
-    guard !raw.isEmpty else {
-      return []
-    }
-    return raw
-      .split(separator: ",")
-      .map { String($0).trimmedForInput }
-      .filter { !$0.isEmpty }
-  }
+  private func selectOption(_ option: String) {
+    ensureCapacity(for: tab)
 
-  private func selectOption(_ option: String, at index: Int, multiple: Bool) {
-    ensureDraftCapacity(at: index)
-
-    if !multiple {
-      answerDrafts[index] = option
+    if !isMultiple {
+      answers[tab] = [option]
+      isEditingCustom = false
       return
     }
 
-    var selected = selectedLabels(at: index)
+    var selected = answers[tab]
     if let selectedIndex = selected.firstIndex(of: option) {
       selected.remove(at: selectedIndex)
     } else {
       selected.append(option)
     }
 
-    answerDrafts[index] = selected.joined(separator: ", ")
+    answers[tab] = selected
   }
 
-  private func ensureDraftCapacity(at index: Int) {
-    if index < answerDrafts.count {
+  private func commitCustomAnswer() {
+    let value = customInput.trimmedForInput
+    ensureCapacity(for: tab)
+    customAnswers[tab] = value
+
+    guard !value.isEmpty else {
+      isEditingCustom = false
       return
     }
-    answerDrafts.append(contentsOf: Array(repeating: "", count: (index - answerDrafts.count) + 1))
+
+    if isMultiple {
+      if !answers[tab].contains(value) {
+        answers[tab].append(value)
+      }
+      isEditingCustom = false
+      return
+    }
+
+    answers[tab] = [value]
+    isEditingCustom = false
   }
 
-  private func resetAnswerDrafts() {
-    answerDrafts = Array(repeating: "", count: request.questions.count)
+  private func ensureCapacity(for index: Int) {
+    if index < answers.count {
+      return
+    }
+
+    let growBy = (index - answers.count) + 1
+    answers.append(contentsOf: Array(repeating: [], count: growBy))
+    customAnswers.append(contentsOf: Array(repeating: "", count: growBy))
+  }
+
+  private func resetState() {
+    tab = 0
+    answers = Array(repeating: [], count: request.questions.count)
+    customAnswers = Array(repeating: "", count: request.questions.count)
+    isEditingCustom = false
   }
 }
 
