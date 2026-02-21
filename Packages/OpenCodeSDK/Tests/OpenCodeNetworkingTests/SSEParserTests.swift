@@ -1,5 +1,5 @@
-import XCTest
 import OpenCodeNetworking
+import XCTest
 
 final class SSEParserTests: XCTestCase {
   func testParsesSingleMessage() {
@@ -77,5 +77,15 @@ final class SSEParserTests: XCTestCase {
     let output = parser.finish()
     XCTAssertEqual(output?.event, "message")
     XCTAssertEqual(output?.data, "tail")
+  }
+
+  func testFlushesEventWithoutData() {
+    var parser = SSEParser()
+
+    XCTAssertNil(parser.ingest(line: "event: ping"))
+
+    let output = parser.ingest(line: "")
+    XCTAssertEqual(output?.event, "ping")
+    XCTAssertNil(output?.data)
   }
 }

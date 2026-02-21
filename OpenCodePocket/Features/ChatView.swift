@@ -1,4 +1,5 @@
 import SwiftUI
+import OpenCodeModels
 
 struct ChatView: View {
   @Bindable var store: AppStore

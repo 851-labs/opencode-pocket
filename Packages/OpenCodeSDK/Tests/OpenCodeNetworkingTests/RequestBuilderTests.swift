@@ -1,5 +1,5 @@
-import XCTest
 import OpenCodeNetworking
+import XCTest
 
 final class RequestBuilderTests: XCTestCase {
   func testBuildsGETRequestWithQueryAndAuth() throws {

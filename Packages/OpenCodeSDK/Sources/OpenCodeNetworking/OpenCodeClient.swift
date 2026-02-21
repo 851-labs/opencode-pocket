@@ -1,18 +1,26 @@
 import Foundation
+import OpenCodeModels
 
-struct OpenCodeClientConfiguration: Sendable {
-  let baseURL: URL
-  let username: String?
-  let password: String?
-  let directory: String?
+public struct OpenCodeClientConfiguration: Sendable {
+  public let baseURL: URL
+  public let username: String?
+  public let password: String?
+  public let directory: String?
+
+  public init(baseURL: URL, username: String?, password: String?, directory: String?) {
+    self.baseURL = baseURL
+    self.username = username
+    self.password = password
+    self.directory = directory
+  }
 }
 
-final class OpenCodeClient {
+public final class OpenCodeClient {
   private let configuration: OpenCodeClientConfiguration
   private let requestBuilder: HTTPRequestBuilder
   private let urlSession: URLSession
 
-  init(configuration: OpenCodeClientConfiguration, urlSession: URLSession = .shared) {
+  public init(configuration: OpenCodeClientConfiguration, urlSession: URLSession = .shared) {
     self.configuration = configuration
     requestBuilder = HTTPRequestBuilder(
       baseURL: configuration.baseURL,
@@ -22,23 +30,23 @@ final class OpenCodeClient {
     self.urlSession = urlSession
   }
 
-  func health() async throws -> HealthResponse {
+  public func health() async throws -> HealthResponse {
     try await request(.get, path: "/global/health", response: HealthResponse.self)
   }
 
-  func listSessions(directory: String? = nil) async throws -> [Session] {
+  public func listSessions(directory: String? = nil) async throws -> [Session] {
     try await request(.get, path: "/session", query: mergedDirectoryQuery(directory), response: [Session].self)
   }
 
-  func listAgents(directory: String? = nil) async throws -> [AgentDescriptor] {
+  public func listAgents(directory: String? = nil) async throws -> [AgentDescriptor] {
     try await request(.get, path: "/agent", query: mergedDirectoryQuery(directory), response: [AgentDescriptor].self)
   }
 
-  func listConfigProviders(directory: String? = nil) async throws -> ProviderCatalogResponse {
+  public func listConfigProviders(directory: String? = nil) async throws -> ProviderCatalogResponse {
     try await request(.get, path: "/config/providers", query: mergedDirectoryQuery(directory), response: ProviderCatalogResponse.self)
   }
 
-  func createSession(_ body: SessionCreateRequest, directory: String? = nil) async throws -> Session {
+  public func createSession(_ body: SessionCreateRequest, directory: String? = nil) async throws -> Session {
     try await request(
       .post,
       path: "/session",
@@ -48,7 +56,7 @@ final class OpenCodeClient {
     )
   }
 
-  func getSession(id: String, directory: String? = nil) async throws -> Session {
+  public func getSession(id: String, directory: String? = nil) async throws -> Session {
     try await request(
       .get,
       path: "/session/\(escapedPathComponent(id))",
@@ -57,7 +65,7 @@ final class OpenCodeClient {
     )
   }
 
-  func updateSession(id: String, body: SessionUpdateRequest, directory: String? = nil) async throws -> Session {
+  public func updateSession(id: String, body: SessionUpdateRequest, directory: String? = nil) async throws -> Session {
     try await request(
       .patch,
       path: "/session/\(escapedPathComponent(id))",
@@ -67,7 +75,7 @@ final class OpenCodeClient {
     )
   }
 
-  func deleteSession(id: String, directory: String? = nil) async throws -> Bool {
+  public func deleteSession(id: String, directory: String? = nil) async throws -> Bool {
     try await request(
       .delete,
       path: "/session/\(escapedPathComponent(id))",
@@ -76,7 +84,7 @@ final class OpenCodeClient {
     )
   }
 
-  func listMessages(sessionID: String, limit: Int? = nil, directory: String? = nil) async throws -> [MessageEnvelope] {
+  public func listMessages(sessionID: String, limit: Int? = nil, directory: String? = nil) async throws -> [MessageEnvelope] {
     var query = mergedDirectoryQuery(directory)
     if let limit {
       query.append(URLQueryItem(name: "limit", value: String(limit)))
@@ -89,7 +97,7 @@ final class OpenCodeClient {
     )
   }
 
-  func getMessage(sessionID: String, messageID: String, directory: String? = nil) async throws -> MessageEnvelope {
+  public func getMessage(sessionID: String, messageID: String, directory: String? = nil) async throws -> MessageEnvelope {
     try await request(
       .get,
       path: "/session/\(escapedPathComponent(sessionID))/message/\(escapedPathComponent(messageID))",
@@ -98,7 +106,7 @@ final class OpenCodeClient {
     )
   }
 
-  func getSessionDiff(sessionID: String, messageID: String? = nil, directory: String? = nil) async throws -> [FileDiff] {
+  public func getSessionDiff(sessionID: String, messageID: String? = nil, directory: String? = nil) async throws -> [FileDiff] {
     var query = mergedDirectoryQuery(directory)
     if let messageID {
       query.append(URLQueryItem(name: "messageID", value: messageID))
@@ -112,7 +120,7 @@ final class OpenCodeClient {
     )
   }
 
-  func sendMessage(sessionID: String, body: PromptRequest, directory: String? = nil) async throws -> MessageEnvelope {
+  public func sendMessage(sessionID: String, body: PromptRequest, directory: String? = nil) async throws -> MessageEnvelope {
     try await request(
       .post,
       path: "/session/\(escapedPathComponent(sessionID))/message",
@@ -122,7 +130,7 @@ final class OpenCodeClient {
     )
   }
 
-  func sendMessageAsync(sessionID: String, body: PromptRequest, directory: String? = nil) async throws {
+  public func sendMessageAsync(sessionID: String, body: PromptRequest, directory: String? = nil) async throws {
     try await requestNoContent(
       .post,
       path: "/session/\(escapedPathComponent(sessionID))/prompt_async",
@@ -131,7 +139,7 @@ final class OpenCodeClient {
     )
   }
 
-  func abortSession(sessionID: String, directory: String? = nil) async throws -> Bool {
+  public func abortSession(sessionID: String, directory: String? = nil) async throws -> Bool {
     try await request(
       .post,
       path: "/session/\(escapedPathComponent(sessionID))/abort",
@@ -140,18 +148,31 @@ final class OpenCodeClient {
     )
   }
 
-  func subscribeEvents(directory: String? = nil) -> AsyncStream<ServerEvent> {
+  public func subscribeEvents(directory: String? = nil) -> AsyncStream<ServerEvent> {
     AsyncStream { continuation in
       let task = Task {
         var attempts = 0
+        var lastEventID: String?
+        var retryDelayMilliseconds = 3000
 
         while !Task.isCancelled {
+          attempts += 1
+
           do {
+            var headers = [
+              "Accept": "text/event-stream",
+            ]
+
+            if let lastEventID {
+              headers["Last-Event-ID"] = lastEventID
+            }
+
             let request = try requestBuilder.makeRequest(
               path: "/event",
               method: .get,
               query: mergedDirectoryQuery(directory),
-              timeout: 600
+              timeout: 600,
+              headers: headers
             )
 
             let (bytes, response) = try await urlSession.bytes(for: request)
@@ -165,25 +186,44 @@ final class OpenCodeClient {
             attempts = 0
             var parser = SSEParser()
 
-            for try await line in bytes.lines {
+            var buffer = ""
+            for try await byte in bytes {
               if Task.isCancelled { break }
-              if let message = parser.ingest(line: line), let data = message.data {
-                yieldEvent(from: data, to: continuation)
-              }
+              buffer.unicodeScalars.append(Unicode.Scalar(byte))
+              flushBufferedSSEFrames(
+                buffer: &buffer,
+                parser: &parser,
+                lastEventID: &lastEventID,
+                retryDelayMilliseconds: &retryDelayMilliseconds,
+                continuation: continuation
+              )
             }
 
-            if let message = parser.finish(), let data = message.data {
-              yieldEvent(from: data, to: continuation)
-            }
+            flushRemainingSSEBuffer(
+              buffer: &buffer,
+              parser: &parser,
+              lastEventID: &lastEventID,
+              retryDelayMilliseconds: &retryDelayMilliseconds,
+              continuation: continuation
+            )
+
+            consume(
+              parser.finish(),
+              lastEventID: &lastEventID,
+              retryDelayMilliseconds: &retryDelayMilliseconds,
+              continuation: continuation
+            )
           } catch {
             if Task.isCancelled {
               break
             }
 
-            attempts += 1
-            let delay = min(pow(2.0, Double(max(0, attempts - 1))), 15.0)
-            let nanoseconds = UInt64(delay * 1_000_000_000)
-            try? await Task.sleep(nanoseconds: nanoseconds)
+            let backoffMilliseconds = min(
+              Int(Double(retryDelayMilliseconds) * pow(2.0, Double(max(0, attempts - 1)))),
+              30_000
+            )
+
+            try? await Task.sleep(nanoseconds: UInt64(backoffMilliseconds) * 1_000_000)
           }
         }
 
@@ -194,6 +234,105 @@ final class OpenCodeClient {
         task.cancel()
       }
     }
+  }
+
+  private func consume(
+    _ message: SSEMessage?,
+    lastEventID: inout String?,
+    retryDelayMilliseconds: inout Int,
+    continuation: AsyncStream<ServerEvent>.Continuation
+  ) {
+    guard let message else {
+      return
+    }
+
+    if let id = message.id {
+      lastEventID = id
+    }
+
+    if let retry = message.retry {
+      retryDelayMilliseconds = retry
+    }
+
+    if let data = message.data {
+      yieldEvent(from: data, to: continuation)
+    }
+  }
+
+  private func flushBufferedSSEFrames(
+    buffer: inout String,
+    parser: inout SSEParser,
+    lastEventID: inout String?,
+    retryDelayMilliseconds: inout Int,
+    continuation: AsyncStream<ServerEvent>.Continuation
+  ) {
+    let normalized = buffer
+      .replacingOccurrences(of: "\r\n", with: "\n")
+      .replacingOccurrences(of: "\r", with: "\n")
+
+    var frames = normalized.components(separatedBy: "\n\n")
+    guard frames.count > 1 else {
+      buffer = normalized
+      return
+    }
+
+    buffer = frames.removeLast()
+
+    for frame in frames {
+      flushFrame(
+        frame,
+        parser: &parser,
+        lastEventID: &lastEventID,
+        retryDelayMilliseconds: &retryDelayMilliseconds,
+        continuation: continuation
+      )
+    }
+  }
+
+  private func flushRemainingSSEBuffer(
+    buffer: inout String,
+    parser: inout SSEParser,
+    lastEventID: inout String?,
+    retryDelayMilliseconds: inout Int,
+    continuation: AsyncStream<ServerEvent>.Continuation
+  ) {
+    let normalized = buffer
+      .replacingOccurrences(of: "\r\n", with: "\n")
+      .replacingOccurrences(of: "\r", with: "\n")
+
+    guard !normalized.isEmpty else {
+      buffer = ""
+      return
+    }
+
+    flushFrame(
+      normalized,
+      parser: &parser,
+      lastEventID: &lastEventID,
+      retryDelayMilliseconds: &retryDelayMilliseconds,
+      continuation: continuation
+    )
+
+    buffer = ""
+  }
+
+  private func flushFrame(
+    _ frame: String,
+    parser: inout SSEParser,
+    lastEventID: inout String?,
+    retryDelayMilliseconds: inout Int,
+    continuation: AsyncStream<ServerEvent>.Continuation
+  ) {
+    for line in frame.split(separator: "\n", omittingEmptySubsequences: false) {
+      _ = parser.ingest(line: String(line))
+    }
+
+    consume(
+      parser.ingest(line: ""),
+      lastEventID: &lastEventID,
+      retryDelayMilliseconds: &retryDelayMilliseconds,
+      continuation: continuation
+    )
   }
 
   private func request<T: Decodable>(
@@ -286,7 +425,7 @@ final class OpenCodeClient {
   }
 
   private func escapedPathComponent(_ value: String) -> String {
-    value.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? value
+    value.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed)!
   }
 
   private func mergedDirectoryQuery(_ override: String?) -> [URLQueryItem] {

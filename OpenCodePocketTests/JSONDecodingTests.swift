@@ -1,5 +1,5 @@
-@testable import OpenCodePocket
 import XCTest
+import OpenCodeModels
 
 final class JSONDecodingTests: XCTestCase {
   func testDecodesSession() throws {

@@ -1,6 +1,6 @@
 import Foundation
-@testable import OpenCodePocket
 import XCTest
+import OpenCodeNetworking
 
 final class LiveServerIntegrationTests: XCTestCase {
   func testHealthAndSessionListAgainstLiveServer() async throws {

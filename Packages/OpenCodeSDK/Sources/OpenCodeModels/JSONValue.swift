@@ -1,6 +1,6 @@
 import Foundation
 
-enum JSONValue: Codable, Hashable, Sendable {
+public enum JSONValue: Codable, Hashable, Sendable {
   case string(String)
   case number(Double)
   case bool(Bool)
@@ -8,7 +8,7 @@ enum JSONValue: Codable, Hashable, Sendable {
   case array([JSONValue])
   case null
 
-  init(from decoder: Decoder) throws {
+  public init(from decoder: Decoder) throws {
     let container = try decoder.singleValueContainer()
     if container.decodeNil() {
       self = .null
@@ -41,7 +41,7 @@ enum JSONValue: Codable, Hashable, Sendable {
     throw DecodingError.dataCorruptedError(in: container, debugDescription: "Unsupported JSON type")
   }
 
-  func encode(to encoder: Encoder) throws {
+  public func encode(to encoder: Encoder) throws {
     var container = encoder.singleValueContainer()
     switch self {
     case let .string(value):
@@ -60,7 +60,7 @@ enum JSONValue: Codable, Hashable, Sendable {
   }
 }
 
-extension JSONValue {
+public extension JSONValue {
   var objectValue: [String: JSONValue]? {
     guard case let .object(value) = self else { return nil }
     return value
@@ -111,7 +111,7 @@ extension JSONValue {
   }
 }
 
-extension Dictionary where Key == String, Value == JSONValue {
+public extension Dictionary where Key == String, Value == JSONValue {
   func string(for key: String) -> String? {
     self[key]?.stringValue
   }

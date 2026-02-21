@@ -1,6 +1,7 @@
 import Foundation
+import OpenCodeModels
 
-enum OpenCodeClientError: LocalizedError {
+public enum OpenCodeClientError: LocalizedError {
   case invalidURL(String)
   case invalidResponse
   case transport(Error)
@@ -8,7 +9,7 @@ enum OpenCodeClientError: LocalizedError {
   case httpStatus(code: Int, message: String?)
   case message(String)
 
-  var errorDescription: String? {
+  public var errorDescription: String? {
     switch self {
     case let .invalidURL(value):
       return "Invalid server URL: \(value)"

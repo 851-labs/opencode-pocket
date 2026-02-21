@@ -1,4 +1,6 @@
 import Foundation
+import OpenCodeModels
+import OpenCodeNetworking
 import Observation
 
 @MainActor
@@ -34,7 +36,8 @@ final class AppStore {
 
   private var client: OpenCodeClient?
   private var eventsTask: Task<Void, Never>?
-  private var debouncedSessionRefreshTask: Task<Void, Never>?
+  private var sessionRefreshTasks: [String: Task<Void, Never>] = [:]
+  private var sessionRefreshNeedsDiff: Set<String> = []
 
   private let settingsStore: ConnectionSettingsStore
   private let isMockWorkspace: Bool
@@ -179,8 +182,9 @@ final class AppStore {
   func disconnect() {
     eventsTask?.cancel()
     eventsTask = nil
-    debouncedSessionRefreshTask?.cancel()
-    debouncedSessionRefreshTask = nil
+    sessionRefreshTasks.values.forEach { $0.cancel() }
+    sessionRefreshTasks.removeAll()
+    sessionRefreshNeedsDiff.removeAll()
     client = nil
     isConnected = false
     eventConnectionState = "Disconnected"
@@ -590,6 +594,9 @@ final class AppStore {
 
   private func startEventSubscriptionLoop() {
     eventsTask?.cancel()
+    sessionRefreshTasks.values.forEach { $0.cancel() }
+    sessionRefreshTasks.removeAll()
+    sessionRefreshNeedsDiff.removeAll()
     guard let client else { return }
 
     eventsTask = Task { [weak self] in
@@ -656,23 +663,80 @@ final class AppStore {
         scheduleSessionRefresh(sessionID: sessionID)
       }
 
+    case "message.part.delta":
+      guard
+        let properties = event.properties.objectValue,
+        let sessionID = properties.string(for: "sessionID")
+      else {
+        return
+      }
+
+      if applyMessagePartDelta(properties: properties) {
+        scheduleSessionRefresh(sessionID: sessionID, includeDiffs: false)
+      } else {
+        scheduleSessionRefresh(sessionID: sessionID)
+      }
+
     case "message.updated", "message.part.updated", "message.part.removed", "message.removed":
-      scheduleSessionRefresh(sessionID: selectedSessionID)
+      let sessionID = event.properties.objectValue?.string(for: "sessionID") ?? selectedSessionID
+      scheduleSessionRefresh(sessionID: sessionID)
 
     default:
       break
     }
   }
 
-  private func scheduleSessionRefresh(sessionID: String?) {
+  private func scheduleSessionRefresh(sessionID: String?, includeDiffs: Bool = true) {
     guard let sessionID else { return }
 
-    debouncedSessionRefreshTask?.cancel()
-    debouncedSessionRefreshTask = Task { [weak self] in
-      try? await Task.sleep(nanoseconds: 300_000_000)
-      await self?.loadMessages(sessionID: sessionID)
-      await self?.loadDiffs(sessionID: sessionID)
+    if includeDiffs {
+      sessionRefreshNeedsDiff.insert(sessionID)
     }
+
+    if sessionRefreshTasks[sessionID] != nil {
+      return
+    }
+
+    sessionRefreshTasks[sessionID] = Task { [weak self] in
+      try? await Task.sleep(nanoseconds: 300_000_000)
+      await self?.runScheduledSessionRefresh(sessionID: sessionID)
+    }
+  }
+
+  private func runScheduledSessionRefresh(sessionID: String) async {
+    defer {
+      sessionRefreshTasks[sessionID] = nil
+    }
+
+    await loadMessages(sessionID: sessionID)
+
+    let shouldRefreshDiffs = sessionRefreshNeedsDiff.remove(sessionID) != nil
+    if shouldRefreshDiffs {
+      await loadDiffs(sessionID: sessionID)
+    }
+  }
+
+  private func applyMessagePartDelta(properties: [String: JSONValue]) -> Bool {
+    guard
+      let sessionID = properties.string(for: "sessionID"),
+      let messageID = properties.string(for: "messageID"),
+      let partID = properties.string(for: "partID"),
+      let field = properties.string(for: "field"),
+      let delta = properties.string(for: "delta"),
+      !delta.isEmpty,
+      var messages = messagesBySession[sessionID],
+      let messageIndex = messages.firstIndex(where: { $0.info.id == messageID }),
+      let partIndex = messages[messageIndex].parts.firstIndex(where: { $0.id == partID }),
+      let updatedPart = messages[messageIndex].parts[partIndex].appendingDelta(field: field, delta: delta)
+    else {
+      return false
+    }
+
+    var updatedParts = messages[messageIndex].parts
+    updatedParts[partIndex] = updatedPart
+    messages[messageIndex] = MessageEnvelope(info: messages[messageIndex].info, parts: updatedParts)
+    messagesBySession[sessionID] = messages
+    return true
   }
 
   private func reconcileSelectedModel(using defaultModels: [String: String]) {
