@@ -25,6 +25,7 @@ final class ConnectionStore {
   let initialSelectedAgentName: String
   let initialSelectedModel: ModelSelector?
   let initialSelectedModelVariant: String?
+  let initialHiddenModelKeys: Set<String>
 
   private let settingsStore: ConnectionSettingsStore
 
@@ -58,6 +59,7 @@ final class ConnectionStore {
     }
 
     initialSelectedModelVariant = settings.selectedModelVariant?.trimmedNonEmpty
+    initialHiddenModelKeys = Set(settings.hiddenModelKeys)
   }
 
   var resolvedDirectory: String? {
@@ -117,7 +119,8 @@ final class ConnectionStore {
         using: normalizedURL.absoluteString,
         selectedAgentName: workspace?.selectedAgentName.trimmedNonEmpty,
         selectedModel: workspace?.selectedModel,
-        selectedModelVariant: workspace?.selectedModelVariant
+        selectedModelVariant: workspace?.selectedModelVariant,
+        hiddenModelKeys: workspace?.hiddenModelKeys ?? []
       )
 
       await workspace?.refreshAgentAndModelOptions()
@@ -145,7 +148,8 @@ final class ConnectionStore {
   func persistSettingsBestEffort(
     selectedAgentName: String,
     selectedModel: ModelSelector?,
-    selectedModelVariant: String?
+    selectedModelVariant: String?,
+    hiddenModelKeys: Set<String>
   ) {
     let normalized: String
     if let url = try? normalizedBaseURL() {
@@ -160,7 +164,8 @@ final class ConnectionStore {
       using: normalized,
       selectedAgentName: selectedAgentName.trimmedNonEmpty,
       selectedModel: selectedModel,
-      selectedModelVariant: selectedModelVariant?.trimmedNonEmpty
+      selectedModelVariant: selectedModelVariant?.trimmedNonEmpty,
+      hiddenModelKeys: hiddenModelKeys
     )
   }
 
@@ -185,7 +190,8 @@ final class ConnectionStore {
     using normalizedBaseURL: String,
     selectedAgentName: String?,
     selectedModel: ModelSelector?,
-    selectedModelVariant: String?
+    selectedModelVariant: String?,
+    hiddenModelKeys: Set<String>
   ) {
     let settings = ConnectionSettings(
       baseURL: normalizedBaseURL,
@@ -195,7 +201,8 @@ final class ConnectionStore {
       selectedAgent: selectedAgentName,
       selectedProviderID: selectedModel?.providerID,
       selectedModelID: selectedModel?.modelID,
-      selectedModelVariant: selectedModelVariant
+      selectedModelVariant: selectedModelVariant,
+      hiddenModelKeys: hiddenModelKeys.sorted()
     )
     settingsStore.saveSettings(settings)
 

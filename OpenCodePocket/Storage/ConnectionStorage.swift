@@ -10,6 +10,7 @@ struct ConnectionSettings: Codable, Equatable {
   var selectedProviderID: String?
   var selectedModelID: String?
   var selectedModelVariant: String?
+  var hiddenModelKeys: [String]
 
   static let `default` = ConnectionSettings(
     baseURL: "http://claudl.taile64ce5.ts.net:4096",
@@ -19,7 +20,8 @@ struct ConnectionSettings: Codable, Equatable {
     selectedAgent: nil,
     selectedProviderID: nil,
     selectedModelID: nil,
-    selectedModelVariant: nil
+    selectedModelVariant: nil,
+    hiddenModelKeys: []
   )
 }
 

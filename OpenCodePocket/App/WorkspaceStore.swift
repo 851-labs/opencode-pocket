@@ -17,6 +17,7 @@ final class WorkspaceStore {
 
   var availableAgents: [AgentDescriptor] = []
   var availableModels: [ModelOption] = []
+  var hiddenModelKeys: Set<String>
   var selectedAgentName: String
   var selectedModel: ModelSelector?
   var selectedModelVariant: String?
@@ -36,6 +37,7 @@ final class WorkspaceStore {
 
   init(connection: ConnectionStore) {
     self.connection = connection
+    hiddenModelKeys = connection.initialHiddenModelKeys
     selectedAgentName = connection.initialSelectedAgentName
     selectedModel = connection.initialSelectedModel
     selectedModelVariant = connection.initialSelectedModelVariant
@@ -103,6 +105,10 @@ final class WorkspaceStore {
     return match.variants
   }
 
+  var visibleModelOptions: [ModelOption] {
+    availableModels.filter { isModelVisible($0.selector) }
+  }
+
   var selectedModelVariantDisplayName: String {
     guard let selectedModelVariant else {
       return "Default"
@@ -111,6 +117,24 @@ final class WorkspaceStore {
   }
 
   var modelProviderGroups: [ModelProviderGroup] {
+    let grouped = Dictionary(grouping: visibleModelOptions, by: \.providerID)
+    return grouped.keys
+      .sorted()
+      .compactMap { providerID in
+        guard let models = grouped[providerID], let first = models.first else {
+          return nil
+        }
+        return ModelProviderGroup(
+          providerID: providerID,
+          providerName: first.providerName,
+          models: models.sorted { lhs, rhs in
+            lhs.modelName.localizedCaseInsensitiveCompare(rhs.modelName) == .orderedAscending
+          }
+        )
+      }
+  }
+
+  var modelSettingsProviderGroups: [ModelProviderGroup] {
     let grouped = Dictionary(grouping: availableModels, by: \.providerID)
     return grouped.keys
       .sorted()
@@ -384,12 +408,15 @@ final class WorkspaceStore {
       }
 
       availableModels = options
+      let knownKeys = Set(options.map { modelVisibilityKey($0.selector) })
+      hiddenModelKeys = hiddenModelKeys.intersection(knownKeys)
       reconcileSelectedModel(using: catalog.defaultModels)
       reconcileSelectedModelVariant()
       connection.persistSettingsBestEffort(
         selectedAgentName: selectedAgentName,
         selectedModel: selectedModel,
-        selectedModelVariant: selectedModelVariant
+        selectedModelVariant: selectedModelVariant,
+        hiddenModelKeys: hiddenModelKeys
       )
     } catch {
       connection.connectionError = error.localizedDescription
@@ -401,7 +428,8 @@ final class WorkspaceStore {
     connection.persistSettingsBestEffort(
       selectedAgentName: selectedAgentName,
       selectedModel: selectedModel,
-      selectedModelVariant: selectedModelVariant
+      selectedModelVariant: selectedModelVariant,
+      hiddenModelKeys: hiddenModelKeys
     )
   }
 
@@ -411,7 +439,8 @@ final class WorkspaceStore {
     connection.persistSettingsBestEffort(
       selectedAgentName: selectedAgentName,
       selectedModel: selectedModel,
-      selectedModelVariant: selectedModelVariant
+      selectedModelVariant: selectedModelVariant,
+      hiddenModelKeys: hiddenModelKeys
     )
   }
 
@@ -421,7 +450,34 @@ final class WorkspaceStore {
     connection.persistSettingsBestEffort(
       selectedAgentName: selectedAgentName,
       selectedModel: selectedModel,
-      selectedModelVariant: selectedModelVariant
+      selectedModelVariant: selectedModelVariant,
+      hiddenModelKeys: hiddenModelKeys
+    )
+  }
+
+  func isModelVisible(_ option: ModelOption) -> Bool {
+    isModelVisible(option.selector)
+  }
+
+  func setModelVisibility(_ option: ModelOption, isVisible: Bool) {
+    let key = modelVisibilityKey(option.selector)
+
+    if isVisible {
+      hiddenModelKeys.remove(key)
+    } else {
+      if visibleModelOptions.count <= 1, isModelVisible(option.selector) {
+        return
+      }
+      hiddenModelKeys.insert(key)
+    }
+
+    reconcileSelectedModel(using: [:])
+    reconcileSelectedModelVariant()
+    connection.persistSettingsBestEffort(
+      selectedAgentName: selectedAgentName,
+      selectedModel: selectedModel,
+      selectedModelVariant: selectedModelVariant,
+      hiddenModelKeys: hiddenModelKeys
     )
   }
 
@@ -1026,9 +1082,11 @@ final class WorkspaceStore {
   }
 
   private func reconcileSelectedModel(using defaultModels: [String: String]) {
+    let visibleOptions = visibleModelOptions
+
     if
       let selectedModel,
-      availableModels.contains(where: {
+      visibleOptions.contains(where: {
         $0.providerID == selectedModel.providerID && $0.modelID == selectedModel.modelID
       })
     {
@@ -1036,13 +1094,13 @@ final class WorkspaceStore {
     }
 
     for (providerID, modelID) in defaultModels {
-      if let match = availableModels.first(where: { $0.providerID == providerID && $0.modelID == modelID }) {
+      if let match = visibleOptions.first(where: { $0.providerID == providerID && $0.modelID == modelID }) {
         selectedModel = match.selector
         return
       }
     }
 
-    selectedModel = availableModels.first?.selector
+    selectedModel = visibleOptions.first?.selector ?? availableModels.first?.selector
   }
 
   private func reconcileSelectedModelVariant() {
@@ -1054,6 +1112,14 @@ final class WorkspaceStore {
       self.selectedModelVariant = nil
       return
     }
+  }
+
+  private func isModelVisible(_ selector: ModelSelector) -> Bool {
+    !hiddenModelKeys.contains(modelVisibilityKey(selector))
+  }
+
+  private func modelVisibilityKey(_ selector: ModelSelector) -> String {
+    "\(selector.providerID)::\(selector.modelID)"
   }
 
   func seedMockWorkspace() {
@@ -1104,11 +1170,13 @@ final class WorkspaceStore {
       ModelOption(providerID: "openai", providerName: "OpenAI", modelID: "gpt-5.3-codex", modelName: "GPT-5.3 Codex", variants: ["low", "medium", "high"]),
       ModelOption(providerID: "anthropic", providerName: "Anthropic", modelID: "claude-sonnet-4-5", modelName: "Claude Sonnet 4.5", variants: ["high", "max"]),
     ]
+    let knownKeys = Set(availableModels.map { modelVisibilityKey($0.selector) })
+    hiddenModelKeys = hiddenModelKeys.intersection(knownKeys)
 
     if !availableAgents.contains(where: { $0.name == selectedAgentName }) {
       selectedAgentName = "build"
     }
-    selectedModel = availableModels.first?.selector
+    reconcileSelectedModel(using: [:])
     reconcileSelectedModelVariant()
 
     if let greeting = makeMockMessage(sessionID: primary.id, role: .assistant, text: "Welcome to the mock workspace.") {

@@ -8,5 +8,11 @@ struct OpenCodePocketApp: App {
     WindowGroup {
       RootView(store: store)
     }
+
+#if os(macOS)
+    Settings {
+      MacSettingsView(store: store.workspace)
+    }
+#endif
   }
 }
