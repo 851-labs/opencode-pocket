@@ -2,7 +2,7 @@ import SwiftUI
 import OpenCodeModels
 
 struct ChatView: View {
-  @Bindable var store: AppStore
+  @Bindable var store: WorkspaceStore
   let sessionID: String
 
   var body: some View {

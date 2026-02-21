@@ -6,18 +6,18 @@ struct RootView: View {
   var body: some View {
 #if os(macOS)
     Group {
-      if store.isConnected {
-        MacWorkspaceView(store: store)
+      if store.connection.isConnected {
+        MacWorkspaceView(store: store.workspace)
       } else {
-        MacConnectView(store: store)
+        MacConnectView(store: store.connection)
       }
     }
 #else
     Group {
-      if store.isConnected {
-        WorkspaceView(store: store)
+      if store.connection.isConnected {
+        WorkspaceView(store: store.workspace)
       } else {
-        ConnectView(store: store)
+        ConnectView(store: store.connection)
       }
     }
 #endif

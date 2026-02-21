@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ConnectView: View {
-  @Bindable var store: AppStore
+  @Bindable var store: ConnectionStore
 
   var body: some View {
     NavigationStack {

@@ -9,7 +9,7 @@ private enum WorkspacePanel: String, CaseIterable, Identifiable {
 }
 
 struct WorkspaceView: View {
-  @Bindable var store: AppStore
+  @Bindable var store: WorkspaceStore
 
   @State private var selectedPanel: WorkspacePanel = .session
   @State private var isDrawerPresented = false
@@ -198,7 +198,7 @@ private extension WorkspaceView {
 }
 
 private struct SessionSheet: View {
-  @Bindable var store: AppStore
+  @Bindable var store: WorkspaceStore
   @Binding var isPresented: Bool
 
   var body: some View {
@@ -370,7 +370,7 @@ private struct ChangesPane: View {
 }
 
 private struct WorkspaceComposer: View {
-  @Bindable var store: AppStore
+  @Bindable var store: WorkspaceStore
   let sessionID: String
 
   var body: some View {

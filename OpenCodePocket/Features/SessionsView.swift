@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct SessionsView: View {
-  @Bindable var store: AppStore
+  @Bindable var store: WorkspaceStore
 
   var body: some View {
     List(selection: $store.selectedSessionID) {

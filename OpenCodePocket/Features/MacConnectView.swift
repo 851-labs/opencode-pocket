@@ -2,7 +2,7 @@
 import SwiftUI
 
 struct MacConnectView: View {
-  @Bindable var store: AppStore
+  @Bindable var store: ConnectionStore
 
   var body: some View {
     VStack(alignment: .leading, spacing: 20) {

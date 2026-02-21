@@ -10,7 +10,7 @@ private enum MacWorkspacePanel: String, CaseIterable, Identifiable {
 }
 
 struct MacWorkspaceView: View {
-  @Bindable var store: AppStore
+  @Bindable var store: WorkspaceStore
 
   @State private var selectedPanel: MacWorkspacePanel = .transcript
   @State private var isRenameSheetPresented = false
@@ -334,7 +334,7 @@ private struct MacChangesPane: View {
 }
 
 private struct MacComposerView: View {
-  @Bindable var store: AppStore
+  @Bindable var store: WorkspaceStore
   let sessionID: String
 
   var body: some View {
