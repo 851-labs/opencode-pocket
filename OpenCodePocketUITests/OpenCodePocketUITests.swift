@@ -58,6 +58,7 @@ final class OpenCodePocketUITests: XCTestCase {
 
     XCTAssertTrue(anyElements["composer.agentMenu"].waitForExistence(timeout: 4), "Expected agent menu in composer")
     XCTAssertTrue(anyElements["composer.modelMenu"].exists, "Expected model menu in composer")
+    XCTAssertTrue(anyElements["composer.effortMenu"].exists, "Expected thinking effort menu in composer")
     XCTAssertTrue(anyElements["composer.sendAbort"].exists, "Expected send/abort control in composer")
   }
 

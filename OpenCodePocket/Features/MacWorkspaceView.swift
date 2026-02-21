@@ -1738,6 +1738,8 @@ private struct MacComposerView: View {
 
         modelMenu
 
+        effortMenu
+
         Spacer()
 
         Text(store.statusLabel(for: sessionID))
@@ -1797,9 +1799,9 @@ private struct MacComposerView: View {
                 store.selectModel(model)
               } label: {
                 if store.selectedModel?.providerID == model.providerID && store.selectedModel?.modelID == model.modelID {
-                  Label(model.displayLabel, systemImage: "checkmark")
+                  Label(model.modelName, systemImage: "checkmark")
                 } else {
-                  Text(model.displayLabel)
+                  Text(model.modelName)
                 }
               }
             }
@@ -1808,6 +1810,35 @@ private struct MacComposerView: View {
       }
     } label: {
       Label(store.selectedModelDisplayName, systemImage: "cpu")
+        .lineLimit(1)
+    }
+  }
+
+  private var effortMenu: some View {
+    Menu {
+      Button {
+        store.selectModelVariant(nil)
+      } label: {
+        if store.selectedModelVariant == nil {
+          Label("Default", systemImage: "checkmark")
+        } else {
+          Text("Default")
+        }
+      }
+
+      ForEach(store.selectedModelVariants, id: \.self) { variant in
+        Button {
+          store.selectModelVariant(variant)
+        } label: {
+          if store.selectedModelVariant == variant {
+            Label(variant.capitalized, systemImage: "checkmark")
+          } else {
+            Text(variant.capitalized)
+          }
+        }
+      }
+    } label: {
+      Text(store.selectedModelVariantDisplayName)
         .lineLimit(1)
     }
   }

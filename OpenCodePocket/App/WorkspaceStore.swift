@@ -19,6 +19,7 @@ final class WorkspaceStore {
   var availableModels: [ModelOption] = []
   var selectedAgentName: String
   var selectedModel: ModelSelector?
+  var selectedModelVariant: String?
   var showReasoningSummaries = true
 
   var draftMessage = ""
@@ -37,6 +38,7 @@ final class WorkspaceStore {
     self.connection = connection
     selectedAgentName = connection.initialSelectedAgentName
     selectedModel = connection.initialSelectedModel
+    selectedModelVariant = connection.initialSelectedModelVariant
   }
 
   var selectedMessages: [MessageEnvelope] {
@@ -86,6 +88,26 @@ final class WorkspaceStore {
       return "Select model"
     }
     return match.modelName
+  }
+
+  var selectedModelVariants: [String] {
+    guard
+      let selectedModel,
+      let match = availableModels.first(where: {
+        $0.providerID == selectedModel.providerID && $0.modelID == selectedModel.modelID
+      })
+    else {
+      return []
+    }
+
+    return match.variants
+  }
+
+  var selectedModelVariantDisplayName: String {
+    guard let selectedModelVariant else {
+      return "Default"
+    }
+    return selectedModelVariant.capitalized
   }
 
   var modelProviderGroups: [ModelProviderGroup] {
@@ -266,6 +288,7 @@ final class WorkspaceStore {
       let request = PromptRequest(
         model: selectedModel,
         agent: selectedAgentName.trimmedNonEmpty,
+        variant: selectedModelVariant,
         parts: [.text(original)]
       )
       try await client.sendMessageAsync(sessionID: sessionID, body: request, directory: connection.resolvedDirectory)
@@ -362,7 +385,12 @@ final class WorkspaceStore {
 
       availableModels = options
       reconcileSelectedModel(using: catalog.defaultModels)
-      connection.persistSettingsBestEffort(selectedAgentName: selectedAgentName, selectedModel: selectedModel)
+      reconcileSelectedModelVariant()
+      connection.persistSettingsBestEffort(
+        selectedAgentName: selectedAgentName,
+        selectedModel: selectedModel,
+        selectedModelVariant: selectedModelVariant
+      )
     } catch {
       connection.connectionError = error.localizedDescription
     }
@@ -370,12 +398,31 @@ final class WorkspaceStore {
 
   func selectAgent(named name: String) {
     selectedAgentName = name
-    connection.persistSettingsBestEffort(selectedAgentName: selectedAgentName, selectedModel: selectedModel)
+    connection.persistSettingsBestEffort(
+      selectedAgentName: selectedAgentName,
+      selectedModel: selectedModel,
+      selectedModelVariant: selectedModelVariant
+    )
   }
 
   func selectModel(_ option: ModelOption) {
     selectedModel = option.selector
-    connection.persistSettingsBestEffort(selectedAgentName: selectedAgentName, selectedModel: selectedModel)
+    reconcileSelectedModelVariant()
+    connection.persistSettingsBestEffort(
+      selectedAgentName: selectedAgentName,
+      selectedModel: selectedModel,
+      selectedModelVariant: selectedModelVariant
+    )
+  }
+
+  func selectModelVariant(_ variant: String?) {
+    selectedModelVariant = variant?.trimmedNonEmpty
+    reconcileSelectedModelVariant()
+    connection.persistSettingsBestEffort(
+      selectedAgentName: selectedAgentName,
+      selectedModel: selectedModel,
+      selectedModelVariant: selectedModelVariant
+    )
   }
 
   func currentPermissionRequest(for sessionID: String) -> PermissionRequest? {
@@ -998,6 +1045,17 @@ final class WorkspaceStore {
     selectedModel = availableModels.first?.selector
   }
 
+  private func reconcileSelectedModelVariant() {
+    guard let selectedModelVariant else {
+      return
+    }
+
+    guard selectedModelVariants.contains(selectedModelVariant) else {
+      self.selectedModelVariant = nil
+      return
+    }
+  }
+
   func seedMockWorkspace() {
     let now = Date().timeIntervalSince1970 * 1000
 
@@ -1051,6 +1109,7 @@ final class WorkspaceStore {
       selectedAgentName = "build"
     }
     selectedModel = availableModels.first?.selector
+    reconcileSelectedModelVariant()
 
     if let greeting = makeMockMessage(sessionID: primary.id, role: .assistant, text: "Welcome to the mock workspace.") {
       messagesBySession[primary.id] = [greeting]

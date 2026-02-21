@@ -1951,6 +1951,8 @@ private struct WorkspaceComposer: View {
 
         modelMenu
 
+        effortMenu
+
         Spacer()
 
         Text(store.statusLabel(for: sessionID))
@@ -2002,9 +2004,9 @@ private struct WorkspaceComposer: View {
                 store.selectModel(model)
               } label: {
                 if store.selectedModel?.providerID == model.providerID && store.selectedModel?.modelID == model.modelID {
-                  Label(model.displayLabel, systemImage: "checkmark")
+                  Label(model.modelName, systemImage: "checkmark")
                 } else {
-                  Text(model.displayLabel)
+                  Text(model.modelName)
                 }
               }
             }
@@ -2018,6 +2020,38 @@ private struct WorkspaceComposer: View {
     }
     .accessibilityIdentifier("composer.modelMenu")
     .accessibilityLabel("Model Menu")
+  }
+
+  private var effortMenu: some View {
+    Menu {
+      Button {
+        store.selectModelVariant(nil)
+      } label: {
+        if store.selectedModelVariant == nil {
+          Label("Default", systemImage: "checkmark")
+        } else {
+          Text("Default")
+        }
+      }
+
+      ForEach(store.selectedModelVariants, id: \.self) { variant in
+        Button {
+          store.selectModelVariant(variant)
+        } label: {
+          if store.selectedModelVariant == variant {
+            Label(variant.capitalized, systemImage: "checkmark")
+          } else {
+            Text(variant.capitalized)
+          }
+        }
+      }
+    } label: {
+      Text(store.selectedModelVariantDisplayName)
+        .font(.caption.weight(.semibold))
+        .lineLimit(1)
+    }
+    .accessibilityIdentifier("composer.effortMenu")
+    .accessibilityLabel("Thinking Effort Menu")
   }
 }
 

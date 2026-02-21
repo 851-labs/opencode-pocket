@@ -24,6 +24,7 @@ final class ConnectionStore {
   let isMockWorkspace: Bool
   let initialSelectedAgentName: String
   let initialSelectedModel: ModelSelector?
+  let initialSelectedModelVariant: String?
 
   private let settingsStore: ConnectionSettingsStore
 
@@ -55,6 +56,8 @@ final class ConnectionStore {
     } else {
       initialSelectedModel = nil
     }
+
+    initialSelectedModelVariant = settings.selectedModelVariant?.trimmedNonEmpty
   }
 
   var resolvedDirectory: String? {
@@ -113,7 +116,8 @@ final class ConnectionStore {
       saveConnectionSettings(
         using: normalizedURL.absoluteString,
         selectedAgentName: workspace?.selectedAgentName.trimmedNonEmpty,
-        selectedModel: workspace?.selectedModel
+        selectedModel: workspace?.selectedModel,
+        selectedModelVariant: workspace?.selectedModelVariant
       )
 
       await workspace?.refreshAgentAndModelOptions()
@@ -138,7 +142,11 @@ final class ConnectionStore {
     eventConnectionState = "Disconnected"
   }
 
-  func persistSettingsBestEffort(selectedAgentName: String, selectedModel: ModelSelector?) {
+  func persistSettingsBestEffort(
+    selectedAgentName: String,
+    selectedModel: ModelSelector?,
+    selectedModelVariant: String?
+  ) {
     let normalized: String
     if let url = try? normalizedBaseURL() {
       normalized = url.absoluteString
@@ -151,7 +159,8 @@ final class ConnectionStore {
     saveConnectionSettings(
       using: normalized,
       selectedAgentName: selectedAgentName.trimmedNonEmpty,
-      selectedModel: selectedModel
+      selectedModel: selectedModel,
+      selectedModelVariant: selectedModelVariant?.trimmedNonEmpty
     )
   }
 
@@ -175,7 +184,8 @@ final class ConnectionStore {
   private func saveConnectionSettings(
     using normalizedBaseURL: String,
     selectedAgentName: String?,
-    selectedModel: ModelSelector?
+    selectedModel: ModelSelector?,
+    selectedModelVariant: String?
   ) {
     let settings = ConnectionSettings(
       baseURL: normalizedBaseURL,
@@ -184,7 +194,8 @@ final class ConnectionStore {
       directory: directory,
       selectedAgent: selectedAgentName,
       selectedProviderID: selectedModel?.providerID,
-      selectedModelID: selectedModel?.modelID
+      selectedModelID: selectedModel?.modelID,
+      selectedModelVariant: selectedModelVariant
     )
     settingsStore.saveSettings(settings)
 
