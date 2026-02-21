@@ -452,7 +452,19 @@ private struct AssistantMessageCard: View {
 
   private var items: [AssistantRenderItem] {
     let visibleParts = message.parts.filter { part in
-      !(part.type == "tool" && (part.tool == "todowrite" || part.tool == "todoread"))
+      if part.type != "tool" {
+        return true
+      }
+
+      if part.tool == "todowrite" || part.tool == "todoread" {
+        return false
+      }
+
+      if part.tool == "question", part.toolState?.status.isInFlight == true {
+        return false
+      }
+
+      return true
     }
 
     var result: [AssistantRenderItem] = []
@@ -639,7 +651,37 @@ private struct ToolPartCard: View {
   }
 
   private var statusText: String {
-    part.toolState?.status.rawValue.capitalized ?? "Pending"
+    guard let status = part.toolState?.status else {
+      return "Pending"
+    }
+
+    switch status {
+    case .pending, .running:
+      return "Running"
+    case .completed:
+      return "Done"
+    case .error:
+      return "Error"
+    case let .unknown(value):
+      return value.capitalized
+    }
+  }
+
+  private var statusColor: Color {
+    guard let status = part.toolState?.status else {
+      return .secondary
+    }
+
+    switch status {
+    case .pending, .running:
+      return .orange
+    case .completed:
+      return .green
+    case .error:
+      return .red
+    case .unknown:
+      return .secondary
+    }
   }
 
   @ViewBuilder
@@ -670,7 +712,7 @@ private struct ToolPartCard: View {
 
         Text(statusText)
           .font(.caption2.weight(.semibold))
-          .foregroundStyle(.secondary)
+          .foregroundStyle(statusColor)
       }
 
       if let subtitle = toolSubtitle(for: part), !subtitle.isEmpty {

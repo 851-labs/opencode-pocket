@@ -744,8 +744,29 @@ final class WorkspaceStore {
       }
 
     case "message.updated", "message.removed":
-      let sessionID = event.properties.objectValue?.string(for: "sessionID") ?? selectedSessionID
-      scheduleSessionRefresh(sessionID: sessionID)
+      guard let properties = event.properties.objectValue else {
+        let sessionID = selectedSessionID
+        scheduleSessionRefresh(sessionID: sessionID)
+        return
+      }
+
+      if event.type == "message.updated" {
+        if applyMessageUpdated(properties: properties) {
+          return
+        }
+        let sessionID =
+          properties.object(for: "info")?.string(for: "sessionID")
+            ?? properties.string(for: "sessionID")
+            ?? selectedSessionID
+        scheduleSessionRefresh(sessionID: sessionID, includeDiffs: false)
+        return
+      }
+
+      if applyMessageRemoval(properties: properties) {
+        return
+      }
+      let sessionID = properties.string(for: "sessionID") ?? selectedSessionID
+      scheduleSessionRefresh(sessionID: sessionID, includeDiffs: false)
 
     default:
       break
@@ -819,11 +840,56 @@ final class WorkspaceStore {
     if let partIndex = updatedParts.firstIndex(where: { $0.id == part.id }) {
       updatedParts[partIndex] = part
     } else {
-      updatedParts.append(part)
+      let insertIndex = updatedParts.firstIndex(where: { $0.id > part.id }) ?? updatedParts.count
+      updatedParts.insert(part, at: insertIndex)
     }
 
     messages[messageIndex] = MessageEnvelope(info: messages[messageIndex].info, parts: updatedParts)
     messagesBySession[part.sessionID] = messages
+    return true
+  }
+
+  private func applyMessageUpdated(properties: [String: JSONValue]) -> Bool {
+    let info: MessageInfo?
+    if let infoValue = properties["info"] {
+      info = infoValue.decoded(as: MessageInfo.self)
+    } else {
+      info = JSONValue.object(properties).decoded(as: MessageInfo.self)
+    }
+
+    guard let info else {
+      return false
+    }
+
+    var messages = messagesBySession[info.sessionID] ?? []
+    if let index = messages.firstIndex(where: { $0.info.id == info.id }) {
+      let existingParts = messages[index].parts
+      messages[index] = MessageEnvelope(info: info, parts: existingParts)
+    } else {
+      let insertIndex = messages.firstIndex(where: { $0.info.id > info.id }) ?? messages.count
+      messages.insert(MessageEnvelope(info: info, parts: []), at: insertIndex)
+    }
+
+    messagesBySession[info.sessionID] = messages
+    return true
+  }
+
+  private func applyMessageRemoval(properties: [String: JSONValue]) -> Bool {
+    guard
+      let sessionID = properties.string(for: "sessionID"),
+      let messageID = properties.string(for: "messageID"),
+      var messages = messagesBySession[sessionID]
+    else {
+      return false
+    }
+
+    let originalCount = messages.count
+    messages.removeAll { $0.info.id == messageID }
+    guard messages.count != originalCount else {
+      return false
+    }
+
+    messagesBySession[sessionID] = messages
     return true
   }
 

@@ -404,7 +404,19 @@ private struct MacAssistantMessageCard: View {
 
   private var groupedParts: [MacAssistantItem] {
     let visibleParts = message.parts.filter { part in
-      !(part.type == "tool" && (part.tool == "todowrite" || part.tool == "todoread"))
+      if part.type != "tool" {
+        return true
+      }
+
+      if part.tool == "todowrite" || part.tool == "todoread" {
+        return false
+      }
+
+      if part.tool == "question", part.toolState?.status.isInFlight == true {
+        return false
+      }
+
+      return true
     }
 
     var result: [MacAssistantItem] = []
@@ -586,6 +598,40 @@ private struct MacToolPartCard: View {
   let part: MessagePart
   @State private var showOutput = false
 
+  private var statusText: String {
+    guard let status = part.toolState?.status else {
+      return "Pending"
+    }
+
+    switch status {
+    case .pending, .running:
+      return "Running"
+    case .completed:
+      return "Done"
+    case .error:
+      return "Error"
+    case let .unknown(value):
+      return value.capitalized
+    }
+  }
+
+  private var statusColor: Color {
+    guard let status = part.toolState?.status else {
+      return .secondary
+    }
+
+    switch status {
+    case .pending, .running:
+      return .orange
+    case .completed:
+      return .green
+    case .error:
+      return .red
+    case .unknown:
+      return .secondary
+    }
+  }
+
   @ViewBuilder
   private var detailContent: some View {
     switch part.tool {
@@ -612,9 +658,9 @@ private struct MacToolPartCard: View {
 
         Spacer(minLength: 0)
 
-        Text(part.toolState?.status.rawValue.capitalized ?? "Pending")
+        Text(statusText)
           .font(.caption2)
-          .foregroundStyle(.secondary)
+          .foregroundStyle(statusColor)
       }
 
       if let subtitle = macToolSubtitle(for: part), !subtitle.isEmpty {
