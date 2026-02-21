@@ -46,7 +46,7 @@ final class WorkspaceStore {
     selectedModelVariant = connection.initialSelectedModelVariant
 
     if connection.initialProjects.isEmpty {
-      let defaultDirectory = connection.directory.trimmedNonEmpty ?? FileManager.default.homeDirectoryForCurrentUser.path
+      let defaultDirectory = connection.directory.trimmedNonEmpty ?? NSHomeDirectory()
       let project = Self.makeProject(directory: defaultDirectory)
       projects = [project]
       selectedProjectID = project.id

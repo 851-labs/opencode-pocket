@@ -11,47 +11,13 @@ struct ConnectView: View {
 
   private var formContent: some View {
     Form {
-      serverSection
-      authenticationSection
+      ConnectionServerSection(store: store, applyInputTraits: true)
+      ConnectionAuthenticationSection(store: store, applyInputTraits: true)
       actionsSection
     }
     .navigationTitle("OpenCode Pocket")
     .safeAreaInset(edge: .bottom) {
       statusFooter
-    }
-  }
-
-  @ViewBuilder
-  private var serverSection: some View {
-    Section("Server") {
-      TextField("Base URL", text: $store.baseURL)
-        .keyboardType(.URL)
-        .autocorrectionDisabled()
-        .textInputAutocapitalization(.never)
-        .accessibilityIdentifier("connect.baseURL")
-
-      TextField("Workspace directory (optional)", text: $store.directory)
-        .autocorrectionDisabled()
-        .textInputAutocapitalization(.never)
-        .accessibilityIdentifier("connect.directory")
-    }
-  }
-
-  @ViewBuilder
-  private var authenticationSection: some View {
-    Section("Authentication") {
-      Toggle("Use Basic Auth", isOn: $store.useBasicAuth)
-        .accessibilityIdentifier("connect.useBasicAuth")
-
-      if store.useBasicAuth {
-        TextField("Username", text: $store.username)
-          .autocorrectionDisabled()
-          .textInputAutocapitalization(.never)
-          .accessibilityIdentifier("connect.username")
-
-        SecureField("Password", text: $store.password)
-          .accessibilityIdentifier("connect.password")
-      }
     }
   }
 
@@ -71,13 +37,7 @@ struct ConnectView: View {
 
   private var connectButton: some View {
     Button(action: connect) {
-      HStack {
-        if store.isConnecting {
-          ProgressView()
-            .controlSize(.small)
-        }
-        Text(store.isConnecting ? "Connecting..." : "Connect")
-      }
+      ConnectionPrimaryButtonLabel(isConnecting: store.isConnecting, inlineProgressAndText: true)
     }
     .disabled(store.isConnecting)
     .accessibilityIdentifier("connect.button")

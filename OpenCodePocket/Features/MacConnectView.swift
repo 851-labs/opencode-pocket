@@ -27,35 +27,8 @@ struct MacConnectView: View {
 
   private var formContent: some View {
     Form {
-      serverSection
-      authenticationSection
-    }
-  }
-
-  @ViewBuilder
-  private var serverSection: some View {
-    Section("Server") {
-      TextField("Base URL", text: $store.baseURL)
-        .accessibilityIdentifier("connect.baseURL")
-
-      TextField("Workspace directory (optional)", text: $store.directory)
-        .accessibilityIdentifier("connect.directory")
-    }
-  }
-
-  @ViewBuilder
-  private var authenticationSection: some View {
-    Section("Authentication") {
-      Toggle("Use Basic Auth", isOn: $store.useBasicAuth)
-        .accessibilityIdentifier("connect.useBasicAuth")
-
-      if store.useBasicAuth {
-        TextField("Username", text: $store.username)
-          .accessibilityIdentifier("connect.username")
-
-        SecureField("Password", text: $store.password)
-          .accessibilityIdentifier("connect.password")
-      }
+      ConnectionServerSection(store: store, applyInputTraits: false)
+      ConnectionAuthenticationSection(store: store, applyInputTraits: false)
     }
   }
 
@@ -81,12 +54,7 @@ struct MacConnectView: View {
 
   private var connectButton: some View {
     Button(action: connect) {
-      if store.isConnecting {
-        ProgressView()
-          .controlSize(.small)
-      } else {
-        Text("Connect")
-      }
+      ConnectionPrimaryButtonLabel(isConnecting: store.isConnecting, inlineProgressAndText: false)
     }
     .keyboardShortcut(.defaultAction)
     .disabled(store.isConnecting)

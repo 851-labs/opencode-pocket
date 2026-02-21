@@ -52,7 +52,7 @@ final class OpenCodePocketUITests: XCTestCase {
     XCTAssertTrue(hasChangesPane, "Expected changes pane after switching panels")
 
     drawerToggle.tap()
-    let sessionRow = app.buttons["drawer.session.ses_mock_secondary"]
+    let sessionRow = app.buttons["drawer.session.ses_mock_primary"]
     XCTAssertTrue(sessionRow.waitForExistence(timeout: 4), "Expected selectable mock session row")
     sessionRow.tap()
 
@@ -77,8 +77,7 @@ final class OpenCodePocketUITests: XCTestCase {
     XCTAssertTrue(reasoningItem.waitForExistence(timeout: 4), "Expected reasoning summaries toggle in actions menu")
     reasoningItem.tap()
 
-    let copyPredicate = NSPredicate(format: "label == 'Copy' AND identifier BEGINSWITH 'workspace.turn.'")
-    let copyButton = app.buttons.matching(copyPredicate).firstMatch
+    let copyButton = app.buttons["message.assistant.copy"].firstMatch
     XCTAssertTrue(copyButton.waitForExistence(timeout: 4), "Expected assistant copy control in transcript")
   }
 }

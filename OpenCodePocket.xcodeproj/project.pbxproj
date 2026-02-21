@@ -24,6 +24,7 @@
 		63026B59410D0B0ECD612B80 /* WorkspaceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D525B8CA3040B4A99022C401 /* WorkspaceStore.swift */; };
 		8B06F4CD56748969A2052037 /* ConnectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C69CD8CF636DA57803128B44 /* ConnectView.swift */; };
 		93ACD98DA97BB5B919296FF6 /* OpenCodePocketApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F2AB2259CAD47AEF8C1F3AA /* OpenCodePocketApp.swift */; };
+		955B2DF6208D7E3C286B7BE5 /* ConnectionFormComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = D971DC2A29DECA6D00A5D81E /* ConnectionFormComponents.swift */; };
 		998C3F847F8CDE2AA23E1C3E /* OpenCodeClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E21B9A1F7EEF23EDA66C967 /* OpenCodeClientTests.swift */; };
 		B779FEDF99C4832910F61DC8 /* OpenCodeModels in Frameworks */ = {isa = PBXBuildFile; productRef = E7328959F3D1FC73CC4C176E /* OpenCodeModels */; };
 		BC7B461C1D77336301F9D74D /* JSONDecodingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD77BF34D8ED8192C6406A29 /* JSONDecodingTests.swift */; };
@@ -76,6 +77,7 @@
 		C5A7FA305D3CB67FDCC55764 /* AppStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStore.swift; sourceTree = "<group>"; };
 		C69CD8CF636DA57803128B44 /* ConnectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectView.swift; sourceTree = "<group>"; };
 		D525B8CA3040B4A99022C401 /* WorkspaceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceStore.swift; sourceTree = "<group>"; };
+		D971DC2A29DECA6D00A5D81E /* ConnectionFormComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionFormComponents.swift; sourceTree = "<group>"; };
 		E8E410DE47EC2B77914A2902 /* MacConnectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacConnectView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -193,6 +195,7 @@
 			isa = PBXGroup;
 			children = (
 				3E2236AE73B2BB09D504746E /* ChatView.swift */,
+				D971DC2A29DECA6D00A5D81E /* ConnectionFormComponents.swift */,
 				C69CD8CF636DA57803128B44 /* ConnectView.swift */,
 				E8E410DE47EC2B77914A2902 /* MacConnectView.swift */,
 				681188C7D0FE47069D7F445B /* MacWorkspaceView.swift */,
@@ -327,6 +330,7 @@
 				E02690E3B04E399CB1646C14 /* AppStore.swift in Sources */,
 				43998436472CA16316129DD7 /* ChatView.swift in Sources */,
 				8B06F4CD56748969A2052037 /* ConnectView.swift in Sources */,
+				955B2DF6208D7E3C286B7BE5 /* ConnectionFormComponents.swift in Sources */,
 				C079C36C986C5C291A4157D5 /* ConnectionStorage.swift in Sources */,
 				158D1954B8686764906A8497 /* ConnectionStore.swift in Sources */,
 				381731C83DA3795EDF3A1CE7 /* MacConnectView.swift in Sources */,
