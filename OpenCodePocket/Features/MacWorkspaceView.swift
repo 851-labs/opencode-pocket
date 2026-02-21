@@ -2651,9 +2651,6 @@ private struct MacSettingsModelsTab: View {
       Text("Models")
         .font(.title2.weight(.semibold))
 
-      TextField("Search models", text: $query)
-        .textFieldStyle(.roundedBorder)
-
       if filteredGroups.isEmpty {
         ContentUnavailableView(
           "No Models Found",
@@ -2717,6 +2714,7 @@ private struct MacSettingsModelsTab: View {
     }
     .padding(18)
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    .searchable(text: $query, prompt: "Search models")
   }
 }
 
