@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0067638D730AB37496CB0D36 /* RichMarkdownText.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D1A4E8F9B3FB8EECE04BD39 /* RichMarkdownText.swift */; };
 		0336F6CF4A6DAE07B166B8C9 /* MacWorkspaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 681188C7D0FE47069D7F445B /* MacWorkspaceView.swift */; };
 		0414AE69FC0105999EE4C86E /* OpenCodeNetworking in Frameworks */ = {isa = PBXBuildFile; productRef = 4D514DC58EA728464F285221 /* OpenCodeNetworking */; };
 		06C4BC829CCC1FB46B79708F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 8E5D2399CD06F9BB20324AC1 /* Assets.xcassets */; };
@@ -56,6 +57,7 @@
 		12811AD990A5004A07643D76 /* RequestBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RequestBuilderTests.swift; sourceTree = "<group>"; };
 		156C94AEED8216BAB93EF5B3 /* OpenCodePocketTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = OpenCodePocketTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		20A9AA4D4D775F7883475871 /* String+Trimmed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "String+Trimmed.swift"; sourceTree = "<group>"; };
+		2D1A4E8F9B3FB8EECE04BD39 /* RichMarkdownText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RichMarkdownText.swift; sourceTree = "<group>"; };
 		2EAE689015B7EAED4AFD7A08 /* ConnectionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionStore.swift; sourceTree = "<group>"; };
 		3E2236AE73B2BB09D504746E /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
 		51168867734DC2731DFD99F2 /* SSEParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SSEParserTests.swift; sourceTree = "<group>"; };
@@ -194,6 +196,7 @@
 				C69CD8CF636DA57803128B44 /* ConnectView.swift */,
 				E8E410DE47EC2B77914A2902 /* MacConnectView.swift */,
 				681188C7D0FE47069D7F445B /* MacWorkspaceView.swift */,
+				2D1A4E8F9B3FB8EECE04BD39 /* RichMarkdownText.swift */,
 				77054C883C43469DFD38B5A5 /* RootView.swift */,
 				6C7BFCD6254DAE5C93352594 /* SessionsView.swift */,
 				9D83BD8354E87398437EA542 /* WorkspaceView.swift */,
@@ -329,6 +332,7 @@
 				381731C83DA3795EDF3A1CE7 /* MacConnectView.swift in Sources */,
 				0336F6CF4A6DAE07B166B8C9 /* MacWorkspaceView.swift in Sources */,
 				93ACD98DA97BB5B919296FF6 /* OpenCodePocketApp.swift in Sources */,
+				0067638D730AB37496CB0D36 /* RichMarkdownText.swift in Sources */,
 				1355DEB3AE787C31F3505B08 /* RootView.swift in Sources */,
 				0E9E6AA9FEFC0FBE898B75A5 /* SessionsView.swift in Sources */,
 				26B0E2FF8B8C2E1C415E7E44 /* String+Trimmed.swift in Sources */,

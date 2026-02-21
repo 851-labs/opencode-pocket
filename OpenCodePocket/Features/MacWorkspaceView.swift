@@ -387,7 +387,7 @@ private struct MacUserMessageCard: View {
         .font(.caption.weight(.semibold))
         .foregroundStyle(.secondary)
 
-      MacMarkdownText(text: message.textBody)
+      RichMarkdownText(text: message.textBody)
         .font(.body)
     }
     .padding(10)
@@ -494,13 +494,13 @@ private struct MacAssistantPartView: View {
     switch part.type {
     case "text":
       if let text = part.text?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty {
-        MacMarkdownText(text: text)
+        RichMarkdownText(text: text)
           .font(.body)
       }
     case "reasoning":
       if let text = part.text?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty {
         DisclosureGroup("Reasoning") {
-          MacMarkdownText(text: text)
+          RichMarkdownText(text: text)
             .font(.subheadline)
             .padding(.top, 6)
         }
@@ -586,6 +586,20 @@ private struct MacToolPartCard: View {
   let part: MessagePart
   @State private var showOutput = false
 
+  @ViewBuilder
+  private var detailContent: some View {
+    switch part.tool {
+    case "edit":
+      MacToolEditPreview(part: part)
+    case "write":
+      MacToolWritePreview(part: part)
+    case "apply_patch":
+      MacToolPatchPreview(part: part)
+    default:
+      EmptyView()
+    }
+  }
+
   var body: some View {
     VStack(alignment: .leading, spacing: 6) {
       HStack(spacing: 8) {
@@ -615,6 +629,8 @@ private struct MacToolPartCard: View {
           .foregroundStyle(.red)
       }
 
+      detailContent
+
       if let output = part.toolState?.output?.trimmingCharacters(in: .whitespacesAndNewlines), !output.isEmpty {
         DisclosureGroup("Output", isExpanded: $showOutput) {
           ScrollView(.horizontal) {
@@ -634,28 +650,147 @@ private struct MacToolPartCard: View {
   }
 }
 
-private struct MacMarkdownText: View {
-  let text: String
+private struct MacToolEditPreview: View {
+  let part: MessagePart
+  @State private var isExpanded = false
 
-  private var attributed: AttributedString? {
-    try? AttributedString(
-      markdown: text,
-      options: AttributedString.MarkdownParsingOptions(
-        interpretedSyntax: .full,
-        failurePolicy: .returnPartiallyParsedIfPossible
-      )
-    )
+  private var filePath: String? {
+    part.toolInputString("filePath")
+  }
+
+  private var beforeText: String? {
+    let value = part.toolInputString("oldString")?.trimmingCharacters(in: .whitespacesAndNewlines)
+    return value?.isEmpty == true ? nil : value
+  }
+
+  private var afterText: String? {
+    let value = part.toolInputString("newString")?.trimmingCharacters(in: .whitespacesAndNewlines)
+    return value?.isEmpty == true ? nil : value
   }
 
   var body: some View {
-    Group {
-      if let attributed {
-        Text(attributed)
-      } else {
-        Text(text)
+    if beforeText != nil || afterText != nil {
+      DisclosureGroup("Edit Preview", isExpanded: $isExpanded) {
+        VStack(alignment: .leading, spacing: 8) {
+          if let filePath {
+            Text(filePath)
+              .font(.caption2)
+              .foregroundStyle(.secondary)
+          }
+
+          if let beforeText {
+            MacToolSnippetBlock(title: "Before", text: beforeText)
+          }
+
+          if let afterText {
+            MacToolSnippetBlock(title: "After", text: afterText)
+          }
+        }
+        .padding(.top, 6)
+      }
+      .font(.caption)
+    }
+  }
+}
+
+private struct MacToolWritePreview: View {
+  let part: MessagePart
+  @State private var isExpanded = false
+
+  private var filePath: String? {
+    part.toolInputString("filePath")
+  }
+
+  private var content: String? {
+    let value = part.toolInputString("content")?.trimmingCharacters(in: .whitespacesAndNewlines)
+    return value?.isEmpty == true ? nil : value
+  }
+
+  var body: some View {
+    if let content {
+      DisclosureGroup("Written Content", isExpanded: $isExpanded) {
+        VStack(alignment: .leading, spacing: 8) {
+          if let filePath {
+            Text(filePath)
+              .font(.caption2)
+              .foregroundStyle(.secondary)
+          }
+          MacToolSnippetBlock(title: "Content", text: content)
+        }
+        .padding(.top, 6)
+      }
+      .font(.caption)
+    }
+  }
+}
+
+private struct MacToolPatchPreview: View {
+  let part: MessagePart
+  @State private var isExpanded = false
+
+  private var files: [String] {
+    let fromInput = part.toolState?.input["files"]?.arrayValue?.compactMap { $0.stringValue } ?? []
+    if !fromInput.isEmpty {
+      return fromInput
+    }
+    return part.files
+  }
+
+  private var patchText: String? {
+    let value = part.toolInputString("patchText")?.trimmingCharacters(in: .whitespacesAndNewlines)
+    return value?.isEmpty == true ? nil : value
+  }
+
+  var body: some View {
+    if !files.isEmpty || patchText != nil {
+      VStack(alignment: .leading, spacing: 6) {
+        if !files.isEmpty {
+          VStack(alignment: .leading, spacing: 4) {
+            Text("Files")
+              .font(.caption2.weight(.semibold))
+              .foregroundStyle(.secondary)
+            ForEach(files, id: \.self) { file in
+              Text(file)
+                .font(.caption2)
+                .lineLimit(2)
+            }
+          }
+        }
+
+        if let patchText {
+          DisclosureGroup("Patch Text", isExpanded: $isExpanded) {
+            MacToolSnippetBlock(title: "Patch", text: patchText)
+              .padding(.top, 6)
+          }
+          .font(.caption)
+        }
       }
     }
-    .textSelection(.enabled)
+  }
+}
+
+private struct MacToolSnippetBlock: View {
+  let title: String
+  let text: String
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 4) {
+      Text(title)
+        .font(.caption2.weight(.semibold))
+        .foregroundStyle(.secondary)
+
+      ScrollView(.horizontal) {
+        Text(text)
+          .font(.system(.caption, design: .monospaced))
+          .textSelection(.enabled)
+          .frame(maxWidth: .infinity, alignment: .leading)
+      }
+      .padding(8)
+      .background(
+        RoundedRectangle(cornerRadius: 8, style: .continuous)
+          .fill(Color.secondary.opacity(0.07))
+      )
+    }
   }
 }
 
@@ -986,9 +1121,36 @@ private struct MacQuestionPromptCard: View {
             .font(.caption.weight(.semibold))
 
           if !question.options.isEmpty {
-            Text(question.options.map(\.label).joined(separator: "  •  "))
-              .font(.caption2)
-              .foregroundStyle(.secondary)
+            let selected = selectedLabels(at: index)
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 130), spacing: 6)], spacing: 6) {
+              ForEach(question.options, id: \.label) { option in
+                let isSelected = selected.contains(option.label)
+
+                Button {
+                  selectOption(option.label, at: index, multiple: question.multiple == true)
+                } label: {
+                  VStack(alignment: .leading, spacing: 2) {
+                    Text(option.label)
+                      .font(.caption.weight(.semibold))
+                      .lineLimit(1)
+
+                    if !option.description.isEmpty {
+                      Text(option.description)
+                        .font(.caption2)
+                        .lineLimit(2)
+                    }
+                  }
+                  .frame(maxWidth: .infinity, alignment: .leading)
+                  .padding(.horizontal, 8)
+                  .padding(.vertical, 6)
+                  .background(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                      .fill(isSelected ? Color.accentColor.opacity(0.2) : Color.secondary.opacity(0.08))
+                  )
+                }
+                .buttonStyle(.plain)
+              }
+            }
           }
 
           TextField(
@@ -1065,6 +1227,35 @@ private struct MacQuestionPromptCard: View {
         answerDrafts[index] = value
       }
     )
+  }
+
+  private func selectedLabels(at index: Int) -> [String] {
+    let raw = answerDrafts[safe: index]?.trimmedForInput ?? ""
+    guard !raw.isEmpty else {
+      return []
+    }
+    return raw
+      .split(separator: ",")
+      .map { String($0).trimmedForInput }
+      .filter { !$0.isEmpty }
+  }
+
+  private func selectOption(_ option: String, at index: Int, multiple: Bool) {
+    ensureDraftCapacity(at: index)
+
+    if !multiple {
+      answerDrafts[index] = option
+      return
+    }
+
+    var selected = selectedLabels(at: index)
+    if let selectedIndex = selected.firstIndex(of: option) {
+      selected.remove(at: selectedIndex)
+    } else {
+      selected.append(option)
+    }
+
+    answerDrafts[index] = selected.joined(separator: ", ")
   }
 
   private func ensureDraftCapacity(at index: Int) {

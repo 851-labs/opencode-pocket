@@ -752,6 +752,14 @@ public struct MessagePart: Codable, Hashable, Identifiable, Sendable {
     toolInput[key]?.doubleValue
   }
 
+  public func toolInputArray(_ key: String) -> [JSONValue]? {
+    toolInput[key]?.arrayValue
+  }
+
+  public func toolInputStringArray(_ key: String) -> [String] {
+    toolInputArray(key)?.compactMap(\.stringValue) ?? []
+  }
+
   public init(from decoder: Decoder) throws {
     let raw = try JSONValue(from: decoder)
     guard let object = raw.objectValue else {
