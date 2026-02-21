@@ -1,6 +1,12 @@
 import Foundation
 import Security
 
+struct SavedProject: Codable, Equatable, Identifiable {
+  var id: String
+  var name: String
+  var directory: String
+}
+
 struct ConnectionSettings: Codable, Equatable {
   var baseURL: String
   var username: String
@@ -11,6 +17,8 @@ struct ConnectionSettings: Codable, Equatable {
   var selectedModelID: String?
   var selectedModelVariant: String?
   var hiddenModelKeys: [String]
+  var projects: [SavedProject]
+  var selectedProjectID: String?
 
   static let `default` = ConnectionSettings(
     baseURL: "http://claudl.taile64ce5.ts.net:4096",
@@ -21,7 +29,9 @@ struct ConnectionSettings: Codable, Equatable {
     selectedProviderID: nil,
     selectedModelID: nil,
     selectedModelVariant: nil,
-    hiddenModelKeys: []
+    hiddenModelKeys: [],
+    projects: [],
+    selectedProjectID: nil
   )
 }
 

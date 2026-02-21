@@ -16,9 +16,11 @@ struct MacWorkspaceView: View {
   @Environment(\.openSettings) private var openSettings
 
   @State private var selectedPanel: MacWorkspacePanel = .transcript
+  @State private var isAddProjectSheetPresented = false
   @State private var isRenameSheetPresented = false
   @State private var isDeleteConfirmationPresented = false
   @State private var renameDraft = ""
+  @State private var projectDirectoryDraft = ""
 
   private var selectedSessionID: String? {
     store.selectedSessionID
@@ -43,6 +45,9 @@ struct MacWorkspaceView: View {
     .sheet(isPresented: $isRenameSheetPresented) {
       renameSheet
     }
+    .sheet(isPresented: $isAddProjectSheetPresented) {
+      addProjectSheet
+    }
     .confirmationDialog("Delete Session?", isPresented: $isDeleteConfirmationPresented) {
       Button("Delete", role: .destructive) {
         deleteSelectedSession()
@@ -58,37 +63,66 @@ struct MacWorkspaceView: View {
 
   private var sidebar: some View {
     List(selection: $store.selectedSessionID) {
-      ForEach(store.visibleSessions) { session in
-        VStack(alignment: .leading, spacing: 4) {
-          Text(session.title)
-            .font(.body.weight(.semibold))
-            .lineLimit(1)
+      ForEach(store.projects) { project in
+        Section(project.name) {
+          Button {
+            store.selectProject(project.id)
+          } label: {
+            HStack(spacing: 8) {
+              Image(systemName: store.selectedProjectID == project.id ? "folder.fill" : "folder")
+                .font(.caption)
+                .foregroundStyle(.secondary)
 
-          HStack(spacing: 6) {
-            Text(session.id)
-              .font(.caption)
-              .foregroundStyle(.secondary)
-              .lineLimit(1)
+              Text(project.directory)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
 
-            Circle()
-              .fill(.secondary.opacity(0.5))
-              .frame(width: 3, height: 3)
+              Spacer(minLength: 0)
+            }
+          }
+          .buttonStyle(.plain)
+          .accessibilityIdentifier("sidebar.project.\(project.id)")
 
-            Text(store.statusLabel(for: session.id))
+          ForEach(store.visibleSessions(for: project.id)) { session in
+            VStack(alignment: .leading, spacing: 4) {
+              Text(session.title)
+                .font(.body.weight(.semibold))
+                .lineLimit(1)
+
+              HStack(spacing: 6) {
+                Text(session.id)
+                  .font(.caption)
+                  .foregroundStyle(.secondary)
+                  .lineLimit(1)
+
+                Circle()
+                  .fill(.secondary.opacity(0.5))
+                  .frame(width: 3, height: 3)
+
+                Text(store.statusLabel(for: session.id))
+                  .font(.caption)
+                  .foregroundStyle(.secondary)
+              }
+            }
+            .tag(session.id as String?)
+          }
+
+          if store.visibleSessions(for: project.id).isEmpty {
+            Text("No sessions yet")
               .font(.caption)
               .foregroundStyle(.secondary)
           }
         }
-        .tag(session.id as String?)
       }
     }
     .navigationTitle("Sessions")
     .overlay {
-      if store.visibleSessions.isEmpty {
+      if store.projects.isEmpty {
         ContentUnavailableView(
-          "No Sessions",
-          systemImage: "tray",
-          description: Text("Create a session to start chatting with your OpenCode server.")
+          "No Projects",
+          systemImage: "folder.badge.plus",
+          description: Text("Add a project directory to start browsing sessions.")
         )
       }
     }
@@ -179,6 +213,14 @@ struct MacWorkspaceView: View {
       }
       .disabled(store.isCreatingSession)
       .accessibilityIdentifier("sessions.create")
+
+      Button {
+        projectDirectoryDraft = ""
+        isAddProjectSheetPresented = true
+      } label: {
+        Image(systemName: "folder.badge.plus")
+      }
+      .accessibilityIdentifier("projects.add")
     }
 
     ToolbarItem {
@@ -242,6 +284,40 @@ struct MacWorkspaceView: View {
     }
     .padding(18)
     .frame(width: 360)
+  }
+
+  private var addProjectSheet: some View {
+    VStack(alignment: .leading, spacing: 14) {
+      Text("Add Project")
+        .font(.headline)
+
+      TextField("/path/to/project", text: $projectDirectoryDraft)
+
+      HStack {
+        Spacer()
+
+        Button("Cancel") {
+          isAddProjectSheetPresented = false
+        }
+
+        Button("Add") {
+          guard store.addProject(directory: projectDirectoryDraft) else {
+            return
+          }
+
+          Task {
+            await store.refreshAgentAndModelOptions()
+            await store.refreshSessions()
+          }
+
+          isAddProjectSheetPresented = false
+        }
+        .disabled(projectDirectoryDraft.trimmedForInput.isEmpty)
+        .keyboardShortcut(.defaultAction)
+      }
+    }
+    .padding(18)
+    .frame(width: 420)
   }
 
   private func prepareRenameSession() {

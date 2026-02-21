@@ -6,6 +6,9 @@ import OpenCodeNetworking
 @MainActor
 @Observable
 final class WorkspaceStore {
+  var projects: [SavedProject] = []
+  var selectedProjectID: String?
+
   var sessions: [Session] = []
   var selectedSessionID: String?
   var messagesBySession: [String: [MessageEnvelope]] = [:]
@@ -41,6 +44,21 @@ final class WorkspaceStore {
     selectedAgentName = connection.initialSelectedAgentName
     selectedModel = connection.initialSelectedModel
     selectedModelVariant = connection.initialSelectedModelVariant
+
+    if connection.initialProjects.isEmpty {
+      let defaultDirectory = connection.directory.trimmedNonEmpty ?? FileManager.default.homeDirectoryForCurrentUser.path
+      let project = Self.makeProject(directory: defaultDirectory)
+      projects = [project]
+      selectedProjectID = project.id
+    } else {
+      projects = connection.initialProjects
+      let preferredID = connection.initialSelectedProjectID
+      selectedProjectID = projects.contains(where: { $0.id == preferredID }) ? preferredID : projects.first?.id
+    }
+
+    if let selectedProjectID, let selectedProject = projects.first(where: { $0.id == selectedProjectID }) {
+      connection.directory = selectedProject.directory
+    }
   }
 
   var selectedMessages: [MessageEnvelope] {
@@ -76,8 +94,33 @@ final class WorkspaceStore {
     !respondingQuestionRequestIDs.isEmpty
   }
 
+  var activeProject: SavedProject? {
+    guard let selectedProjectID else {
+      return projects.first
+    }
+    return projects.first(where: { $0.id == selectedProjectID })
+  }
+
+  var activeProjectDirectory: String? {
+    activeProject?.directory.trimmedNonEmpty
+  }
+
   var visibleSessions: [Session] {
-    sessions.filter { ($0.time.archived ?? 0) <= 0 }
+    guard let selectedProjectID else {
+      return []
+    }
+    return visibleSessions(for: selectedProjectID)
+  }
+
+  func visibleSessions(for projectID: String) -> [Session] {
+    guard let project = projects.first(where: { $0.id == projectID }) else {
+      return []
+    }
+
+    return sessions
+      .filter { $0.directory == project.directory }
+      .filter { ($0.time.archived ?? 0) <= 0 }
+      .sorted { $0.sortTimestamp > $1.sortTimestamp }
   }
 
   var selectedModelDisplayName: String {
@@ -152,6 +195,64 @@ final class WorkspaceStore {
       }
   }
 
+  func selectProject(_ projectID: String) {
+    guard projects.contains(where: { $0.id == projectID }) else {
+      return
+    }
+
+    selectedProjectID = projectID
+
+    if let activeProject {
+      connection.directory = activeProject.directory
+    }
+
+    Task {
+      await refreshAgentAndModelOptions()
+      await refreshPendingPrompts()
+    }
+
+    if let selectedSessionID, visibleSessions.contains(where: { $0.id == selectedSessionID }) {
+      persistWorkspaceSettings()
+      return
+    }
+
+    selectedSessionID = visibleSessions.first?.id
+    if let selectedSessionID {
+      Task {
+        await selectSession(selectedSessionID)
+      }
+    }
+    persistWorkspaceSettings()
+  }
+
+  @discardableResult
+  func addProject(directory: String) -> Bool {
+    guard let normalized = normalizedProjectDirectory(directory) else {
+      return false
+    }
+
+    if let existing = projects.first(where: { $0.directory == normalized }) {
+      selectProject(existing.id)
+      return true
+    }
+
+    let project = Self.makeProject(directory: normalized)
+    projects.append(project)
+    projects.sort { lhs, rhs in
+      lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+    }
+    selectedProjectID = project.id
+    connection.directory = project.directory
+    selectedSessionID = visibleSessions.first?.id
+    if let selectedSessionID {
+      Task {
+        await selectSession(selectedSessionID)
+      }
+    }
+    persistWorkspaceSettings()
+    return true
+  }
+
   func disconnect() {
     connection.disconnect()
   }
@@ -174,45 +275,53 @@ final class WorkspaceStore {
       isRefreshingSessions = false
     }
 
-    do {
-      var nextSessions = try await client.listSessions(directory: connection.resolvedDirectory)
-      nextSessions.sort { $0.sortTimestamp > $1.sortTimestamp }
+    var nextSessions: [Session] = []
 
-      sessions = nextSessions
-      let validSessionIDs = Set(nextSessions.map(\.id))
-      messagesBySession = messagesBySession.filter { validSessionIDs.contains($0.key) }
-      diffsBySession = diffsBySession.filter { validSessionIDs.contains($0.key) }
-      sessionStatuses = sessionStatuses.filter { validSessionIDs.contains($0.key) }
-      permissionsBySession = permissionsBySession.filter { validSessionIDs.contains($0.key) }
-      questionsBySession = questionsBySession.filter { validSessionIDs.contains($0.key) }
-      todosBySession = todosBySession.filter { validSessionIDs.contains($0.key) }
-      let nextVisible = visibleSessions
+    for project in projects {
+      do {
+        var projectSessions = try await client.listSessions(directory: project.directory)
+        projectSessions.sort { $0.sortTimestamp > $1.sortTimestamp }
+        nextSessions.append(contentsOf: projectSessions)
+      } catch {
+        connection.connectionError = error.localizedDescription
+      }
+    }
 
-      if let selectedSessionID, nextVisible.contains(where: { $0.id == selectedSessionID }) {
+    nextSessions.sort { $0.sortTimestamp > $1.sortTimestamp }
+
+    sessions = nextSessions
+    let validSessionIDs = Set(nextSessions.map(\.id))
+    messagesBySession = messagesBySession.filter { validSessionIDs.contains($0.key) }
+    diffsBySession = diffsBySession.filter { validSessionIDs.contains($0.key) }
+    sessionStatuses = sessionStatuses.filter { validSessionIDs.contains($0.key) }
+    permissionsBySession = permissionsBySession.filter { validSessionIDs.contains($0.key) }
+    questionsBySession = questionsBySession.filter { validSessionIDs.contains($0.key) }
+    todosBySession = todosBySession.filter { validSessionIDs.contains($0.key) }
+    let nextVisible = visibleSessions
+
+    if let selectedSessionID, nextVisible.contains(where: { $0.id == selectedSessionID }) {
+      await loadMessages(sessionID: selectedSessionID)
+      await loadDiffs(sessionID: selectedSessionID)
+    } else {
+      selectedSessionID = nextVisible.first?.id
+      if let selectedSessionID {
         await loadMessages(sessionID: selectedSessionID)
         await loadDiffs(sessionID: selectedSessionID)
-      } else {
-        selectedSessionID = nextVisible.first?.id
-        if let selectedSessionID {
-          await loadMessages(sessionID: selectedSessionID)
-          await loadDiffs(sessionID: selectedSessionID)
-        }
       }
-
-      await refreshPendingPrompts()
-    } catch {
-      connection.connectionError = error.localizedDescription
     }
+
+    await refreshPendingPrompts()
   }
 
   func createSession(title: String? = nil) async {
     if connection.isMockWorkspace {
       let now = Date().timeIntervalSince1970 * 1000
+      let directory = activeProject?.directory ?? "/tmp/mock"
       let created = Session(
         id: "ses_mock_\(UUID().uuidString.prefix(8))",
         slug: "mock-session",
-        projectID: "prj_mock",
-        directory: "/tmp/mock",
+        projectID: activeProject?.id ?? "prj_mock",
+        directory: directory,
         parentID: nil,
         title: title?.trimmedNonEmpty ?? "New Session",
         version: "1",
@@ -240,7 +349,7 @@ final class WorkspaceStore {
     do {
       let created = try await client.createSession(
         SessionCreateRequest(title: title),
-        directory: connection.resolvedDirectory
+        directory: activeProjectDirectory ?? connection.resolvedDirectory
       )
       selectedSessionID = created.id
       await refreshSessions()
@@ -251,6 +360,17 @@ final class WorkspaceStore {
 
   func selectSession(_ sessionID: String?) async {
     guard let sessionID else { return }
+
+    if
+      let session = sessions.first(where: { $0.id == sessionID }),
+      let project = projects.first(where: { $0.directory == session.directory }),
+      selectedProjectID != project.id
+    {
+      selectedProjectID = project.id
+      connection.directory = project.directory
+      persistWorkspaceSettings()
+    }
+
     selectedSessionID = sessionID
     await loadMessages(sessionID: sessionID)
     await loadDiffs(sessionID: sessionID)
@@ -412,12 +532,7 @@ final class WorkspaceStore {
       hiddenModelKeys = hiddenModelKeys.intersection(knownKeys)
       reconcileSelectedModel(using: catalog.defaultModels)
       reconcileSelectedModelVariant()
-      connection.persistSettingsBestEffort(
-        selectedAgentName: selectedAgentName,
-        selectedModel: selectedModel,
-        selectedModelVariant: selectedModelVariant,
-        hiddenModelKeys: hiddenModelKeys
-      )
+      persistWorkspaceSettings()
     } catch {
       connection.connectionError = error.localizedDescription
     }
@@ -425,34 +540,19 @@ final class WorkspaceStore {
 
   func selectAgent(named name: String) {
     selectedAgentName = name
-    connection.persistSettingsBestEffort(
-      selectedAgentName: selectedAgentName,
-      selectedModel: selectedModel,
-      selectedModelVariant: selectedModelVariant,
-      hiddenModelKeys: hiddenModelKeys
-    )
+    persistWorkspaceSettings()
   }
 
   func selectModel(_ option: ModelOption) {
     selectedModel = option.selector
     reconcileSelectedModelVariant()
-    connection.persistSettingsBestEffort(
-      selectedAgentName: selectedAgentName,
-      selectedModel: selectedModel,
-      selectedModelVariant: selectedModelVariant,
-      hiddenModelKeys: hiddenModelKeys
-    )
+    persistWorkspaceSettings()
   }
 
   func selectModelVariant(_ variant: String?) {
     selectedModelVariant = variant?.trimmedNonEmpty
     reconcileSelectedModelVariant()
-    connection.persistSettingsBestEffort(
-      selectedAgentName: selectedAgentName,
-      selectedModel: selectedModel,
-      selectedModelVariant: selectedModelVariant,
-      hiddenModelKeys: hiddenModelKeys
-    )
+    persistWorkspaceSettings()
   }
 
   func isModelVisible(_ option: ModelOption) -> Bool {
@@ -473,12 +573,7 @@ final class WorkspaceStore {
 
     reconcileSelectedModel(using: [:])
     reconcileSelectedModelVariant()
-    connection.persistSettingsBestEffort(
-      selectedAgentName: selectedAgentName,
-      selectedModel: selectedModel,
-      selectedModelVariant: selectedModelVariant,
-      hiddenModelKeys: hiddenModelKeys
-    )
+    persistWorkspaceSettings()
   }
 
   func currentPermissionRequest(for sessionID: String) -> PermissionRequest? {
@@ -1122,14 +1217,53 @@ final class WorkspaceStore {
     "\(selector.providerID)::\(selector.modelID)"
   }
 
+  private func normalizedProjectDirectory(_ raw: String) -> String? {
+    let expanded = (raw as NSString).expandingTildeInPath
+    let trimmed = expanded.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty else {
+      return nil
+    }
+
+    let normalized = URL(fileURLWithPath: trimmed).standardizedFileURL.path
+    var isDirectory = ObjCBool(false)
+    guard FileManager.default.fileExists(atPath: normalized, isDirectory: &isDirectory), isDirectory.boolValue else {
+      return nil
+    }
+
+    return normalized
+  }
+
+  private func persistWorkspaceSettings() {
+    connection.persistSettingsBestEffort(
+      selectedAgentName: selectedAgentName,
+      selectedModel: selectedModel,
+      selectedModelVariant: selectedModelVariant,
+      hiddenModelKeys: hiddenModelKeys,
+      projects: projects,
+      selectedProjectID: selectedProjectID
+    )
+  }
+
+  private static func makeProject(directory: String) -> SavedProject {
+    let url = URL(fileURLWithPath: directory)
+    let name = url.lastPathComponent.isEmpty ? directory : url.lastPathComponent
+    return SavedProject(id: "prj_\(UUID().uuidString.lowercased())", name: name, directory: directory)
+  }
+
   func seedMockWorkspace() {
     let now = Date().timeIntervalSince1970 * 1000
+    let mockDirectory = "/tmp/opencode-pocket"
+    let mockProject = projects.first(where: { $0.directory == mockDirectory })
+      ?? SavedProject(id: "prj_mock_local", name: "opencode-pocket", directory: mockDirectory)
+    projects = [mockProject]
+    selectedProjectID = mockProject.id
+    connection.directory = mockProject.directory
 
     let primary = Session(
       id: "ses_mock_primary",
       slug: "mock-primary",
-      projectID: "prj_mock",
-      directory: "/tmp/opencode-pocket",
+      projectID: mockProject.id,
+      directory: mockProject.directory,
       parentID: nil,
       title: "Mock Workspace Session",
       version: "1",
@@ -1142,8 +1276,8 @@ final class WorkspaceStore {
     let secondary = Session(
       id: "ses_mock_secondary",
       slug: "mock-secondary",
-      projectID: "prj_mock",
-      directory: "/tmp/opencode-pocket",
+      projectID: mockProject.id,
+      directory: mockProject.directory,
       parentID: nil,
       title: "Mock Planning Session",
       version: "1",

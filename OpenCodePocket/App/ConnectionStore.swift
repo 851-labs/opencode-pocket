@@ -26,6 +26,8 @@ final class ConnectionStore {
   let initialSelectedModel: ModelSelector?
   let initialSelectedModelVariant: String?
   let initialHiddenModelKeys: Set<String>
+  let initialProjects: [SavedProject]
+  let initialSelectedProjectID: String?
 
   private let settingsStore: ConnectionSettingsStore
 
@@ -60,6 +62,8 @@ final class ConnectionStore {
 
     initialSelectedModelVariant = settings.selectedModelVariant?.trimmedNonEmpty
     initialHiddenModelKeys = Set(settings.hiddenModelKeys)
+    initialProjects = settings.projects
+    initialSelectedProjectID = settings.selectedProjectID
   }
 
   var resolvedDirectory: String? {
@@ -120,7 +124,9 @@ final class ConnectionStore {
         selectedAgentName: workspace?.selectedAgentName.trimmedNonEmpty,
         selectedModel: workspace?.selectedModel,
         selectedModelVariant: workspace?.selectedModelVariant,
-        hiddenModelKeys: workspace?.hiddenModelKeys ?? []
+        hiddenModelKeys: workspace?.hiddenModelKeys ?? [],
+        projects: workspace?.projects ?? [],
+        selectedProjectID: workspace?.selectedProjectID
       )
 
       await workspace?.refreshAgentAndModelOptions()
@@ -149,7 +155,9 @@ final class ConnectionStore {
     selectedAgentName: String,
     selectedModel: ModelSelector?,
     selectedModelVariant: String?,
-    hiddenModelKeys: Set<String>
+    hiddenModelKeys: Set<String>,
+    projects: [SavedProject],
+    selectedProjectID: String?
   ) {
     let normalized: String
     if let url = try? normalizedBaseURL() {
@@ -165,7 +173,9 @@ final class ConnectionStore {
       selectedAgentName: selectedAgentName.trimmedNonEmpty,
       selectedModel: selectedModel,
       selectedModelVariant: selectedModelVariant?.trimmedNonEmpty,
-      hiddenModelKeys: hiddenModelKeys
+      hiddenModelKeys: hiddenModelKeys,
+      projects: projects,
+      selectedProjectID: selectedProjectID
     )
   }
 
@@ -191,7 +201,9 @@ final class ConnectionStore {
     selectedAgentName: String?,
     selectedModel: ModelSelector?,
     selectedModelVariant: String?,
-    hiddenModelKeys: Set<String>
+    hiddenModelKeys: Set<String>,
+    projects: [SavedProject],
+    selectedProjectID: String?
   ) {
     let settings = ConnectionSettings(
       baseURL: normalizedBaseURL,
@@ -202,7 +214,9 @@ final class ConnectionStore {
       selectedProviderID: selectedModel?.providerID,
       selectedModelID: selectedModel?.modelID,
       selectedModelVariant: selectedModelVariant,
-      hiddenModelKeys: hiddenModelKeys.sorted()
+      hiddenModelKeys: hiddenModelKeys.sorted(),
+      projects: projects,
+      selectedProjectID: selectedProjectID
     )
     settingsStore.saveSettings(settings)
 
