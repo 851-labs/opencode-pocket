@@ -1042,8 +1042,19 @@ private struct MacComposerView: View {
         MacQuestionPromptCard(store: store, sessionID: sessionID, request: question)
       }
 
+      let composerBlocked = store.isComposerBlocked(for: sessionID)
+      let isRunning = store.isSessionRunning(sessionID)
+
       TextField("Message", text: $store.draftMessage, axis: .vertical)
         .lineLimit(1 ... 8)
+        .disabled(composerBlocked)
+
+      if composerBlocked {
+        Text("Respond to the active prompt before sending another message.")
+          .font(.caption)
+          .foregroundStyle(.secondary)
+          .frame(maxWidth: .infinity, alignment: .leading)
+      }
 
       HStack(spacing: 10) {
         agentMenu
@@ -1066,7 +1077,7 @@ private struct MacComposerView: View {
           }
         }
         .buttonStyle(.borderedProminent)
-        .disabled(!store.isSessionRunning(sessionID) && store.draftMessage.trimmedForInput.isEmpty)
+        .disabled(!isRunning && (composerBlocked || store.draftMessage.trimmedForInput.isEmpty))
         .keyboardShortcut(.defaultAction)
       }
     }
@@ -1151,14 +1162,14 @@ private struct MacPermissionPromptCard: View {
             await store.respondToPermission(sessionID: sessionID, requestID: request.id, reply: .reject)
           }
         }
-        .disabled(store.isRespondingToPermission)
+        .disabled(store.isRespondingToPermission(requestID: request.id))
 
         Button("Allow Always") {
           Task {
             await store.respondToPermission(sessionID: sessionID, requestID: request.id, reply: .always)
           }
         }
-        .disabled(store.isRespondingToPermission)
+        .disabled(store.isRespondingToPermission(requestID: request.id))
 
         Button("Allow Once") {
           Task {
@@ -1166,7 +1177,7 @@ private struct MacPermissionPromptCard: View {
           }
         }
         .buttonStyle(.borderedProminent)
-        .disabled(store.isRespondingToPermission)
+        .disabled(store.isRespondingToPermission(requestID: request.id))
       }
       .font(.caption)
     }
@@ -1244,7 +1255,7 @@ private struct MacQuestionPromptCard: View {
             await store.rejectQuestion(sessionID: sessionID, requestID: request.id)
           }
         }
-        .disabled(store.isRespondingToQuestion)
+        .disabled(store.isRespondingToQuestion(requestID: request.id))
 
         Spacer()
 
@@ -1258,7 +1269,7 @@ private struct MacQuestionPromptCard: View {
           }
         }
         .buttonStyle(.borderedProminent)
-        .disabled(store.isRespondingToQuestion || parsedAnswers.allSatisfy(\.isEmpty))
+        .disabled(store.isRespondingToQuestion(requestID: request.id) || parsedAnswers.allSatisfy(\.isEmpty))
       }
       .font(.caption)
     }

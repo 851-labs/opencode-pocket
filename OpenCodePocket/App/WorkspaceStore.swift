@@ -24,8 +24,8 @@ final class WorkspaceStore {
   var isSending = false
   var isCreatingSession = false
   var isRefreshingSessions = false
-  var isRespondingToPermission = false
-  var isRespondingToQuestion = false
+  var respondingPermissionRequestIDs: Set<String> = []
+  var respondingQuestionRequestIDs: Set<String> = []
 
   private let connection: ConnectionStore
   private var eventsTask: Task<Void, Never>?
@@ -61,6 +61,14 @@ final class WorkspaceStore {
   var selectedTodos: [TodoItem] {
     guard let selectedSessionID else { return [] }
     return todosBySession[selectedSessionID] ?? []
+  }
+
+  var isRespondingToPermission: Bool {
+    !respondingPermissionRequestIDs.isEmpty
+  }
+
+  var isRespondingToQuestion: Bool {
+    !respondingQuestionRequestIDs.isEmpty
   }
 
   var visibleSessions: [Session] {
@@ -377,6 +385,18 @@ final class WorkspaceStore {
     questionsBySession[sessionID]?.first
   }
 
+  func isComposerBlocked(for sessionID: String) -> Bool {
+    currentPermissionRequest(for: sessionID) != nil || currentQuestionRequest(for: sessionID) != nil
+  }
+
+  func isRespondingToPermission(requestID: String) -> Bool {
+    respondingPermissionRequestIDs.contains(requestID)
+  }
+
+  func isRespondingToQuestion(requestID: String) -> Bool {
+    respondingQuestionRequestIDs.contains(requestID)
+  }
+
   func refreshPendingPrompts() async {
     if connection.isMockWorkspace {
       return
@@ -406,11 +426,11 @@ final class WorkspaceStore {
     }
 
     guard let client = connection.client else { return }
-    guard !isRespondingToPermission else { return }
+    guard !isRespondingToPermission(requestID: requestID) else { return }
 
-    isRespondingToPermission = true
+    respondingPermissionRequestIDs.insert(requestID)
     defer {
-      isRespondingToPermission = false
+      respondingPermissionRequestIDs.remove(requestID)
     }
 
     do {
@@ -433,11 +453,11 @@ final class WorkspaceStore {
     }
 
     guard let client = connection.client else { return }
-    guard !isRespondingToQuestion else { return }
+    guard !isRespondingToQuestion(requestID: requestID) else { return }
 
-    isRespondingToQuestion = true
+    respondingQuestionRequestIDs.insert(requestID)
     defer {
-      isRespondingToQuestion = false
+      respondingQuestionRequestIDs.remove(requestID)
     }
 
     do {
@@ -459,11 +479,11 @@ final class WorkspaceStore {
     }
 
     guard let client = connection.client else { return }
-    guard !isRespondingToQuestion else { return }
+    guard !isRespondingToQuestion(requestID: requestID) else { return }
 
-    isRespondingToQuestion = true
+    respondingQuestionRequestIDs.insert(requestID)
     defer {
-      isRespondingToQuestion = false
+      respondingQuestionRequestIDs.remove(requestID)
     }
 
     do {

@@ -1131,11 +1131,15 @@ private struct WorkspaceComposer: View {
         )
       }
 
+      let composerBlocked = store.isComposerBlocked(for: sessionID)
+      let isRunning = store.isSessionRunning(sessionID)
+
       HStack(alignment: .bottom, spacing: 10) {
         TextField("Message", text: $store.draftMessage, axis: .vertical)
           .lineLimit(1 ... 6)
           .padding(.horizontal, 12)
           .padding(.vertical, 10)
+          .disabled(composerBlocked)
           .accessibilityIdentifier("composer.input")
 
         Button {
@@ -1154,9 +1158,16 @@ private struct WorkspaceComposer: View {
             .background(Circle().fill(Color.accentColor))
         }
         .buttonStyle(.plain)
-        .disabled(!store.isSessionRunning(sessionID) && store.draftMessage.trimmedForInput.isEmpty)
+        .disabled(!isRunning && (composerBlocked || store.draftMessage.trimmedForInput.isEmpty))
         .accessibilityIdentifier("composer.sendAbort")
         .accessibilityLabel(store.isSessionRunning(sessionID) ? "Abort" : "Send")
+      }
+
+      if composerBlocked {
+        Text("Respond to the active prompt before sending another message.")
+          .font(.caption)
+          .foregroundStyle(.secondary)
+          .frame(maxWidth: .infinity, alignment: .leading)
       }
 
       HStack(spacing: 8) {
@@ -1264,7 +1275,7 @@ private struct PermissionPromptCard: View {
             )
           }
         }
-        .disabled(store.isRespondingToPermission)
+        .disabled(store.isRespondingToPermission(requestID: request.id))
 
         Button("Allow Always") {
           Task {
@@ -1275,7 +1286,7 @@ private struct PermissionPromptCard: View {
             )
           }
         }
-        .disabled(store.isRespondingToPermission)
+        .disabled(store.isRespondingToPermission(requestID: request.id))
 
         Button("Allow Once") {
           Task {
@@ -1287,7 +1298,7 @@ private struct PermissionPromptCard: View {
           }
         }
         .buttonStyle(.borderedProminent)
-        .disabled(store.isRespondingToPermission)
+        .disabled(store.isRespondingToPermission(requestID: request.id))
       }
       .font(.caption)
     }
@@ -1365,7 +1376,7 @@ private struct QuestionPromptCard: View {
             await store.rejectQuestion(sessionID: sessionID, requestID: request.id)
           }
         }
-        .disabled(store.isRespondingToQuestion)
+        .disabled(store.isRespondingToQuestion(requestID: request.id))
 
         Spacer()
 
@@ -1379,7 +1390,7 @@ private struct QuestionPromptCard: View {
           }
         }
         .buttonStyle(.borderedProminent)
-        .disabled(store.isRespondingToQuestion || parsedAnswers.allSatisfy(\.isEmpty))
+        .disabled(store.isRespondingToQuestion(requestID: request.id) || parsedAnswers.allSatisfy(\.isEmpty))
       }
       .font(.caption)
     }
