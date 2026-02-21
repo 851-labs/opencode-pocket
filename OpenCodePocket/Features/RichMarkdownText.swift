@@ -9,13 +9,12 @@ import UIKit
 struct RichMarkdownText: View {
   let text: String
 
-  private var segments: [MarkdownSegment] {
-    MarkdownSegment.parse(text)
-  }
+  @State private var renderedSegments: [MarkdownSegment] = []
+  @State private var pendingRenderTask: Task<Void, Never>?
 
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
-      ForEach(segments) { segment in
+      ForEach(renderedSegments) { segment in
         switch segment.kind {
         case let .prose(value):
           MarkdownProseView(text: value)
@@ -25,6 +24,50 @@ struct RichMarkdownText: View {
       }
     }
     .frame(maxWidth: .infinity, alignment: .leading)
+    .onAppear {
+      renderedSegments = MarkdownRenderCache.shared.segments(for: text)
+    }
+    .onChange(of: text) { _, updated in
+      pendingRenderTask?.cancel()
+      pendingRenderTask = Task { @MainActor in
+        try? await Task.sleep(nanoseconds: 80_000_000)
+        guard !Task.isCancelled else {
+          return
+        }
+        renderedSegments = MarkdownRenderCache.shared.segments(for: updated)
+      }
+    }
+    .onDisappear {
+      pendingRenderTask?.cancel()
+      pendingRenderTask = nil
+    }
+  }
+}
+
+private final class MarkdownRenderCache {
+  static let shared = MarkdownRenderCache()
+
+  private let capacity = 120
+  private var cache: [String: [MarkdownSegment]] = [:]
+  private var order: [String] = []
+
+  private init() {}
+
+  func segments(for text: String) -> [MarkdownSegment] {
+    if let hit = cache[text] {
+      return hit
+    }
+
+    let parsed = MarkdownSegment.parse(text)
+    cache[text] = parsed
+    order.append(text)
+
+    if order.count > capacity, let oldest = order.first {
+      cache[oldest] = nil
+      order.removeFirst()
+    }
+
+    return parsed
   }
 }
 
@@ -113,13 +156,18 @@ private struct MarkdownProseView: View {
   let text: String
 
   private var attributed: AttributedString? {
-    try? AttributedString(
+    guard var value = try? AttributedString(
       markdown: text,
       options: AttributedString.MarkdownParsingOptions(
         interpretedSyntax: .full,
         failurePolicy: .returnPartiallyParsedIfPossible
       )
-    )
+    ) else {
+      return nil
+    }
+
+    linkifyURLs(in: &value)
+    return value
   }
 
   var body: some View {
@@ -134,6 +182,35 @@ private struct MarkdownProseView: View {
   }
 }
 
+private func linkifyURLs(in attributed: inout AttributedString) {
+  let plain = String(attributed.characters)
+  guard !plain.isEmpty else {
+    return
+  }
+
+  guard let regex = try? NSRegularExpression(pattern: #"https?://[^\s)\]>`]+"#) else {
+    return
+  }
+
+  let nsRange = NSRange(location: 0, length: (plain as NSString).length)
+  for match in regex.matches(in: plain, range: nsRange) {
+    guard
+      let stringRange = Range(match.range, in: plain),
+      let attributedRange = Range(stringRange, in: attributed),
+      attributed[attributedRange].link == nil
+    else {
+      continue
+    }
+
+    let urlString = String(plain[stringRange])
+    guard let url = URL(string: urlString) else {
+      continue
+    }
+
+    attributed[attributedRange].link = url
+  }
+}
+
 private struct MarkdownCodeBlockView: View {
   let language: String?
   let text: String
@@ -145,6 +222,10 @@ private struct MarkdownCodeBlockView: View {
       return "CODE"
     }
     return language.uppercased()
+  }
+
+  private var highlightedCode: AttributedString {
+    highlightedCodeText(text, language: language)
   }
 
   var body: some View {
@@ -166,7 +247,7 @@ private struct MarkdownCodeBlockView: View {
       }
 
       ScrollView(.horizontal) {
-        Text(text)
+        Text(highlightedCode)
           .font(.system(.caption, design: .monospaced))
           .textSelection(.enabled)
           .frame(maxWidth: .infinity, alignment: .leading)
@@ -186,6 +267,44 @@ private struct MarkdownCodeBlockView: View {
     DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
       copied = false
     }
+  }
+}
+
+private func highlightedCodeText(_ text: String, language: String?) -> AttributedString {
+  var attributed = AttributedString(text)
+  let lowered = language?.lowercased() ?? ""
+
+  if lowered == "swift" || lowered == "" {
+    applyRegexColor(#"\b(let|var|func|if|else|guard|return|await|async|try|throw|struct|class|enum|private|public|internal|extension|import)\b"#, color: .blue, to: &attributed, source: text)
+    applyRegexColor(#"\b(true|false|nil)\b"#, color: .purple, to: &attributed, source: text)
+  }
+
+  if lowered == "json" {
+    applyRegexColor(#""([^"\\]|\\.)*"\s*:"#, color: .blue, to: &attributed, source: text)
+    applyRegexColor(#""([^"\\]|\\.)*""#, color: .green, to: &attributed, source: text)
+    applyRegexColor(#"\b(true|false|null)\b"#, color: .purple, to: &attributed, source: text)
+    applyRegexColor(#"-?\b\d+(\.\d+)?\b"#, color: .orange, to: &attributed, source: text)
+  }
+
+  if lowered == "bash" || lowered == "sh" || lowered == "zsh" {
+    applyRegexColor(#"\b(if|then|fi|for|in|do|done|case|esac|while|function|export|alias)\b"#, color: .blue, to: &attributed, source: text)
+    applyRegexColor(#"\$[A-Za-z_][A-Za-z0-9_]*"#, color: .purple, to: &attributed, source: text)
+  }
+
+  return attributed
+}
+
+private func applyRegexColor(_ pattern: String, color: Color, to attributed: inout AttributedString, source: String) {
+  guard let regex = try? NSRegularExpression(pattern: pattern) else {
+    return
+  }
+
+  let range = NSRange(location: 0, length: (source as NSString).length)
+  for match in regex.matches(in: source, range: range) {
+    guard let attributedRange = Range(match.range, in: attributed) else {
+      continue
+    }
+    attributed[attributedRange].foregroundColor = color
   }
 }
 
