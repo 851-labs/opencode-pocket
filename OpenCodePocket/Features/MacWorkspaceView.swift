@@ -907,10 +907,12 @@ private func macToolDisplayName(for tool: String?) -> String {
     return "Write"
   case "apply_patch":
     return "Patch"
+  case "webfetch":
+    return "Web"
   case "question":
     return "Question"
   case "task":
-    return "Task"
+    return "Agent"
   case let value:
     return value ?? "Tool"
   }
@@ -922,6 +924,8 @@ private func macIconName(for tool: String?) -> String {
     return "terminal"
   case "read", "glob", "grep", "list":
     return "magnifyingglass"
+  case "webfetch":
+    return "globe"
   case "write", "edit", "apply_patch":
     return "doc.text"
   case "task":
@@ -936,15 +940,25 @@ private func macIconName(for tool: String?) -> String {
 private func macToolSubtitle(for part: MessagePart) -> String? {
   switch part.tool {
   case "read":
-    return part.toolInputString("filePath")
+    return macDisplayPathComponent(part.toolInputString("filePath"))
   case "list":
-    return part.toolInputString("path")
+    return macDisplayPathComponent(part.toolInputString("path"))
   case "glob":
     return part.toolInputString("pattern")
   case "grep":
     return part.toolInputString("pattern")
+  case "webfetch":
+    return part.toolInputString("url")
   case "bash":
     return part.toolInputString("description")
+  case "edit", "write":
+    return macDisplayPathComponent(part.toolInputString("filePath"))
+  case "apply_patch":
+    let fileCount = part.toolState?.input["files"]?.arrayValue?.count ?? 0
+    if fileCount > 0 {
+      return "\(fileCount) file\(fileCount == 1 ? "" : "s")"
+    }
+    return nil
   case "task":
     return part.toolInputString("description")
   default:
@@ -956,6 +970,23 @@ private func macToolSubtitle(for part: MessagePart) -> String? {
     }
     return nil
   }
+}
+
+private func macDisplayPathComponent(_ rawPath: String?) -> String? {
+  guard let rawPath else {
+    return nil
+  }
+
+  let trimmed = rawPath.trimmingCharacters(in: .whitespacesAndNewlines)
+  guard !trimmed.isEmpty else {
+    return nil
+  }
+
+  let component = trimmed
+    .split(whereSeparator: { $0 == "/" || $0 == "\\" })
+    .last
+    .map(String.init)
+  return component?.isEmpty == false ? component : trimmed
 }
 
 private struct MacChangesPane: View {
