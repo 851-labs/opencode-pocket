@@ -571,8 +571,6 @@ private struct UserMessageCard: View {
             .lineLimit(1)
         }
 
-        Spacer(minLength: 0)
-
         Button {
           copyText(message.textBody)
           copied = true
@@ -585,8 +583,10 @@ private struct UserMessageCard: View {
             .foregroundStyle(.secondary)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(copied ? "Copied" : "Copy")
         .accessibilityIdentifier("message.user.copy.\(message.id)")
       }
+      .frame(maxWidth: .infinity, alignment: .leading)
     }
     .padding(12)
     .frame(maxWidth: .infinity, alignment: .trailing)
@@ -949,8 +949,6 @@ private struct AssistantPartView: View {
                   .lineLimit(1)
               }
 
-              Spacer(minLength: 0)
-
               Button {
                 copyText(copyTextValue)
                 copied = true
@@ -966,6 +964,7 @@ private struct AssistantPartView: View {
               .accessibilityLabel(copied ? "Copied" : "Copy")
               .accessibilityIdentifier("message.assistant.copy")
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
           }
         }
       }

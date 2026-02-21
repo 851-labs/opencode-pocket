@@ -500,6 +500,7 @@ private struct MacUserMessageCard: View {
   let message: MessageEnvelope
 
   @State private var copied = false
+  @State private var isHovering = false
 
   private var attachments: [MacMessageAttachment] {
     message.parts.compactMap(MacMessageAttachment.init(part:))
@@ -518,29 +519,32 @@ private struct MacUserMessageCard: View {
       MacHighlightedUserText(text: message.textBody)
         .font(.body)
 
-      HStack(spacing: 8) {
-        if !metadata.isEmpty {
-          Text(metadata)
-            .font(.caption2)
-            .foregroundStyle(.secondary)
-            .lineLimit(1)
-        }
-
-        Spacer(minLength: 0)
-
-        Button {
-          macCopyText(message.textBody)
-          copied = true
-          DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            copied = false
+      if isHovering || copied {
+        HStack(spacing: 8) {
+          if !metadata.isEmpty {
+            Text(metadata)
+              .font(.caption2)
+              .foregroundStyle(.secondary)
+              .lineLimit(1)
           }
-        } label: {
-          Image(systemName: copied ? "checkmark" : "doc.on.doc")
-            .font(.caption)
-            .foregroundStyle(.secondary)
+
+          Button {
+            macCopyText(message.textBody)
+            copied = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+              copied = false
+            }
+          } label: {
+            Image(systemName: copied ? "checkmark" : "doc.on.doc")
+              .font(.caption)
+              .foregroundStyle(.secondary)
+          }
+          .buttonStyle(.plain)
+          .accessibilityLabel(copied ? "Copied" : "Copy")
+          .accessibilityIdentifier("message.user.copy.\(message.id)")
         }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier("message.user.copy.\(message.id)")
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .transition(.opacity)
       }
     }
     .padding(10)
@@ -549,6 +553,11 @@ private struct MacUserMessageCard: View {
       RoundedRectangle(cornerRadius: 10, style: .continuous)
         .fill(Color.accentColor.opacity(0.16))
     )
+    .onHover { hovering in
+      isHovering = hovering
+    }
+    .animation(.easeInOut(duration: 0.15), value: isHovering)
+    .animation(.easeInOut(duration: 0.15), value: copied)
     .accessibilityElement(children: .contain)
     .accessibilityLabel("User message")
   }
@@ -837,6 +846,8 @@ private struct MacAssistantMessageCard: View {
   let busy: Bool
   let showReasoningSummaries: Bool
 
+  @State private var isHovering = false
+
   private var lastTextPartID: String? {
     groupedParts.compactMap { item in
       if case let .part(part) = item,
@@ -908,7 +919,8 @@ private struct MacAssistantMessageCard: View {
             part: part,
             message: message,
             showReasoningSummaries: showReasoningSummaries,
-            isLastTextPart: part.id == lastTextPartID
+            isLastTextPart: part.id == lastTextPartID,
+            showMetadataRow: isHovering
           )
         case let .context(_, tools):
           MacContextToolGroupCard(parts: tools, busy: busy && index == groupedParts.count - 1)
@@ -933,6 +945,10 @@ private struct MacAssistantMessageCard: View {
       RoundedRectangle(cornerRadius: 10, style: .continuous)
         .fill(Color.gray.opacity(0.12))
     )
+    .onHover { hovering in
+      isHovering = hovering
+    }
+    .animation(.easeInOut(duration: 0.15), value: isHovering)
     .accessibilityElement(children: .contain)
     .accessibilityLabel("Assistant message")
   }
@@ -957,6 +973,7 @@ private struct MacAssistantPartView: View {
   let message: MessageEnvelope
   let showReasoningSummaries: Bool
   let isLastTextPart: Bool
+  let showMetadataRow: Bool
 
   @State private var copied = false
 
@@ -977,30 +994,32 @@ private struct MacAssistantPartView: View {
             .font(.body)
 
           if isLastTextPart {
-            HStack(spacing: 8) {
-              if !metadata.isEmpty {
-                Text(metadata)
-                  .font(.caption2)
-                  .foregroundStyle(.secondary)
-                  .lineLimit(1)
-              }
-
-              Spacer(minLength: 0)
-
-              Button {
-                macCopyText(copyTextValue)
-                copied = true
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                  copied = false
+            if showMetadataRow || copied {
+              HStack(spacing: 8) {
+                if !metadata.isEmpty {
+                  Text(metadata)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
                 }
-              } label: {
-                Image(systemName: copied ? "checkmark" : "doc.on.doc")
-                  .font(.caption)
-                  .foregroundStyle(.secondary)
+
+                Button {
+                  macCopyText(copyTextValue)
+                  copied = true
+                  DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                    copied = false
+                  }
+                } label: {
+                  Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(copied ? "Copied" : "Copy")
+                .accessibilityIdentifier("message.assistant.copy")
               }
-              .buttonStyle(.plain)
-              .accessibilityLabel(copied ? "Copied" : "Copy")
-              .accessibilityIdentifier("message.assistant.copy")
+              .frame(maxWidth: .infinity, alignment: .leading)
+              .transition(.opacity)
             }
           }
         }
