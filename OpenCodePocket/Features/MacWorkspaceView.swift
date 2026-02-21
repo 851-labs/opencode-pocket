@@ -511,10 +511,6 @@ private struct MacUserMessageCard: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
-      Text("You")
-        .font(.caption.weight(.semibold))
-        .foregroundStyle(.secondary)
-
       if !attachments.isEmpty {
         MacAttachmentStrip(attachments: attachments)
       }
@@ -553,6 +549,8 @@ private struct MacUserMessageCard: View {
       RoundedRectangle(cornerRadius: 10, style: .continuous)
         .fill(Color.accentColor.opacity(0.16))
     )
+    .accessibilityElement(children: .contain)
+    .accessibilityLabel("User message")
   }
 }
 
@@ -897,10 +895,6 @@ private struct MacAssistantMessageCard: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
-      Text("Assistant")
-        .font(.caption.weight(.semibold))
-        .foregroundStyle(.secondary)
-
       if groupedParts.isEmpty {
         Text("(Assistant response has no visible parts yet)")
           .font(.caption)
@@ -939,6 +933,8 @@ private struct MacAssistantMessageCard: View {
       RoundedRectangle(cornerRadius: 10, style: .continuous)
         .fill(Color.gray.opacity(0.12))
     )
+    .accessibilityElement(children: .contain)
+    .accessibilityLabel("Assistant message")
   }
 }
 

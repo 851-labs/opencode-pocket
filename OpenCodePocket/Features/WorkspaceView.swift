@@ -556,10 +556,6 @@ private struct UserMessageCard: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
-      Text("You")
-        .font(.caption.weight(.semibold))
-        .foregroundStyle(.secondary)
-
       if !attachments.isEmpty {
         AttachmentStrip(attachments: attachments)
       }
@@ -598,6 +594,8 @@ private struct UserMessageCard: View {
       RoundedRectangle(cornerRadius: 12, style: .continuous)
         .fill(Color.accentColor.opacity(0.16))
     )
+    .accessibilityElement(children: .contain)
+    .accessibilityLabel("User message")
   }
 }
 
@@ -861,10 +859,6 @@ private struct AssistantMessageCard: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
-      Text("Assistant")
-        .font(.caption.weight(.semibold))
-        .foregroundStyle(.secondary)
-
       if items.isEmpty {
         Text("(Assistant response has no visible parts yet)")
           .font(.caption)
@@ -903,6 +897,8 @@ private struct AssistantMessageCard: View {
       RoundedRectangle(cornerRadius: 12, style: .continuous)
         .fill(Color.white.opacity(0.72))
     )
+    .accessibilityElement(children: .contain)
+    .accessibilityLabel("Assistant message")
   }
 }
 
