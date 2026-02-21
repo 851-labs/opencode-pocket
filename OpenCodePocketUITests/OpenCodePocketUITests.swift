@@ -60,4 +60,24 @@ final class OpenCodePocketUITests: XCTestCase {
     XCTAssertTrue(anyElements["composer.modelMenu"].exists, "Expected model menu in composer")
     XCTAssertTrue(anyElements["composer.sendAbort"].exists, "Expected send/abort control in composer")
   }
+
+  @MainActor
+  func testTranscriptMenuToggleAndAssistantCopyControl() throws {
+    let app = XCUIApplication()
+    app.launchArguments = ["-ui-testing-workspace"]
+    app.launchEnvironment["OPENCODE_POCKET_UI_TEST_WORKSPACE"] = "1"
+    app.launch()
+
+    let actionsMenu = app.buttons["workspace.actions.menu"].firstMatch
+    XCTAssertTrue(actionsMenu.waitForExistence(timeout: 10), "Expected actions menu in workspace toolbar")
+    actionsMenu.tap()
+
+    let reasoningItem = app.buttons["Show Reasoning Summaries"]
+    XCTAssertTrue(reasoningItem.waitForExistence(timeout: 4), "Expected reasoning summaries toggle in actions menu")
+    reasoningItem.tap()
+
+    let copyPredicate = NSPredicate(format: "label == 'Copy' AND identifier BEGINSWITH 'workspace.turn.'")
+    let copyButton = app.buttons.matching(copyPredicate).firstMatch
+    XCTAssertTrue(copyButton.waitForExistence(timeout: 4), "Expected assistant copy control in transcript")
+  }
 }

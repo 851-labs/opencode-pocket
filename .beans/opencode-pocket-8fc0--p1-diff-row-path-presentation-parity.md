@@ -1,7 +1,7 @@
 ---
 # opencode-pocket-8fc0
 title: P1 diff row path presentation parity
-status: todo
+status: completed
 type: task
 priority: normal
 tags:
@@ -9,6 +9,6 @@ tags:
     - diff
     - ui
 created_at: 2026-02-21T08:13:16Z
-updated_at: 2026-02-21T08:13:16Z
+updated_at: 2026-02-21T08:45:09Z
 ---
 

@@ -1,7 +1,7 @@
 ---
 # opencode-pocket-y5cx
 title: P1 inline file and agent highlight parity
-status: todo
+status: completed
 type: task
 priority: normal
 tags:
@@ -9,6 +9,6 @@ tags:
     - user
     - ui
 created_at: 2026-02-21T08:13:16Z
-updated_at: 2026-02-21T08:13:16Z
+updated_at: 2026-02-21T08:45:00Z
 ---
 

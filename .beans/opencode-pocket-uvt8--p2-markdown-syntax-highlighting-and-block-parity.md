@@ -1,7 +1,7 @@
 ---
 # opencode-pocket-uvt8
 title: P2 markdown syntax highlighting and block parity
-status: todo
+status: completed
 type: task
 priority: low
 tags:
@@ -9,6 +9,6 @@ tags:
     - markdown
     - ui
 created_at: 2026-02-21T08:13:21Z
-updated_at: 2026-02-21T08:13:21Z
+updated_at: 2026-02-21T08:54:38Z
 ---
 
