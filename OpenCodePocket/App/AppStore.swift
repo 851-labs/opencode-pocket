@@ -1,7 +1,7 @@
+import Foundation
 import Observation
 
 @MainActor
-@Observable
 final class AppStore {
   let connection: ConnectionStore
   let workspace: WorkspaceStore

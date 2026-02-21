@@ -6,7 +6,7 @@ struct OpenCodePocketApp: App {
 
   var body: some Scene {
     WindowGroup {
-      RootView(store: store)
+      RootView(connection: store.connection, workspace: store.workspace)
     }
 
 #if os(macOS)

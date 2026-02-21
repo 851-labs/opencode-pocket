@@ -1,23 +1,24 @@
 import SwiftUI
 
 struct RootView: View {
-  @Bindable var store: AppStore
+  @Bindable var connection: ConnectionStore
+  @Bindable var workspace: WorkspaceStore
 
   var body: some View {
 #if os(macOS)
     Group {
-      if store.connection.isConnected {
-        MacWorkspaceView(store: store.workspace)
+      if connection.isConnected {
+        MacWorkspaceView(store: workspace)
       } else {
-        MacConnectView(store: store.connection)
+        MacConnectView(store: connection)
       }
     }
 #else
     Group {
-      if store.connection.isConnected {
-        WorkspaceView(store: store.workspace)
+      if connection.isConnected {
+        WorkspaceView(store: workspace)
       } else {
-        ConnectView(store: store.connection)
+        ConnectView(store: connection)
       }
     }
 #endif
