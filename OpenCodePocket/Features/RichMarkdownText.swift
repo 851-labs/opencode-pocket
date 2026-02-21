@@ -6,6 +6,8 @@ import AppKit
 import UIKit
 #endif
 
+// MARK: - Rich Markdown View
+
 struct RichMarkdownText: View {
   let text: String
 
@@ -24,25 +26,39 @@ struct RichMarkdownText: View {
       }
     }
     .frame(maxWidth: .infinity, alignment: .leading)
-    .onAppear {
-      renderedSegments = MarkdownRenderCache.shared.segments(for: text)
-    }
+    .onAppear(perform: handleAppear)
     .onChange(of: text) { _, updated in
-      pendingRenderTask?.cancel()
-      pendingRenderTask = Task { @MainActor in
-        try? await Task.sleep(nanoseconds: 80_000_000)
-        guard !Task.isCancelled else {
-          return
-        }
-        renderedSegments = MarkdownRenderCache.shared.segments(for: updated)
-      }
+      handleTextChange(updated)
     }
-    .onDisappear {
-      pendingRenderTask?.cancel()
-      pendingRenderTask = nil
-    }
+    .onDisappear(perform: handleDisappear)
   }
 }
+
+// MARK: - Rich Markdown Lifecycle
+
+private extension RichMarkdownText {
+  func handleAppear() {
+    renderedSegments = MarkdownRenderCache.shared.segments(for: text)
+  }
+
+  func handleTextChange(_ updated: String) {
+    pendingRenderTask?.cancel()
+    pendingRenderTask = Task { @MainActor in
+      try? await Task.sleep(nanoseconds: 80_000_000)
+      guard !Task.isCancelled else {
+        return
+      }
+      renderedSegments = MarkdownRenderCache.shared.segments(for: updated)
+    }
+  }
+
+  func handleDisappear() {
+    pendingRenderTask?.cancel()
+    pendingRenderTask = nil
+  }
+}
+
+// MARK: - Markdown Segment Cache
 
 private final class MarkdownRenderCache {
   static let shared = MarkdownRenderCache()
@@ -70,6 +86,8 @@ private final class MarkdownRenderCache {
     return parsed
   }
 }
+
+// MARK: - Segment Parsing
 
 private struct MarkdownSegment: Identifiable {
   enum Kind {
@@ -152,6 +170,8 @@ private struct MarkdownSegment: Identifiable {
   }
 }
 
+// MARK: - Prose Rendering
+
 private struct MarkdownProseView: View {
   let text: String
 
@@ -182,6 +202,8 @@ private struct MarkdownProseView: View {
   }
 }
 
+// MARK: - URL Linkification
+
 private func linkifyURLs(in attributed: inout AttributedString) {
   let plain = String(attributed.characters)
   guard !plain.isEmpty else {
@@ -210,6 +232,8 @@ private func linkifyURLs(in attributed: inout AttributedString) {
     attributed[attributedRange].link = url
   }
 }
+
+// MARK: - Code Block Rendering
 
 private struct MarkdownCodeBlockView: View {
   let language: String?
@@ -270,6 +294,8 @@ private struct MarkdownCodeBlockView: View {
   }
 }
 
+// MARK: - Syntax Highlighting
+
 private func highlightedCodeText(_ text: String, language: String?) -> AttributedString {
   var attributed = AttributedString(text)
   let lowered = language?.lowercased() ?? ""
@@ -307,6 +333,8 @@ private func applyRegexColor(_ pattern: String, color: Color, to attributed: ino
     attributed[attributedRange].foregroundColor = color
   }
 }
+
+// MARK: - Clipboard
 
 private func copyToClipboard(_ value: String) {
 #if os(macOS)
