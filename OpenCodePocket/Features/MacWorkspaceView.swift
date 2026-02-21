@@ -1,6 +1,7 @@
 #if os(macOS)
 import OpenCodeModels
 import SwiftUI
+import AppKit
 
 private enum MacWorkspacePanel: String, CaseIterable, Identifiable {
   case transcript = "Transcript"
@@ -120,7 +121,8 @@ struct MacWorkspaceView: View {
           case .transcript:
             MacTranscriptPane(
               messages: store.messagesBySession[selectedSessionID] ?? [],
-              sessionStatus: store.status(for: selectedSessionID)
+              sessionStatus: store.status(for: selectedSessionID),
+              showReasoningSummaries: store.showReasoningSummaries
             )
           case .changes:
             MacChangesPane(diffs: store.diffsBySession[selectedSessionID] ?? [])
@@ -200,6 +202,10 @@ struct MacWorkspaceView: View {
           isDeleteConfirmationPresented = true
         }
         .disabled(selectedSessionID == nil)
+
+        Toggle(isOn: $store.showReasoningSummaries) {
+          Text("Show Reasoning Summaries")
+        }
       } label: {
         Label("Session Actions", systemImage: "ellipsis.circle")
       }
@@ -263,12 +269,24 @@ struct MacWorkspaceView: View {
 private struct MacTranscriptPane: View {
   let messages: [MessageEnvelope]
   let sessionStatus: SessionStatus
+  let showReasoningSummaries: Bool
 
   @State private var followTail = true
   @State private var hasPendingTail = false
+  @State private var visibleTurnLimit = 40
+
+  private let turnBatchSize = 40
 
   private var turns: [MacTranscriptTurn] {
     MacTranscriptTurn.build(from: messages)
+  }
+
+  private var visibleTurns: [MacTranscriptTurn] {
+    Array(turns.suffix(visibleTurnLimit))
+  }
+
+  private var hiddenTurnCount: Int {
+    max(0, turns.count - visibleTurnLimit)
   }
 
   var body: some View {
@@ -283,10 +301,26 @@ private struct MacTranscriptPane: View {
         ZStack(alignment: .bottomTrailing) {
           ScrollView {
             LazyVStack(alignment: .leading, spacing: 12) {
-              ForEach(Array(turns.enumerated()), id: \.element.id) { index, turn in
+              if hiddenTurnCount > 0 {
+                Button {
+                  visibleTurnLimit += turnBatchSize
+                  followTail = false
+                } label: {
+                  Text("Load earlier (\(hiddenTurnCount))")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.accentColor)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 8)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("workspace.transcript.loadEarlier")
+              }
+
+              ForEach(Array(visibleTurns.enumerated()), id: \.element.id) { index, turn in
                 MacTurnView(
                   turn: turn,
-                  isWorking: index == turns.count - 1 && sessionStatus.isRunning
+                  isWorking: index == visibleTurns.count - 1 && sessionStatus.isRunning,
+                  showReasoningSummaries: showReasoningSummaries
                 )
                 .id(turn.id)
               }
@@ -302,6 +336,7 @@ private struct MacTranscriptPane: View {
               }
           )
           .onChange(of: messages.count) { _, _ in
+            visibleTurnLimit = max(visibleTurnLimit, turnBatchSize)
             guard let lastID = turns.last?.id else { return }
             if followTail {
               withAnimation(.easeOut(duration: 0.2)) {
@@ -401,6 +436,22 @@ private struct MacTranscriptTurn: Identifiable {
 private struct MacTurnView: View {
   let turn: MacTranscriptTurn
   let isWorking: Bool
+  let showReasoningSummaries: Bool
+
+  private var latestReasoningHeading: String? {
+    turn.assistantMessages
+      .flatMap(\.parts)
+      .filter { $0.type == "reasoning" }
+      .compactMap { $0.text }
+      .compactMap(macExtractReasoningHeading)
+      .last
+  }
+
+  private var hasVisibleAssistantText: Bool {
+    turn.assistantMessages
+      .flatMap(\.parts)
+      .contains { $0.type == "text" && !($0.text?.trimmedForInput ?? "").isEmpty }
+  }
 
   var body: some View {
     VStack(alignment: .leading, spacing: 10) {
@@ -411,17 +462,25 @@ private struct MacTurnView: View {
       ForEach(Array(turn.assistantMessages.enumerated()), id: \.element.id) { index, assistant in
         MacAssistantMessageCard(
           message: assistant,
-          busy: isWorking && index == turn.assistantMessages.count - 1
+          busy: isWorking && index == turn.assistantMessages.count - 1,
+          showReasoningSummaries: showReasoningSummaries
         )
       }
 
-      if isWorking {
+      if isWorking && (!hasVisibleAssistantText || showReasoningSummaries || latestReasoningHeading != nil) {
         HStack(spacing: 8) {
           ProgressView()
             .controlSize(.small)
           Text("Thinking...")
             .font(.caption)
             .foregroundStyle(.secondary)
+
+          if !showReasoningSummaries, let latestReasoningHeading {
+            Text(latestReasoningHeading)
+              .font(.caption)
+              .foregroundStyle(.secondary)
+              .lineLimit(1)
+          }
         }
         .padding(.leading, 8)
       }
@@ -440,14 +499,53 @@ private struct MacTurnView: View {
 private struct MacUserMessageCard: View {
   let message: MessageEnvelope
 
+  @State private var copied = false
+
+  private var attachments: [MacMessageAttachment] {
+    message.parts.compactMap(MacMessageAttachment.init(part:))
+  }
+
+  private var metadata: String {
+    macUserMessageMetadata(for: message)
+  }
+
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
       Text("You")
         .font(.caption.weight(.semibold))
         .foregroundStyle(.secondary)
 
-      RichMarkdownText(text: message.textBody)
+      if !attachments.isEmpty {
+        MacAttachmentStrip(attachments: attachments)
+      }
+
+      MacHighlightedUserText(text: message.textBody)
         .font(.body)
+
+      HStack(spacing: 8) {
+        if !metadata.isEmpty {
+          Text(metadata)
+            .font(.caption2)
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
+        }
+
+        Spacer(minLength: 0)
+
+        Button {
+          macCopyText(message.textBody)
+          copied = true
+          DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            copied = false
+          }
+        } label: {
+          Image(systemName: copied ? "checkmark" : "doc.on.doc")
+            .font(.caption)
+            .foregroundStyle(.secondary)
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("message.user.copy.\(message.id)")
+      }
     }
     .padding(10)
     .frame(maxWidth: .infinity, alignment: .trailing)
@@ -458,13 +556,307 @@ private struct MacUserMessageCard: View {
   }
 }
 
+private struct MacHighlightedUserText: View {
+  let text: String
+
+  private var highlighted: AttributedString {
+    macHighlightedUserText(text)
+  }
+
+  var body: some View {
+    Text(highlighted)
+      .textSelection(.enabled)
+      .frame(maxWidth: .infinity, alignment: .leading)
+  }
+}
+
+private struct MacAttachmentStrip: View {
+  let attachments: [MacMessageAttachment]
+
+  var body: some View {
+    LazyVGrid(columns: [GridItem(.adaptive(minimum: 48), spacing: 8)], spacing: 8) {
+      ForEach(attachments) { attachment in
+        if let url = URL(string: attachment.url) {
+          Link(destination: url) {
+            MacAttachmentThumb(attachment: attachment)
+          }
+          .buttonStyle(.plain)
+        } else {
+          MacAttachmentThumb(attachment: attachment)
+        }
+      }
+    }
+    .frame(maxWidth: .infinity, alignment: .trailing)
+  }
+}
+
+private struct MacAttachmentThumb: View {
+  let attachment: MacMessageAttachment
+
+  var body: some View {
+    Group {
+      if attachment.isImage, let url = URL(string: attachment.url) {
+        AsyncImage(url: url) { phase in
+          if let image = phase.image {
+            image
+              .resizable()
+              .scaledToFill()
+          } else {
+            Color.secondary.opacity(0.15)
+              .overlay(Image(systemName: "photo").font(.caption))
+          }
+        }
+      } else {
+        Color.secondary.opacity(0.15)
+          .overlay(
+            Image(systemName: attachment.isPDF ? "doc.richtext" : "doc")
+              .font(.caption)
+              .foregroundStyle(.secondary)
+          )
+      }
+    }
+    .frame(width: 48, height: 48)
+    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+    .overlay(
+      RoundedRectangle(cornerRadius: 6, style: .continuous)
+        .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
+    )
+  }
+}
+
+private struct MacMessageAttachment: Identifiable {
+  let id: String
+  let mime: String
+  let name: String
+  let url: String
+
+  var isImage: Bool {
+    mime.hasPrefix("image/")
+  }
+
+  var isPDF: Bool {
+    mime == "application/pdf"
+  }
+
+  init?(part: MessagePart) {
+    guard part.type == "file" else {
+      return nil
+    }
+    guard let url = part.fileURL, !url.isEmpty else {
+      return nil
+    }
+    let mime = part.fileMime ?? "application/octet-stream"
+    guard mime.hasPrefix("image/") || mime == "application/pdf" else {
+      return nil
+    }
+
+    id = part.id
+    self.mime = mime
+    name = part.fileName ?? "Attachment"
+    self.url = url
+  }
+}
+
+private func macHighlightedUserText(_ text: String) -> AttributedString {
+  var result = AttributedString(text)
+  let nsText = text as NSString
+  let fullRange = NSRange(location: 0, length: nsText.length)
+
+  if let fileRegex = try? NSRegularExpression(pattern: #"\[[Ff]ile:[^\]]+\]"#) {
+    for match in fileRegex.matches(in: text, range: fullRange) {
+      if let range = Range(match.range, in: result) {
+        result[range].foregroundColor = .blue
+      }
+    }
+  }
+
+  if let agentRegex = try? NSRegularExpression(pattern: #"@[A-Za-z0-9_\-.]+"#) {
+    for match in agentRegex.matches(in: text, range: fullRange) {
+      if let range = Range(match.range, in: result) {
+        result[range].foregroundColor = .green
+      }
+    }
+  }
+
+  return result
+}
+
+private func macUserMessageMetadata(for message: MessageEnvelope) -> String {
+  var chunks: [String] = []
+  if let agent = message.info.agent?.trimmedForInput, !agent.isEmpty {
+    chunks.append(agent.capitalized)
+  }
+  if let model = message.info.modelID?.trimmedForInput, !model.isEmpty {
+    chunks.append(model)
+  }
+  if let time = macFormattedClockTime(from: message.info.createdAt) {
+    chunks.append(time)
+  }
+  return chunks.joined(separator: " · ")
+}
+
+private func macFormattedClockTime(from raw: Double?) -> String? {
+  guard let raw else {
+    return nil
+  }
+
+  let seconds = raw > 10_000_000_000 ? raw / 1000 : raw
+  let date = Date(timeIntervalSince1970: seconds)
+  let formatter = DateFormatter()
+  formatter.dateFormat = "h:mm a"
+  return formatter.string(from: date)
+}
+
+private func macAssistantMessageMetadata(for message: MessageEnvelope) -> String {
+  var chunks: [String] = []
+  if let model = message.info.modelID?.trimmedForInput, !model.isEmpty {
+    chunks.append(model)
+  }
+  if let time = macFormattedClockTime(from: message.info.createdAt) {
+    chunks.append(time)
+  }
+  return chunks.joined(separator: " · ")
+}
+
+private func macAssistantCopyText(for message: MessageEnvelope, includeReasoning: Bool) -> String {
+  let text = message.parts
+    .filter { part in
+      part.type == "text" || (includeReasoning && part.type == "reasoning")
+    }
+    .compactMap(\.text)
+    .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+    .filter { !$0.isEmpty }
+    .joined(separator: "\n\n")
+
+  if !text.isEmpty {
+    return text
+  }
+
+  return message.textBody
+}
+
+private func macExtractReasoningHeading(from text: String) -> String? {
+  let lines = text
+    .components(separatedBy: .newlines)
+    .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+    .filter { !$0.isEmpty }
+
+  guard let first = lines.first else {
+    return nil
+  }
+
+  if first.hasPrefix("#") {
+    let heading = first.drop { $0 == "#" || $0 == " " }
+    return heading.isEmpty ? nil : String(heading)
+  }
+
+  return String(first.prefix(80))
+}
+
+private func macCopyText(_ text: String) {
+  let pasteboard = NSPasteboard.general
+  pasteboard.clearContents()
+  pasteboard.setString(text, forType: .string)
+}
+
+private struct MacToolErrorCard: View {
+  let errorText: String
+
+  private var parsed: MacToolErrorDetails {
+    macParseToolError(errorText)
+  }
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 4) {
+      Text(parsed.title)
+        .font(.caption2.weight(.semibold))
+        .foregroundStyle(.red)
+
+      Text(parsed.message)
+        .font(.caption)
+        .foregroundStyle(.red)
+
+      ForEach(parsed.details, id: \.self) { detail in
+        Text(detail)
+          .font(.caption2)
+          .foregroundStyle(.secondary)
+      }
+    }
+    .padding(8)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .background(
+      RoundedRectangle(cornerRadius: 8, style: .continuous)
+        .fill(Color.red.opacity(0.08))
+    )
+  }
+}
+
+private struct MacToolErrorDetails {
+  let title: String
+  let message: String
+  let details: [String]
+}
+
+private func macParseToolError(_ raw: String) -> MacToolErrorDetails {
+  let fallback = MacToolErrorDetails(title: "Tool Error", message: raw, details: [])
+  guard
+    let data = raw.data(using: .utf8),
+    let value = try? JSONDecoder().decode(JSONValue.self, from: data),
+    let object = value.objectValue
+  else {
+    return fallback
+  }
+
+  let title = object["title"]?.stringValue ?? object["type"]?.stringValue?.capitalized ?? "Tool Error"
+  let message = object["message"]?.stringValue ?? object["error"]?.stringValue ?? raw
+
+  var details: [String] = []
+  if let code = object["code"]?.stringValue, !code.isEmpty {
+    details.append("Code: \(code)")
+  }
+  if let path = object["path"]?.stringValue, !path.isEmpty {
+    details.append("Path: \(path)")
+  }
+  if let hint = object["hint"]?.stringValue, !hint.isEmpty {
+    details.append("Hint: \(hint)")
+  }
+
+  if let errors = object["errors"]?.arrayValue {
+    for item in errors.prefix(2) {
+      if let text = item.stringValue, !text.isEmpty {
+        details.append(text)
+      } else if let nested = item.objectValue?["message"]?.stringValue, !nested.isEmpty {
+        details.append(nested)
+      }
+    }
+  }
+
+  return MacToolErrorDetails(title: title, message: message, details: details)
+}
+
 private struct MacAssistantMessageCard: View {
   let message: MessageEnvelope
   let busy: Bool
+  let showReasoningSummaries: Bool
+
+  private var lastTextPartID: String? {
+    groupedParts.compactMap { item in
+      if case let .part(part) = item,
+        part.type == "text",
+        !(part.text?.trimmedForInput ?? "").isEmpty
+      {
+        return part.id
+      }
+      return nil
+    }.last
+  }
 
   private var groupedParts: [MacAssistantItem] {
     let visibleParts = message.parts.filter { part in
       if part.type != "tool" {
+        if part.type == "reasoning" {
+          return showReasoningSummaries
+        }
         return true
       }
 
@@ -518,7 +910,12 @@ private struct MacAssistantMessageCard: View {
       ForEach(Array(groupedParts.enumerated()), id: \.element.id) { index, item in
         switch item {
         case let .part(part):
-          MacAssistantPartView(part: part)
+          MacAssistantPartView(
+            part: part,
+            message: message,
+            showReasoningSummaries: showReasoningSummaries,
+            isLastTextPart: part.id == lastTextPartID
+          )
         case let .context(_, tools):
           MacContextToolGroupCard(parts: tools, busy: busy && index == groupedParts.count - 1)
         }
@@ -561,17 +958,64 @@ private enum MacAssistantItem: Identifiable {
 
 private struct MacAssistantPartView: View {
   let part: MessagePart
+  let message: MessageEnvelope
+  let showReasoningSummaries: Bool
+  let isLastTextPart: Bool
+
+  @State private var copied = false
+
+  private var metadata: String {
+    macAssistantMessageMetadata(for: message)
+  }
+
+  private var copyTextValue: String {
+    macAssistantCopyText(for: message, includeReasoning: showReasoningSummaries)
+  }
 
   var body: some View {
     switch part.type {
     case "text":
       if let text = part.text?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty {
-        RichMarkdownText(text: text)
-          .font(.body)
+        VStack(alignment: .leading, spacing: 6) {
+          RichMarkdownText(text: text)
+            .font(.body)
+
+          if isLastTextPart {
+            HStack(spacing: 8) {
+              if !metadata.isEmpty {
+                Text(metadata)
+                  .font(.caption2)
+                  .foregroundStyle(.secondary)
+                  .lineLimit(1)
+              }
+
+              Spacer(minLength: 0)
+
+              Button {
+                macCopyText(copyTextValue)
+                copied = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                  copied = false
+                }
+              } label: {
+                Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                  .font(.caption)
+                  .foregroundStyle(.secondary)
+              }
+              .buttonStyle(.plain)
+              .accessibilityLabel(copied ? "Copied" : "Copy")
+              .accessibilityIdentifier("message.assistant.copy")
+            }
+          }
+        }
       }
     case "reasoning":
-      if let text = part.text?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty {
-        DisclosureGroup("Reasoning") {
+      if
+        showReasoningSummaries,
+        let text = part.text?.trimmingCharacters(in: .whitespacesAndNewlines),
+        !text.isEmpty
+      {
+        DisclosureGroup(macExtractReasoningHeading(from: text) ?? "Reasoning") {
           RichMarkdownText(text: text)
             .font(.subheadline)
             .padding(.top, 6)
@@ -741,21 +1185,16 @@ private struct MacToolPartCard: View {
       }
 
       if let error = part.toolState?.error, !error.isEmpty {
-        Text(error)
-          .font(.caption)
-          .foregroundStyle(.red)
+        MacToolErrorCard(errorText: error)
       }
 
       detailContent
 
       if let output = part.toolState?.output?.trimmingCharacters(in: .whitespacesAndNewlines), !output.isEmpty {
         DisclosureGroup("Output", isExpanded: $showOutput) {
-          ScrollView(.horizontal) {
-            Text(output)
-              .font(.system(.caption, design: .monospaced))
-              .textSelection(.enabled)
-              .padding(.top, 4)
-          }
+          RichMarkdownText(text: output)
+            .font(.caption)
+            .padding(.top, 4)
         }
       }
     }
@@ -1130,7 +1569,7 @@ private func macToolSubtitle(for part: MessagePart) -> String? {
       return title
     }
     if let error = part.toolState?.error, !error.isEmpty {
-      return error
+      return macParseToolError(error).message
     }
     return nil
   }
@@ -1479,6 +1918,10 @@ private struct MacPermissionPromptCard: View {
     macPermissionHint(for: request.permission)
   }
 
+  private var linkedToolPart: MessagePart? {
+    store.linkedToolPart(for: sessionID, reference: request.tool)
+  }
+
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
       Label("Permission Needed", systemImage: "exclamationmark.triangle")
@@ -1511,6 +1954,10 @@ private struct MacPermissionPromptCard: View {
         }
       }
 
+      if let linkedToolPart {
+        MacPromptToolLinkRow(part: linkedToolPart)
+      }
+
       HStack(spacing: 8) {
         Button("Deny", role: .destructive) {
           Task {
@@ -1541,6 +1988,37 @@ private struct MacPermissionPromptCard: View {
     .background(
       RoundedRectangle(cornerRadius: 10, style: .continuous)
         .fill(Color.orange.opacity(0.08))
+    )
+  }
+}
+
+private struct MacPromptToolLinkRow: View {
+  let part: MessagePart
+
+  private var label: String {
+    let tool = macToolDisplayName(for: part.tool)
+    let call = part.callID ?? "unknown"
+    return "Linked tool: \(tool) (\(call))"
+  }
+
+  var body: some View {
+    HStack(spacing: 6) {
+      Image(systemName: "link")
+        .font(.caption2)
+        .foregroundStyle(.secondary)
+
+      Text(label)
+        .font(.caption2)
+        .foregroundStyle(.secondary)
+        .lineLimit(1)
+
+      Spacer(minLength: 0)
+    }
+    .padding(.horizontal, 8)
+    .padding(.vertical, 6)
+    .background(
+      RoundedRectangle(cornerRadius: 8, style: .continuous)
+        .fill(Color.secondary.opacity(0.08))
     )
   }
 }
@@ -1617,6 +2095,10 @@ private struct MacQuestionPromptCard: View {
     answers[safe: tab] ?? []
   }
 
+  private var linkedToolPart: MessagePart? {
+    store.linkedToolPart(for: sessionID, reference: request.tool)
+  }
+
   private var parsedAnswers: [QuestionAnswer] {
     request.questions.enumerated().map { index, _ in
       let raw = answers[safe: index] ?? []
@@ -1656,6 +2138,10 @@ private struct MacQuestionPromptCard: View {
       }
 
       if let question {
+        if let linkedToolPart {
+          MacPromptToolLinkRow(part: linkedToolPart)
+        }
+
         Text(question.question)
           .font(.caption.weight(.semibold))
 

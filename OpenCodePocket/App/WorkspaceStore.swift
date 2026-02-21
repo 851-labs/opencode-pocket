@@ -19,6 +19,7 @@ final class WorkspaceStore {
   var availableModels: [ModelOption] = []
   var selectedAgentName: String
   var selectedModel: ModelSelector?
+  var showReasoningSummaries = true
 
   var draftMessage = ""
   var isSending = false
@@ -383,6 +384,27 @@ final class WorkspaceStore {
 
   func currentQuestionRequest(for sessionID: String) -> QuestionRequest? {
     questionsBySession[sessionID]?.first
+  }
+
+  func linkedToolPart(for sessionID: String, reference: PermissionToolReference?) -> MessagePart? {
+    guard let reference else {
+      return nil
+    }
+
+    guard let messages = messagesBySession[sessionID] else {
+      return nil
+    }
+
+    if
+      let message = messages.first(where: { $0.id == reference.messageID }),
+      let part = message.parts.first(where: { $0.type == "tool" && $0.callID == reference.callID })
+    {
+      return part
+    }
+
+    return messages
+      .flatMap(\.parts)
+      .first(where: { $0.type == "tool" && $0.callID == reference.callID })
   }
 
   func isComposerBlocked(for sessionID: String) -> Bool {
