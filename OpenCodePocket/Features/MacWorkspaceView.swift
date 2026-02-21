@@ -10,17 +10,28 @@ private enum MacWorkspacePanel: String, CaseIterable, Identifiable {
   var id: Self { self }
 }
 
+private enum MacWorkspaceSheet: Identifiable {
+  case renameSession(sessionID: String, currentTitle: String)
+  case addProject
+
+  var id: String {
+    switch self {
+    case let .renameSession(sessionID, _):
+      return "rename-\(sessionID)"
+    case .addProject:
+      return "add-project"
+    }
+  }
+}
+
 struct MacWorkspaceView: View {
   @Bindable var store: WorkspaceStore
 
   @Environment(\.openSettings) private var openSettings
 
   @State private var selectedPanel: MacWorkspacePanel = .transcript
-  @State private var isAddProjectSheetPresented = false
-  @State private var isRenameSheetPresented = false
+  @State private var activeSheet: MacWorkspaceSheet?
   @State private var isDeleteConfirmationPresented = false
-  @State private var renameDraft = ""
-  @State private var projectDirectoryDraft = ""
 
   private var selectedSessionID: String? {
     store.selectedSessionID
@@ -42,11 +53,13 @@ struct MacWorkspaceView: View {
         await store.selectSession(newValue)
       }
     }
-    .sheet(isPresented: $isRenameSheetPresented) {
-      renameSheet
-    }
-    .sheet(isPresented: $isAddProjectSheetPresented) {
-      addProjectSheet
+    .sheet(item: $activeSheet) { sheet in
+      switch sheet {
+      case let .renameSession(sessionID, currentTitle):
+        MacRenameSessionSheet(store: store, sessionID: sessionID, currentTitle: currentTitle)
+      case .addProject:
+        MacAddProjectSheet(store: store)
+      }
     }
     .confirmationDialog("Delete Session?", isPresented: $isDeleteConfirmationPresented) {
       Button("Delete", role: .destructive) {
@@ -131,8 +144,7 @@ struct MacWorkspaceView: View {
       .accessibilityIdentifier("sessions.create")
 
       Button {
-        projectDirectoryDraft = ""
-        isAddProjectSheetPresented = true
+        activeSheet = .addProject
       } label: {
         Image(systemName: "folder.badge.plus")
       }
@@ -177,69 +189,12 @@ struct MacWorkspaceView: View {
     }
   }
 
-  private var renameSheet: some View {
-    VStack(alignment: .leading, spacing: 14) {
-      Text("Rename Session")
-        .font(.headline)
-
-      TextField("Session title", text: $renameDraft)
-
-      HStack {
-        Spacer()
-
-        Button("Cancel") {
-          isRenameSheetPresented = false
-        }
-
-        Button("Save") {
-          saveRename()
-          isRenameSheetPresented = false
-        }
-        .keyboardShortcut(.defaultAction)
-      }
-    }
-    .padding(18)
-    .frame(width: 360)
-  }
-
-  private var addProjectSheet: some View {
-    VStack(alignment: .leading, spacing: 14) {
-      Text("Add Project")
-        .font(.headline)
-
-      TextField("/path/to/project", text: $projectDirectoryDraft)
-
-      HStack {
-        Spacer()
-
-        Button("Cancel") {
-          isAddProjectSheetPresented = false
-        }
-
-        Button("Add") {
-          guard store.addProject(directory: projectDirectoryDraft) else {
-            return
-          }
-
-          Task {
-            await store.refreshAgentAndModelOptions()
-            await store.refreshSessions()
-          }
-
-          isAddProjectSheetPresented = false
-        }
-        .disabled(projectDirectoryDraft.trimmedForInput.isEmpty)
-        .keyboardShortcut(.defaultAction)
-      }
-    }
-    .padding(18)
-    .frame(width: 420)
-  }
-
   private func prepareRenameSession() {
     guard let selectedSessionID else { return }
-    renameDraft = store.sessionTitle(for: selectedSessionID)
-    isRenameSheetPresented = true
+    activeSheet = .renameSession(
+      sessionID: selectedSessionID,
+      currentTitle: store.sessionTitle(for: selectedSessionID)
+    )
   }
 
   private func archiveSelectedSession() {
@@ -256,12 +211,6 @@ struct MacWorkspaceView: View {
     }
   }
 
-  private func saveRename() {
-    guard let selectedSessionID else { return }
-    Task {
-      await store.renameSession(sessionID: selectedSessionID, title: renameDraft)
-    }
-  }
 }
 
 private struct MacSidebarProjectSection: View {
@@ -380,6 +329,97 @@ private struct MacWorkspaceDetailContent: View {
 
       MacComposerView(store: store, sessionID: selectedSessionID)
         .padding(12)
+    }
+  }
+}
+
+private struct MacRenameSessionSheet: View {
+  @Environment(\.dismiss) private var dismiss
+
+  @Bindable var store: WorkspaceStore
+  let sessionID: String
+
+  @State private var title: String
+
+  init(store: WorkspaceStore, sessionID: String, currentTitle: String) {
+    self.store = store
+    self.sessionID = sessionID
+    _title = State(initialValue: currentTitle)
+  }
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 14) {
+      Text("Rename Session")
+        .font(.headline)
+
+      TextField("Session title", text: $title)
+
+      HStack {
+        Spacer()
+
+        Button("Cancel") {
+          dismiss()
+        }
+
+        Button("Save") {
+          save()
+        }
+        .keyboardShortcut(.defaultAction)
+      }
+    }
+    .padding(18)
+    .frame(width: 360)
+  }
+
+  private func save() {
+    Task {
+      await store.renameSession(sessionID: sessionID, title: title)
+      dismiss()
+    }
+  }
+}
+
+private struct MacAddProjectSheet: View {
+  @Environment(\.dismiss) private var dismiss
+
+  @Bindable var store: WorkspaceStore
+
+  @State private var directory = ""
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 14) {
+      Text("Add Project")
+        .font(.headline)
+
+      TextField("/path/to/project", text: $directory)
+
+      HStack {
+        Spacer()
+
+        Button("Cancel") {
+          dismiss()
+        }
+
+        Button("Add") {
+          addProject()
+        }
+        .disabled(directory.trimmedForInput.isEmpty)
+        .keyboardShortcut(.defaultAction)
+      }
+    }
+    .padding(18)
+    .frame(width: 420)
+  }
+
+  private func addProject() {
+    guard store.addProject(directory: directory) else {
+      return
+    }
+
+    Task {
+      await store.refreshAgentAndModelOptions()
+      await store.refreshSessions()
+      dismiss()
     }
   }
 }
