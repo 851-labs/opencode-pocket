@@ -1,34 +1,12 @@
 import SwiftUI
+import OpenCodeModels
 
 struct SessionsView: View {
   @Bindable var store: WorkspaceStore
 
   var body: some View {
     List(selection: $store.selectedSessionID) {
-      ForEach(store.sessions) { session in
-        VStack(alignment: .leading, spacing: 4) {
-          Text(session.title.isEmpty ? "Untitled Session" : session.title)
-            .font(.body)
-            .lineLimit(1)
-
-          HStack(spacing: 6) {
-            Text(session.id)
-              .font(.caption)
-              .foregroundStyle(.secondary)
-              .lineLimit(1)
-
-            Text("•")
-              .font(.caption)
-              .foregroundStyle(.secondary)
-
-            Text(store.statusLabel(for: session.id))
-              .font(.caption)
-              .foregroundStyle(.secondary)
-          }
-        }
-        .tag(session.id)
-        .accessibilityIdentifier("session.row.\(session.id)")
-      }
+      sessionsList
     }
     .accessibilityIdentifier("sessions.list")
     .overlay {
@@ -42,49 +20,103 @@ struct SessionsView: View {
     }
     .navigationTitle("Sessions")
     .toolbar {
-      ToolbarItemGroup(placement: .topBarTrailing) {
-        Button {
-          Task {
-            await store.refreshSessions()
-          }
-        } label: {
-          if store.isRefreshingSessions {
-            ProgressView()
-              .controlSize(.small)
-          } else {
-            Image(systemName: "arrow.clockwise")
-          }
-        }
-        .disabled(store.isRefreshingSessions)
-        .accessibilityIdentifier("sessions.refresh")
-
-        Button {
-          Task {
-            await store.createSession()
-          }
-        } label: {
-          if store.isCreatingSession {
-            ProgressView()
-              .controlSize(.small)
-          } else {
-            Image(systemName: "plus")
-          }
-        }
-        .disabled(store.isCreatingSession)
-        .accessibilityIdentifier("sessions.create")
-      }
-
-      ToolbarItem(placement: .topBarLeading) {
-        Button("Disconnect") {
-          store.disconnect()
-        }
-        .accessibilityIdentifier("sessions.disconnect")
-      }
+      toolbarContent
     }
     .onChange(of: store.selectedSessionID) { _, newValue in
-      Task {
-        await store.selectSession(newValue)
+      selectSession(newValue)
+    }
+  }
+
+  @ViewBuilder
+  private var sessionsList: some View {
+    ForEach(store.sessions) { session in
+      SessionRow(store: store, session: session)
+    }
+  }
+
+  @ToolbarContentBuilder
+  private var toolbarContent: some ToolbarContent {
+    ToolbarItemGroup(placement: .topBarTrailing) {
+      Button(action: refreshSessions) {
+        if store.isRefreshingSessions {
+          ProgressView()
+            .controlSize(.small)
+        } else {
+          Image(systemName: "arrow.clockwise")
+        }
+      }
+      .disabled(store.isRefreshingSessions)
+      .accessibilityIdentifier("sessions.refresh")
+
+      Button(action: createSession) {
+        if store.isCreatingSession {
+          ProgressView()
+            .controlSize(.small)
+        } else {
+          Image(systemName: "plus")
+        }
+      }
+      .disabled(store.isCreatingSession)
+      .accessibilityIdentifier("sessions.create")
+    }
+
+    ToolbarItem(placement: .topBarLeading) {
+      Button("Disconnect") {
+        store.disconnect()
+      }
+      .accessibilityIdentifier("sessions.disconnect")
+    }
+  }
+
+  private func refreshSessions() {
+    Task {
+      await store.refreshSessions()
+    }
+  }
+
+  private func createSession() {
+    Task {
+      await store.createSession()
+    }
+  }
+
+  private func selectSession(_ sessionID: String?) {
+    Task {
+      await store.selectSession(sessionID)
+    }
+  }
+}
+
+private struct SessionRow: View {
+  @Bindable var store: WorkspaceStore
+  let session: Session
+
+  private var title: String {
+    session.title.isEmpty ? "Untitled Session" : session.title
+  }
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 4) {
+      Text(title)
+        .font(.body)
+        .lineLimit(1)
+
+      HStack(spacing: 6) {
+        Text(session.id)
+          .font(.caption)
+          .foregroundStyle(.secondary)
+          .lineLimit(1)
+
+        Text("•")
+          .font(.caption)
+          .foregroundStyle(.secondary)
+
+        Text(store.statusLabel(for: session.id))
+          .font(.caption)
+          .foregroundStyle(.secondary)
       }
     }
+    .tag(session.id)
+    .accessibilityIdentifier("session.row.\(session.id)")
   }
 }

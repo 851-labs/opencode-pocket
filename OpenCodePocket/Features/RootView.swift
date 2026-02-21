@@ -5,22 +5,30 @@ struct RootView: View {
   @Bindable var workspace: WorkspaceStore
 
   var body: some View {
+    Group {
+      if connection.isConnected {
+        connectedContent
+      } else {
+        disconnectedContent
+      }
+    }
+  }
+
+  @ViewBuilder
+  private var connectedContent: some View {
 #if os(macOS)
-    Group {
-      if connection.isConnected {
-        MacWorkspaceView(store: workspace)
-      } else {
-        MacConnectView(store: connection)
-      }
-    }
+    MacWorkspaceView(store: workspace)
 #else
-    Group {
-      if connection.isConnected {
-        WorkspaceView(store: workspace)
-      } else {
-        ConnectView(store: connection)
-      }
-    }
+    WorkspaceView(store: workspace)
+#endif
+  }
+
+  @ViewBuilder
+  private var disconnectedContent: some View {
+#if os(macOS)
+    MacConnectView(store: connection)
+#else
+    ConnectView(store: connection)
 #endif
   }
 }

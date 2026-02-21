@@ -5,67 +5,91 @@ struct ChatView: View {
   @Bindable var store: WorkspaceStore
   let sessionID: String
 
+  private var messages: [MessageEnvelope] {
+    store.messagesBySession[sessionID] ?? []
+  }
+
   var body: some View {
     VStack(spacing: 0) {
-      ScrollViewReader { proxy in
-        ScrollView {
-          LazyVStack(alignment: .leading, spacing: 10) {
-            ForEach(store.messagesBySession[sessionID] ?? []) { message in
-              MessageBubble(message: message)
-                .id(message.id)
-                .accessibilityIdentifier("chat.message.\(message.id)")
-            }
-          }
-          .padding(16)
-        }
-        .accessibilityIdentifier("chat.messages")
-        .onChange(of: store.messagesBySession[sessionID]?.count ?? 0) { _, _ in
-          guard let lastID = store.messagesBySession[sessionID]?.last?.id else { return }
-          withAnimation(.easeOut(duration: 0.2)) {
-            proxy.scrollTo(lastID, anchor: .bottom)
-          }
-        }
-      }
+      transcript
 
       Divider()
 
-      HStack(alignment: .bottom, spacing: 8) {
-        TextField("Message", text: $store.draftMessage, axis: .vertical)
-          .lineLimit(1 ... 6)
-          .accessibilityIdentifier("chat.input")
+      composer
 
-        Button("Send") {
-          Task {
-            await store.sendDraftMessage(in: sessionID)
-          }
-        }
-        .buttonStyle(.borderedProminent)
-        .disabled(store.draftMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || store.isSending)
-        .accessibilityIdentifier("chat.send")
-      }
-      .padding(12)
-
-      HStack {
-        Button("Abort") {
-          Task {
-            await store.abort(sessionID: sessionID)
-          }
-        }
-        .accessibilityIdentifier("chat.abort")
-
-        Spacer()
-
-        Text("Status: \(store.statusLabel(for: sessionID))")
-          .font(.caption)
-          .foregroundStyle(.secondary)
-          .accessibilityIdentifier("chat.status")
-      }
-      .padding(.horizontal, 12)
-      .padding(.bottom, 10)
+      statusRow
     }
     .navigationTitle(store.sessionTitle(for: sessionID))
     .task(id: sessionID) {
       await store.loadMessages(sessionID: sessionID)
+    }
+  }
+
+  private var transcript: some View {
+    ScrollViewReader { proxy in
+      ScrollView {
+        LazyVStack(alignment: .leading, spacing: 10) {
+          ForEach(messages) { message in
+            MessageBubble(message: message)
+              .id(message.id)
+              .accessibilityIdentifier("chat.message.\(message.id)")
+          }
+        }
+        .padding(16)
+      }
+      .accessibilityIdentifier("chat.messages")
+      .onChange(of: messages.count) { _, _ in
+        scrollToBottom(using: proxy)
+      }
+    }
+  }
+
+  private var composer: some View {
+    HStack(alignment: .bottom, spacing: 8) {
+      TextField("Message", text: $store.draftMessage, axis: .vertical)
+        .lineLimit(1 ... 6)
+        .accessibilityIdentifier("chat.input")
+
+      Button("Send", action: sendMessage)
+        .buttonStyle(.borderedProminent)
+        .disabled(store.draftMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || store.isSending)
+        .accessibilityIdentifier("chat.send")
+    }
+    .padding(12)
+  }
+
+  private var statusRow: some View {
+    HStack {
+      Button("Abort", action: abortSession)
+        .accessibilityIdentifier("chat.abort")
+
+      Spacer()
+
+      Text("Status: \(store.statusLabel(for: sessionID))")
+        .font(.caption)
+        .foregroundStyle(.secondary)
+        .accessibilityIdentifier("chat.status")
+    }
+    .padding(.horizontal, 12)
+    .padding(.bottom, 10)
+  }
+
+  private func scrollToBottom(using proxy: ScrollViewProxy) {
+    guard let lastID = messages.last?.id else { return }
+    withAnimation(.easeOut(duration: 0.2)) {
+      proxy.scrollTo(lastID, anchor: .bottom)
+    }
+  }
+
+  private func sendMessage() {
+    Task {
+      await store.sendDraftMessage(in: sessionID)
+    }
+  }
+
+  private func abortSession() {
+    Task {
+      await store.abort(sessionID: sessionID)
     }
   }
 }
