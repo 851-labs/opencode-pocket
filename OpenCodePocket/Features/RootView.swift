@@ -4,6 +4,15 @@ struct RootView: View {
   @Bindable var store: AppStore
 
   var body: some View {
+#if os(macOS)
+    Group {
+      if store.isConnected {
+        MacWorkspaceView(store: store)
+      } else {
+        MacConnectView(store: store)
+      }
+    }
+#else
     Group {
       if store.isConnected {
         WorkspaceView(store: store)
@@ -11,5 +20,6 @@ struct RootView: View {
         ConnectView(store: store)
       }
     }
+#endif
   }
 }
