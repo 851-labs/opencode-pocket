@@ -64,56 +64,7 @@ struct MacWorkspaceView: View {
   private var sidebar: some View {
     List(selection: $store.selectedSessionID) {
       ForEach(store.projects) { project in
-        Section(project.name) {
-          Button {
-            store.selectProject(project.id)
-          } label: {
-            HStack(spacing: 8) {
-              Image(systemName: store.selectedProjectID == project.id ? "folder.fill" : "folder")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-              Text(project.directory)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-
-              Spacer(minLength: 0)
-            }
-          }
-          .buttonStyle(.plain)
-          .accessibilityIdentifier("sidebar.project.\(project.id)")
-
-          ForEach(store.visibleSessions(for: project.id)) { session in
-            VStack(alignment: .leading, spacing: 4) {
-              Text(session.title)
-                .font(.body.weight(.semibold))
-                .lineLimit(1)
-
-              HStack(spacing: 6) {
-                Text(session.id)
-                  .font(.caption)
-                  .foregroundStyle(.secondary)
-                  .lineLimit(1)
-
-                Circle()
-                  .fill(.secondary.opacity(0.5))
-                  .frame(width: 3, height: 3)
-
-                Text(store.statusLabel(for: session.id))
-                  .font(.caption)
-                  .foregroundStyle(.secondary)
-              }
-            }
-            .tag(session.id as String?)
-          }
-
-          if store.visibleSessions(for: project.id).isEmpty {
-            Text("No sessions yet")
-              .font(.caption)
-              .foregroundStyle(.secondary)
-          }
-        }
+        MacSidebarProjectSection(store: store, project: project)
       }
     }
     .navigationTitle("Sessions")
@@ -131,46 +82,11 @@ struct MacWorkspaceView: View {
   @ViewBuilder
   private var detail: some View {
     if let selectedSessionID {
-      VStack(spacing: 0) {
-        HStack(spacing: 12) {
-          Text(store.sessionTitle(for: selectedSessionID))
-            .font(.title3.weight(.semibold))
-            .lineLimit(1)
-
-          Spacer(minLength: 0)
-
-          Picker("Panel", selection: $selectedPanel) {
-            ForEach(MacWorkspacePanel.allCases) { panel in
-              Text(panel.rawValue).tag(panel)
-            }
-          }
-          .pickerStyle(.segmented)
-          .frame(width: 220)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-
-        Divider()
-
-        Group {
-          switch selectedPanel {
-          case .transcript:
-            MacTranscriptPane(
-              messages: store.messagesBySession[selectedSessionID] ?? [],
-              sessionStatus: store.status(for: selectedSessionID),
-              showReasoningSummaries: store.showReasoningSummaries
-            )
-          case .changes:
-            MacChangesPane(diffs: store.diffsBySession[selectedSessionID] ?? [])
-          }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-        Divider()
-
-        MacComposerView(store: store, sessionID: selectedSessionID)
-          .padding(12)
-      }
+      MacWorkspaceDetailContent(
+        store: store,
+        selectedSessionID: selectedSessionID,
+        selectedPanel: $selectedPanel
+      )
     } else {
       ContentUnavailableView(
         "No Session Selected",
@@ -344,6 +260,126 @@ struct MacWorkspaceView: View {
     guard let selectedSessionID else { return }
     Task {
       await store.renameSession(sessionID: selectedSessionID, title: renameDraft)
+    }
+  }
+}
+
+private struct MacSidebarProjectSection: View {
+  @Bindable var store: WorkspaceStore
+  let project: SavedProject
+
+  private var sessions: [Session] {
+    store.visibleSessions(for: project.id)
+  }
+
+  var body: some View {
+    Section(project.name) {
+      Button {
+        store.selectProject(project.id)
+      } label: {
+        HStack(spacing: 8) {
+          Image(systemName: store.selectedProjectID == project.id ? "folder.fill" : "folder")
+            .font(.caption)
+            .foregroundStyle(.secondary)
+
+          Text(project.directory)
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
+
+          Spacer(minLength: 0)
+        }
+      }
+      .buttonStyle(.plain)
+      .accessibilityIdentifier("sidebar.project.\(project.id)")
+
+      ForEach(sessions) { session in
+        MacSidebarSessionRow(store: store, session: session)
+      }
+
+      if sessions.isEmpty {
+        Text("No sessions yet")
+          .font(.caption)
+          .foregroundStyle(.secondary)
+      }
+    }
+  }
+}
+
+private struct MacSidebarSessionRow: View {
+  @Bindable var store: WorkspaceStore
+  let session: Session
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 4) {
+      Text(session.title)
+        .font(.body.weight(.semibold))
+        .lineLimit(1)
+
+      HStack(spacing: 6) {
+        Text(session.id)
+          .font(.caption)
+          .foregroundStyle(.secondary)
+          .lineLimit(1)
+
+        Circle()
+          .fill(.secondary.opacity(0.5))
+          .frame(width: 3, height: 3)
+
+        Text(store.statusLabel(for: session.id))
+          .font(.caption)
+          .foregroundStyle(.secondary)
+      }
+    }
+    .tag(session.id as String?)
+  }
+}
+
+private struct MacWorkspaceDetailContent: View {
+  @Bindable var store: WorkspaceStore
+  let selectedSessionID: String
+  @Binding var selectedPanel: MacWorkspacePanel
+
+  var body: some View {
+    VStack(spacing: 0) {
+      HStack(spacing: 12) {
+        Text(store.sessionTitle(for: selectedSessionID))
+          .font(.title3.weight(.semibold))
+          .lineLimit(1)
+
+        Spacer(minLength: 0)
+
+        Picker("Panel", selection: $selectedPanel) {
+          ForEach(MacWorkspacePanel.allCases) { panel in
+            Text(panel.rawValue).tag(panel)
+          }
+        }
+        .pickerStyle(.segmented)
+        .frame(width: 220)
+      }
+      .padding(.horizontal, 16)
+      .padding(.vertical, 10)
+
+      Divider()
+
+      Group {
+        switch selectedPanel {
+        case .transcript:
+          MacTranscriptPane(
+            messages: store.messagesBySession[selectedSessionID] ?? [],
+            sessionStatus: store.status(for: selectedSessionID),
+            showReasoningSummaries: store.showReasoningSummaries
+          )
+        case .changes:
+          MacChangesPane(diffs: store.diffsBySession[selectedSessionID] ?? [])
+        }
+      }
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+      Divider()
+
+      MacComposerView(store: store, sessionID: selectedSessionID)
+        .padding(12)
     }
   }
 }
