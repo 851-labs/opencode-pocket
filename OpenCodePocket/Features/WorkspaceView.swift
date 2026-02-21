@@ -14,10 +14,17 @@ private enum WorkspacePanel: String, CaseIterable, Identifiable {
   var id: Self { self }
 }
 
+private enum WorkspaceBootstrapState {
+  case loading
+  case ready
+  case failed(String)
+}
+
 struct WorkspaceView: View {
   @Bindable var store: WorkspaceStore
 
   @State private var selectedPanel: WorkspacePanel = .session
+  @State private var bootstrapState: WorkspaceBootstrapState = .loading
   @State private var isDrawerPresented = false
   @State private var isRenamePromptPresented = false
   @State private var isDeleteConfirmationPresented = false
@@ -32,8 +39,7 @@ struct WorkspaceView: View {
       workspaceRoot
         .animation(.spring(response: 0.3, dampingFraction: 0.82), value: isDrawerPresented)
         .task {
-          await store.refreshAgentAndModelOptions()
-          await store.refreshSessions()
+          await loadWorkspaceBootstrap()
         }
         .alert("Rename Session", isPresented: $isRenamePromptPresented) {
           TextField("Session title", text: $renameDraft)
@@ -55,11 +61,22 @@ struct WorkspaceView: View {
 
   @ViewBuilder
   private var content: some View {
-    WorkspacePanelContent(
-      store: store,
-      selectedSessionID: selectedSessionID,
-      selectedPanel: selectedPanel
-    )
+    switch bootstrapState {
+    case .loading:
+      WorkspaceLoadingView()
+    case let .failed(message):
+      WorkspaceBootstrapErrorView(message: message) {
+        Task {
+          await loadWorkspaceBootstrap()
+        }
+      }
+    case .ready:
+      WorkspacePanelContent(
+        store: store,
+        selectedSessionID: selectedSessionID,
+        selectedPanel: selectedPanel
+      )
+    }
   }
 }
 
@@ -91,7 +108,7 @@ private extension WorkspaceView {
         .accessibilityIdentifier("workspace.drawer")
     }
     .safeAreaInset(edge: .bottom) {
-      if let selectedSessionID {
+      if case .ready = bootstrapState, let selectedSessionID {
         WorkspaceComposer(store: store, sessionID: selectedSessionID)
           .padding(.horizontal, 14)
           .padding(.bottom, 8)
@@ -158,6 +175,21 @@ private extension WorkspaceView {
 // MARK: - Actions
 
 private extension WorkspaceView {
+  func loadWorkspaceBootstrap() async {
+    bootstrapState = .loading
+    store.clearConnectionError()
+
+    await store.refreshAgentAndModelOptions()
+    await store.refreshSessions()
+
+    if let error = store.latestConnectionError, !error.isEmpty, store.sessions.isEmpty {
+      bootstrapState = .failed(error)
+      return
+    }
+
+    bootstrapState = .ready
+  }
+
   func toggleDrawer() {
     isDrawerPresented.toggle()
   }
@@ -363,6 +395,38 @@ private struct SessionSheetSessionRow: View {
     }
     .buttonStyle(.plain)
     .accessibilityIdentifier("drawer.session.\(session.id)")
+  }
+}
+
+private struct WorkspaceLoadingView: View {
+  var body: some View {
+    ContentUnavailableView {
+      ProgressView()
+    } description: {
+      Text("Loading workspace…")
+    }
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .accessibilityIdentifier("workspace.bootstrap.loading")
+  }
+}
+
+private struct WorkspaceBootstrapErrorView: View {
+  let message: String
+  let retry: () -> Void
+
+  var body: some View {
+    VStack(spacing: 12) {
+      ContentUnavailableView(
+        "Unable to Load Workspace",
+        systemImage: "exclamationmark.triangle",
+        description: Text(message)
+      )
+
+      Button("Retry", action: retry)
+        .buttonStyle(.borderedProminent)
+        .accessibilityIdentifier("workspace.bootstrap.retry")
+    }
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
   }
 }
 

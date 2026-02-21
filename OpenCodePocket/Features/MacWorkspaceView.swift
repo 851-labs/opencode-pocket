@@ -24,12 +24,19 @@ private enum MacWorkspaceSheet: Identifiable {
   }
 }
 
+private enum MacWorkspaceBootstrapState {
+  case loading
+  case ready
+  case failed(String)
+}
+
 struct MacWorkspaceView: View {
   @Bindable var store: WorkspaceStore
 
   @Environment(\.openSettings) private var openSettings
 
   @State private var selectedPanel: MacWorkspacePanel = .transcript
+  @State private var bootstrapState: MacWorkspaceBootstrapState = .loading
   @State private var activeSheet: MacWorkspaceSheet?
   @State private var isDeleteConfirmationPresented = false
 
@@ -45,8 +52,7 @@ struct MacWorkspaceView: View {
     }
     .navigationSplitViewStyle(.balanced)
     .task {
-      await store.refreshAgentAndModelOptions()
-      await store.refreshSessions()
+      await loadWorkspaceBootstrap()
     }
     .onChange(of: store.selectedSessionID) { _, newValue in
       Task {
@@ -94,19 +100,30 @@ struct MacWorkspaceView: View {
 
   @ViewBuilder
   private var detail: some View {
-    if let selectedSessionID {
-      MacWorkspaceDetailContent(
-        store: store,
-        selectedSessionID: selectedSessionID,
-        selectedPanel: $selectedPanel
-      )
-    } else {
-      ContentUnavailableView(
-        "No Session Selected",
-        systemImage: "bubble.left.and.bubble.right",
-        description: Text("Select or create a session from the sidebar.")
-      )
-      .frame(maxWidth: .infinity, maxHeight: .infinity)
+    switch bootstrapState {
+    case .loading:
+      MacWorkspaceLoadingView()
+    case let .failed(message):
+      MacWorkspaceBootstrapErrorView(message: message) {
+        Task {
+          await loadWorkspaceBootstrap()
+        }
+      }
+    case .ready:
+      if let selectedSessionID {
+        MacWorkspaceDetailContent(
+          store: store,
+          selectedSessionID: selectedSessionID,
+          selectedPanel: $selectedPanel
+        )
+      } else {
+        ContentUnavailableView(
+          "No Session Selected",
+          systemImage: "bubble.left.and.bubble.right",
+          description: Text("Select or create a session from the sidebar.")
+        )
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+      }
     }
   }
 
@@ -187,6 +204,21 @@ struct MacWorkspaceView: View {
       }
       .accessibilityIdentifier("workspace.actions.menu")
     }
+  }
+
+  private func loadWorkspaceBootstrap() async {
+    bootstrapState = .loading
+    store.clearConnectionError()
+
+    await store.refreshAgentAndModelOptions()
+    await store.refreshSessions()
+
+    if let error = store.latestConnectionError, !error.isEmpty, store.sessions.isEmpty {
+      bootstrapState = .failed(error)
+      return
+    }
+
+    bootstrapState = .ready
   }
 
   private func prepareRenameSession() {
@@ -330,6 +362,38 @@ private struct MacWorkspaceDetailContent: View {
       MacComposerView(store: store, sessionID: selectedSessionID)
         .padding(12)
     }
+  }
+}
+
+private struct MacWorkspaceLoadingView: View {
+  var body: some View {
+    ContentUnavailableView {
+      ProgressView()
+    } description: {
+      Text("Loading workspace…")
+    }
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .accessibilityIdentifier("workspace.bootstrap.loading")
+  }
+}
+
+private struct MacWorkspaceBootstrapErrorView: View {
+  let message: String
+  let retry: () -> Void
+
+  var body: some View {
+    VStack(spacing: 12) {
+      ContentUnavailableView(
+        "Unable to Load Workspace",
+        systemImage: "exclamationmark.triangle",
+        description: Text(message)
+      )
+
+      Button("Retry", action: retry)
+        .buttonStyle(.borderedProminent)
+        .accessibilityIdentifier("workspace.bootstrap.retry")
+    }
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
   }
 }
 

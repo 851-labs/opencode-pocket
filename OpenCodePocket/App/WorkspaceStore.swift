@@ -94,6 +94,14 @@ final class WorkspaceStore {
     !respondingQuestionRequestIDs.isEmpty
   }
 
+  var latestConnectionError: String? {
+    connection.connectionError
+  }
+
+  func clearConnectionError() {
+    connection.connectionError = nil
+  }
+
   var activeProject: SavedProject? {
     guard let selectedProjectID else {
       return projects.first
