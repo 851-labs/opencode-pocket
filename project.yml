@@ -47,9 +47,9 @@ targets:
         SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
         LD_RUNPATH_SEARCH_PATHS: "@executable_path/Frameworks"
         "LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]": "@executable_path/../Frameworks"
-        "EXCLUDED_SOURCE_FILE_NAMES[sdk=macosx*]": "ConnectView.swift SessionsView.swift WorkspaceView.swift"
-        "EXCLUDED_SOURCE_FILE_NAMES[sdk=iphoneos*]": "MacConnectView.swift MacWorkspaceView.swift"
-        "EXCLUDED_SOURCE_FILE_NAMES[sdk=iphonesimulator*]": "MacConnectView.swift MacWorkspaceView.swift"
+        "EXCLUDED_SOURCE_FILE_NAMES[sdk=macosx*]": "ConnectView.swift SessionsView.swift WorkspaceView.swift */Features/Workspace/*"
+        "EXCLUDED_SOURCE_FILE_NAMES[sdk=iphoneos*]": "MacConnectView.swift MacWorkspaceView.swift */Features/MacWorkspace/*"
+        "EXCLUDED_SOURCE_FILE_NAMES[sdk=iphonesimulator*]": "MacConnectView.swift MacWorkspaceView.swift */Features/MacWorkspace/*"
     dependencies:
       - package: OpenCodeSDK
         product: OpenCodeModels
