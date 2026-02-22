@@ -1,7 +1,7 @@
 ---
 # opencode-pocket-p2lz
 title: P1 tune markdown theme for desktop parity
-status: todo
+status: completed
 type: task
 priority: normal
 tags:
@@ -10,7 +10,7 @@ tags:
     - parity
     - ui
 created_at: 2026-02-22T21:08:24Z
-updated_at: 2026-02-22T21:08:24Z
+updated_at: 2026-02-22T21:35:00Z
 ---
 
 Tune the Textual style stack so transcript typography and spacing align more closely with OpenCode desktop.

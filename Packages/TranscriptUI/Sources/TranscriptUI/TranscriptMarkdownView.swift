@@ -10,7 +10,8 @@ public struct TranscriptMarkdownView: View {
 
   public var body: some View {
     StructuredText(markdown: text)
-      .textual.structuredTextStyle(.default)
+      .textual.structuredTextStyle(.transcript)
+      .textual.listItemSpacing(.fontScaled(top: 0.15, bottom: 0.15))
       .textual.textSelection(.enabled)
       .frame(maxWidth: .infinity, alignment: .leading)
   }
