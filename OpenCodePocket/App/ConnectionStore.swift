@@ -205,6 +205,15 @@ final class ConnectionStore {
     projects: [SavedProject],
     selectedProjectID: String?
   ) {
+    let hadSavedSettings = settingsStore.hasSavedSettings()
+    let previousSettings = settingsStore.loadSettings()
+    let previousBaseURL = previousSettings.baseURL.trimmingCharacters(in: .whitespacesAndNewlines)
+    let previousUsername = previousSettings.username.trimmedNonEmpty
+
+    let currentBaseURL = normalizedBaseURL.trimmingCharacters(in: .whitespacesAndNewlines)
+    let currentUsername = username.trimmedNonEmpty
+    let currentPassword = password.trimmedNonEmpty
+
     let settings = ConnectionSettings(
       baseURL: normalizedBaseURL,
       username: username,
@@ -220,14 +229,18 @@ final class ConnectionStore {
     )
     settingsStore.saveSettings(settings)
 
-    if
-      useBasicAuth,
-      let resolvedUsername = username.trimmedNonEmpty,
-      let resolvedPassword = password.trimmedNonEmpty
-    {
-      settingsStore.savePassword(resolvedPassword, baseURL: normalizedBaseURL, username: resolvedUsername)
-    } else if let resolvedUsername = username.trimmedNonEmpty {
-      settingsStore.deletePassword(baseURL: normalizedBaseURL, username: resolvedUsername)
+    if useBasicAuth, let currentUsername, let currentPassword {
+      settingsStore.savePassword(currentPassword, baseURL: normalizedBaseURL, username: currentUsername)
+    } else if let currentUsername {
+      settingsStore.deletePassword(baseURL: normalizedBaseURL, username: currentUsername)
+    }
+
+    if hadSavedSettings, let previousUsername, !previousBaseURL.isEmpty {
+      let credentialsChanged = currentUsername == nil || currentUsername != previousUsername || currentBaseURL != previousBaseURL
+
+      if credentialsChanged {
+        settingsStore.deletePassword(baseURL: previousBaseURL, username: previousUsername)
+      }
     }
   }
 }

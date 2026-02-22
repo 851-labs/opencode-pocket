@@ -62,6 +62,10 @@ final class ConnectionSettingsStore {
     defaults.set(data, forKey: Self.defaultsKey)
   }
 
+  func hasSavedSettings() -> Bool {
+    defaults.data(forKey: Self.defaultsKey) != nil
+  }
+
   func loadPassword(baseURL: String, username: String) -> String? {
     let account = accountKey(baseURL: baseURL, username: username)
     let query: [String: Any] = [

@@ -31,6 +31,7 @@
 		5F3464B95811048FD9CC8AD2 /* WorkspaceSessionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10AF29913FFA1E7F68A717FA /* WorkspaceSessionSheet.swift */; };
 		63026B59410D0B0ECD612B80 /* WorkspaceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D525B8CA3040B4A99022C401 /* WorkspaceStore.swift */; };
 		7D451B4CBFBF8C727DB990DD /* MacWorkspaceSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = F39921D7F52F1501F71404A9 /* MacWorkspaceSettings.swift */; };
+		7FB3E376778D6785B2D944B2 /* ConnectionSecurityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 026E56A9451C809E58A4241D /* ConnectionSecurityTests.swift */; };
 		8B06F4CD56748969A2052037 /* ConnectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C69CD8CF636DA57803128B44 /* ConnectView.swift */; };
 		8D01B95B1E0BF1DECE496903 /* MacWorkspaceShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87482039779D818117783BD6 /* MacWorkspaceShared.swift */; };
 		93ACD98DA97BB5B919296FF6 /* OpenCodePocketApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F2AB2259CAD47AEF8C1F3AA /* OpenCodePocketApp.swift */; };
@@ -70,6 +71,7 @@
 
 /* Begin PBXFileReference section */
 		01A4FE78F261B36005A4B76F /* ConnectionStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionStorage.swift; sourceTree = "<group>"; };
+		026E56A9451C809E58A4241D /* ConnectionSecurityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionSecurityTests.swift; sourceTree = "<group>"; };
 		0E21B9A1F7EEF23EDA66C967 /* OpenCodeClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenCodeClientTests.swift; sourceTree = "<group>"; };
 		10AF29913FFA1E7F68A717FA /* WorkspaceSessionSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceSessionSheet.swift; sourceTree = "<group>"; };
 		12811AD990A5004A07643D76 /* RequestBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RequestBuilderTests.swift; sourceTree = "<group>"; };
@@ -201,6 +203,7 @@
 		4316D4CE93C5CBEBDC6CBD0D /* OpenCodePocketTests */ = {
 			isa = PBXGroup;
 			children = (
+				026E56A9451C809E58A4241D /* ConnectionSecurityTests.swift */,
 				AD77BF34D8ED8192C6406A29 /* JSONDecodingTests.swift */,
 				5863B4179F814BACC36D0A24 /* LiveServerIntegrationTests.swift */,
 				0E21B9A1F7EEF23EDA66C967 /* OpenCodeClientTests.swift */,
@@ -437,6 +440,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7FB3E376778D6785B2D944B2 /* ConnectionSecurityTests.swift in Sources */,
 				BC7B461C1D77336301F9D74D /* JSONDecodingTests.swift in Sources */,
 				F523C4CE4B7B6C0663D08CA2 /* LiveServerIntegrationTests.swift in Sources */,
 				998C3F847F8CDE2AA23E1C3E /* OpenCodeClientTests.swift in Sources */,
