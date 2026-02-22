@@ -18,6 +18,10 @@ struct MacUserMessageCard: View {
     macUserMessageMetadata(for: message)
   }
 
+  private var metadataVisible: Bool {
+    isHovering || copied
+  }
+
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
       if !attachments.isEmpty {
@@ -27,33 +31,33 @@ struct MacUserMessageCard: View {
       MacHighlightedUserText(text: message.textBody)
         .font(.body)
 
-      if isHovering || copied {
-        HStack(spacing: 8) {
-          if !metadata.isEmpty {
-            Text(metadata)
-              .font(.caption2)
-              .foregroundStyle(.secondary)
-              .lineLimit(1)
-          }
-
-          Button {
-            macCopyText(message.textBody)
-            copied = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-              copied = false
-            }
-          } label: {
-            Image(systemName: copied ? "checkmark" : "doc.on.doc")
-              .font(.caption)
-              .foregroundStyle(.secondary)
-          }
-          .buttonStyle(.plain)
-          .accessibilityLabel(copied ? "Copied" : "Copy")
-          .accessibilityIdentifier("message.user.copy.\(message.id)")
+      HStack(spacing: 8) {
+        if !metadata.isEmpty {
+          Text(metadata)
+            .font(.caption2)
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .transition(.opacity)
+
+        Button {
+          macCopyText(message.textBody)
+          copied = true
+          DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            copied = false
+          }
+        } label: {
+          Image(systemName: copied ? "checkmark" : "doc.on.doc")
+            .font(.caption)
+            .foregroundStyle(.secondary)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(copied ? "Copied" : "Copy")
+        .accessibilityIdentifier("message.user.copy.\(message.id)")
       }
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .opacity(metadataVisible ? 1 : 0)
+      .allowsHitTesting(metadataVisible)
+      .accessibilityHidden(!metadataVisible)
     }
     .padding(10)
     .frame(maxWidth: .infinity, alignment: .trailing)
@@ -423,6 +427,10 @@ private struct MacAssistantPartView: View {
     macAssistantCopyText(for: message, includeReasoning: showReasoningSummaries)
   }
 
+  private var metadataVisible: Bool {
+    showMetadataRow || copied
+  }
+
   var body: some View {
     switch part.type {
     case "text":
@@ -432,33 +440,33 @@ private struct MacAssistantPartView: View {
             .font(.body)
 
           if isLastTextPart {
-            if showMetadataRow || copied {
-              HStack(spacing: 8) {
-                if !metadata.isEmpty {
-                  Text(metadata)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                }
-
-                Button {
-                  macCopyText(copyTextValue)
-                  copied = true
-                  DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                    copied = false
-                  }
-                } label: {
-                  Image(systemName: copied ? "checkmark" : "doc.on.doc")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(copied ? "Copied" : "Copy")
-                .accessibilityIdentifier("message.assistant.copy")
+            HStack(spacing: 8) {
+              if !metadata.isEmpty {
+                Text(metadata)
+                  .font(.caption2)
+                  .foregroundStyle(.secondary)
+                  .lineLimit(1)
               }
-              .frame(maxWidth: .infinity, alignment: .leading)
-              .transition(.opacity)
+
+              Button {
+                macCopyText(copyTextValue)
+                copied = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                  copied = false
+                }
+              } label: {
+                Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                  .font(.caption)
+                  .foregroundStyle(.secondary)
+              }
+              .buttonStyle(.plain)
+              .accessibilityLabel(copied ? "Copied" : "Copy")
+              .accessibilityIdentifier("message.assistant.copy")
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .opacity(metadataVisible ? 1 : 0)
+            .allowsHitTesting(metadataVisible)
+            .accessibilityHidden(!metadataVisible)
           }
         }
       }
