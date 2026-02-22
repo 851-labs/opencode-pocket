@@ -5,6 +5,13 @@ final class OpenCodePocketUITests: XCTestCase {
     continueAfterFailure = false
   }
 
+  private func makeWorkspaceApp() -> XCUIApplication {
+    let app = XCUIApplication()
+    app.launchArguments = ["-ui-testing-workspace"]
+    app.launchEnvironment["OPENCODE_POCKET_UI_TEST_WORKSPACE"] = "1"
+    return app
+  }
+
   @MainActor
   func testConnectScreenAndServerAttempt() throws {
     let app = XCUIApplication()
@@ -29,12 +36,15 @@ final class OpenCodePocketUITests: XCTestCase {
 
   @MainActor
   func testWorkspaceToolbarDrawerAndComposer() throws {
-    let app = XCUIApplication()
-    app.launchArguments = ["-ui-testing-workspace"]
-    app.launchEnvironment["OPENCODE_POCKET_UI_TEST_WORKSPACE"] = "1"
+    let app = makeWorkspaceApp()
     app.launch()
 
     let anyElements = app.descendants(matching: .any)
+
+    XCTAssertTrue(
+      anyElements["workspace.session.pane"].waitForExistence(timeout: 15),
+      "Expected workspace session pane after bootstrap"
+    )
 
     let drawerToggle = app.buttons["workspace.drawer.toggle"].firstMatch
     XCTAssertTrue(drawerToggle.waitForExistence(timeout: 15), "Expected drawer toggle in workspace toolbar")
@@ -52,6 +62,16 @@ final class OpenCodePocketUITests: XCTestCase {
     XCTAssertTrue(hasChangesPane, "Expected changes pane after switching panels")
 
     drawerToggle.tap()
+    XCTAssertTrue(anyElements["workspace.drawer"].waitForExistence(timeout: 4), "Expected drawer sheet")
+    XCTAssertTrue(app.buttons["drawer.refresh"].exists, "Expected drawer refresh action")
+    XCTAssertTrue(app.buttons["drawer.create"].exists, "Expected drawer create action")
+    XCTAssertTrue(app.buttons["drawer.project.add"].exists, "Expected drawer add project action")
+
+    let projectButton = app.buttons
+      .matching(NSPredicate(format: "identifier BEGINSWITH %@", "drawer.project."))
+      .firstMatch
+    XCTAssertTrue(projectButton.exists, "Expected at least one project selector in drawer")
+
     let sessionRow = app.buttons["drawer.session.ses_mock_primary"]
     XCTAssertTrue(sessionRow.waitForExistence(timeout: 4), "Expected selectable mock session row")
     sessionRow.tap()
@@ -63,10 +83,8 @@ final class OpenCodePocketUITests: XCTestCase {
   }
 
   @MainActor
-  func testTranscriptMenuToggleAndAssistantCopyControl() throws {
-    let app = XCUIApplication()
-    app.launchArguments = ["-ui-testing-workspace"]
-    app.launchEnvironment["OPENCODE_POCKET_UI_TEST_WORKSPACE"] = "1"
+  func testTranscriptReasoningToggleAndMessageCopyContracts() throws {
+    let app = makeWorkspaceApp()
     app.launch()
 
     let actionsMenu = app.buttons["workspace.actions.menu"].firstMatch
@@ -77,7 +95,23 @@ final class OpenCodePocketUITests: XCTestCase {
     XCTAssertTrue(reasoningItem.waitForExistence(timeout: 4), "Expected reasoning summaries toggle in actions menu")
     reasoningItem.tap()
 
+    let composerInput = app.descendants(matching: .any)["composer.input"]
+    XCTAssertTrue(composerInput.waitForExistence(timeout: 4), "Expected composer input")
+    composerInput.tap()
+    composerInput.typeText("Contract coverage message")
+
+    let sendAbort = app.buttons["composer.sendAbort"]
+    XCTAssertTrue(sendAbort.exists, "Expected send/abort composer control")
+    sendAbort.tap()
+
     let copyButton = app.buttons["message.assistant.copy"].firstMatch
-    XCTAssertTrue(copyButton.waitForExistence(timeout: 4), "Expected assistant copy control in transcript")
+    XCTAssertTrue(copyButton.waitForExistence(timeout: 6), "Expected assistant copy control in transcript")
+
+    let userCopyButton = app.buttons
+      .matching(NSPredicate(format: "identifier BEGINSWITH %@", "message.user.copy."))
+      .firstMatch
+    XCTAssertTrue(userCopyButton.waitForExistence(timeout: 6), "Expected user copy control in transcript")
+
+    XCTAssertTrue(app.descendants(matching: .any)["composer.status"].exists, "Expected composer status label")
   }
 }
