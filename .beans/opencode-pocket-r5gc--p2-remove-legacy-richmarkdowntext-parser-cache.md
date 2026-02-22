@@ -1,7 +1,7 @@
 ---
 # opencode-pocket-r5gc
 title: P2 remove legacy RichMarkdownText parser cache
-status: todo
+status: completed
 type: task
 priority: normal
 tags:
@@ -9,7 +9,7 @@ tags:
     - markdown
     - technical-debt
 created_at: 2026-02-22T21:08:24Z
-updated_at: 2026-02-22T21:08:24Z
+updated_at: 2026-02-22T21:55:00Z
 ---
 
 Clean up old markdown parsing/rendering internals once Textual-backed transcript rendering is in place.
