@@ -1,5 +1,6 @@
 import SwiftUI
 import OpenCodeModels
+import TranscriptUI
 
 #if os(iOS)
 
@@ -404,7 +405,7 @@ private struct AssistantPartView: View {
     case "text":
       if let text = part.text?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty {
         VStack(alignment: .leading, spacing: 6) {
-          RichMarkdownText(text: text)
+          TranscriptMarkdownView(text: text)
             .font(.body)
 
           if isLastTextPart {
@@ -442,7 +443,7 @@ private struct AssistantPartView: View {
         !text.isEmpty
       {
         DisclosureGroup(extractReasoningHeading(from: text) ?? "Reasoning") {
-          RichMarkdownText(text: text)
+          TranscriptMarkdownView(text: text)
             .font(.subheadline)
             .padding(.top, 6)
         }

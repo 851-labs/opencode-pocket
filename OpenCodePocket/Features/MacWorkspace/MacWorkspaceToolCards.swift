@@ -1,6 +1,7 @@
 #if os(macOS)
 import OpenCodeModels
 import SwiftUI
+import TranscriptUI
 
 private struct MacToolErrorCard: View {
   let errorText: String
@@ -236,7 +237,7 @@ struct MacToolPartCard: View {
 
       if let output = part.toolState?.output?.trimmingCharacters(in: .whitespacesAndNewlines), !output.isEmpty {
         DisclosureGroup("Output", isExpanded: $showOutput) {
-          RichMarkdownText(text: output)
+          TranscriptMarkdownView(text: output)
             .font(.caption)
             .padding(.top, 4)
         }

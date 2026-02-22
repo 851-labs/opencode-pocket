@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		0067638D730AB37496CB0D36 /* RichMarkdownText.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D1A4E8F9B3FB8EECE04BD39 /* RichMarkdownText.swift */; };
 		0336F6CF4A6DAE07B166B8C9 /* MacWorkspaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 681188C7D0FE47069D7F445B /* MacWorkspaceView.swift */; };
 		0414AE69FC0105999EE4C86E /* OpenCodeNetworking in Frameworks */ = {isa = PBXBuildFile; productRef = 4D514DC58EA728464F285221 /* OpenCodeNetworking */; };
 		0452BEC068B08BFA3A2067E9 /* WorkspaceMessageCards.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A728FB3B761B021F17CF6C5 /* WorkspaceMessageCards.swift */; };
@@ -53,6 +52,7 @@
 		E5D170470C94B7A6A872F3A1 /* WorkspaceComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE441A71ED45FC10DDFFBB36 /* WorkspaceComposer.swift */; };
 		E62308C1947F3F506FBBC3B9 /* MacWorkspaceDiffSummary.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6D76D90C2BB54B4DC0919B1 /* MacWorkspaceDiffSummary.swift */; };
 		F523C4CE4B7B6C0663D08CA2 /* LiveServerIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5863B4179F814BACC36D0A24 /* LiveServerIntegrationTests.swift */; };
+		FBA94DCFE75A76E029FB6156 /* TranscriptUI in Frameworks */ = {isa = PBXBuildFile; productRef = 3D7D11C579C7189C0C2E1491 /* TranscriptUI */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -82,7 +82,6 @@
 		20A9AA4D4D775F7883475871 /* String+Trimmed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "String+Trimmed.swift"; sourceTree = "<group>"; };
 		28B2F3932AA1CACC175E281B /* MacWorkspaceTranscriptPane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacWorkspaceTranscriptPane.swift; sourceTree = "<group>"; };
 		2930741C759CD6EACE1120C3 /* WorkspaceToolCards.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceToolCards.swift; sourceTree = "<group>"; };
-		2D1A4E8F9B3FB8EECE04BD39 /* RichMarkdownText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RichMarkdownText.swift; sourceTree = "<group>"; };
 		2EAE689015B7EAED4AFD7A08 /* ConnectionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionStore.swift; sourceTree = "<group>"; };
 		3E2236AE73B2BB09D504746E /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
 		3E6555165FCF4AB7C9339FCA /* MacWorkspacePromptCards.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacWorkspacePromptCards.swift; sourceTree = "<group>"; };
@@ -97,6 +96,7 @@
 		77054C883C43469DFD38B5A5 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		87482039779D818117783BD6 /* MacWorkspaceShared.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacWorkspaceShared.swift; sourceTree = "<group>"; };
 		8E5D2399CD06F9BB20324AC1 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		9339474A4324C58343ACAC6A /* TranscriptUI */ = {isa = PBXFileReference; lastKnownFileType = folder; name = TranscriptUI; path = Packages/TranscriptUI; sourceTree = SOURCE_ROOT; };
 		9931F30547081E6D53C02DC3 /* WorkspacePromptCards.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspacePromptCards.swift; sourceTree = "<group>"; };
 		9D83BD8354E87398437EA542 /* WorkspaceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceView.swift; sourceTree = "<group>"; };
 		AADE98A1BF9D37A9CA435170 /* WorkspaceStore+ProjectBrowser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "WorkspaceStore+ProjectBrowser.swift"; sourceTree = "<group>"; };
@@ -128,6 +128,7 @@
 			files = (
 				4362D490CDC954625128E4DF /* OpenCodeModels in Frameworks */,
 				07DBA528548F6EBC0D4B58C4 /* OpenCodeNetworking in Frameworks */,
+				FBA94DCFE75A76E029FB6156 /* TranscriptUI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -157,6 +158,7 @@
 			isa = PBXGroup;
 			children = (
 				B67A7E53005A3C2790A3203A /* OpenCodeSDK */,
+				9339474A4324C58343ACAC6A /* TranscriptUI */,
 			);
 			path = Packages;
 			sourceTree = "<group>";
@@ -273,7 +275,6 @@
 				C69CD8CF636DA57803128B44 /* ConnectView.swift */,
 				E8E410DE47EC2B77914A2902 /* MacConnectView.swift */,
 				681188C7D0FE47069D7F445B /* MacWorkspaceView.swift */,
-				2D1A4E8F9B3FB8EECE04BD39 /* RichMarkdownText.swift */,
 				77054C883C43469DFD38B5A5 /* RootView.swift */,
 				6C7BFCD6254DAE5C93352594 /* SessionsView.swift */,
 				9D83BD8354E87398437EA542 /* WorkspaceView.swift */,
@@ -320,6 +321,7 @@
 			packageProductDependencies = (
 				0B5BC2DE254EA41F83F4AFD4 /* OpenCodeModels */,
 				3812E39D97AD2EB76D3F11BB /* OpenCodeNetworking */,
+				3D7D11C579C7189C0C2E1491 /* TranscriptUI */,
 			);
 			productName = OpenCodePocket;
 			productReference = 6E0B7D1C84E1310D9D09080B /* OpenCodePocket.app */;
@@ -375,6 +377,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				42ED961D3F24F8BC179AB65D /* XCLocalSwiftPackageReference "Packages/OpenCodeSDK" */,
+				FA0199896D8A3CCDE91AAB87 /* XCLocalSwiftPackageReference "Packages/TranscriptUI" */,
 			);
 			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
@@ -420,7 +423,6 @@
 				090049CB1F8AC1F6A722C68F /* MacWorkspaceTranscriptPane.swift in Sources */,
 				0336F6CF4A6DAE07B166B8C9 /* MacWorkspaceView.swift in Sources */,
 				93ACD98DA97BB5B919296FF6 /* OpenCodePocketApp.swift in Sources */,
-				0067638D730AB37496CB0D36 /* RichMarkdownText.swift in Sources */,
 				1355DEB3AE787C31F3505B08 /* RootView.swift in Sources */,
 				0E9E6AA9FEFC0FBE898B75A5 /* SessionsView.swift in Sources */,
 				26B0E2FF8B8C2E1C415E7E44 /* String+Trimmed.swift in Sources */,
@@ -770,6 +772,10 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/OpenCodeSDK;
 		};
+		FA0199896D8A3CCDE91AAB87 /* XCLocalSwiftPackageReference "Packages/TranscriptUI" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/TranscriptUI;
+		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -780,6 +786,10 @@
 		3812E39D97AD2EB76D3F11BB /* OpenCodeNetworking */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = OpenCodeNetworking;
+		};
+		3D7D11C579C7189C0C2E1491 /* TranscriptUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = TranscriptUI;
 		};
 		4D514DC58EA728464F285221 /* OpenCodeNetworking */ = {
 			isa = XCSwiftPackageProductDependency;

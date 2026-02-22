@@ -1,5 +1,6 @@
 import SwiftUI
 import OpenCodeModels
+import TranscriptUI
 
 #if os(iOS)
 
@@ -177,7 +178,7 @@ struct ToolPartCard: View {
         !output.isEmpty
       {
         DisclosureGroup("Output", isExpanded: $showOutput) {
-          RichMarkdownText(text: output)
+          TranscriptMarkdownView(text: output)
             .font(.caption)
             .padding(.top, 6)
         }
@@ -409,7 +410,7 @@ private struct ToolBashDetail: View {
           .buttonStyle(.plain)
         }
 
-        RichMarkdownText(text: text)
+        TranscriptMarkdownView(text: text)
           .font(.caption)
           .padding(8)
           .background(

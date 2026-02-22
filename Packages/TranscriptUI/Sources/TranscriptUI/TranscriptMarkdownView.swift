@@ -8,13 +8,13 @@ import UIKit
 
 // MARK: - Rich Markdown View
 
-struct RichMarkdownText: View {
-  let text: String
+public struct TranscriptMarkdownView: View {
+  public let text: String
 
   @State private var renderedSegments: [MarkdownSegment] = []
   @State private var pendingRenderTask: Task<Void, Never>?
 
-  var body: some View {
+  public var body: some View {
     VStack(alignment: .leading, spacing: 8) {
       ForEach(renderedSegments) { segment in
         switch segment.kind {
@@ -32,11 +32,15 @@ struct RichMarkdownText: View {
     }
     .onDisappear(perform: handleDisappear)
   }
+
+  public init(text: String) {
+    self.text = text
+  }
 }
 
 // MARK: - Rich Markdown Lifecycle
 
-private extension RichMarkdownText {
+private extension TranscriptMarkdownView {
   func handleAppear() {
     renderedSegments = MarkdownRenderCache.shared.segments(for: text)
   }

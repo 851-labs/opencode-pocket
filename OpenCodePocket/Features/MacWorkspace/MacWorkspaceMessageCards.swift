@@ -2,6 +2,7 @@
 import AppKit
 import OpenCodeModels
 import SwiftUI
+import TranscriptUI
 
 struct MacUserMessageCard: View {
   let message: MessageEnvelope
@@ -427,7 +428,7 @@ private struct MacAssistantPartView: View {
     case "text":
       if let text = part.text?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty {
         VStack(alignment: .leading, spacing: 6) {
-          RichMarkdownText(text: text)
+          TranscriptMarkdownView(text: text)
             .font(.body)
 
           if isLastTextPart {
@@ -468,7 +469,7 @@ private struct MacAssistantPartView: View {
         !text.isEmpty
       {
         DisclosureGroup(macExtractReasoningHeading(from: text) ?? "Reasoning") {
-          RichMarkdownText(text: text)
+          TranscriptMarkdownView(text: text)
             .font(.subheadline)
             .padding(.top, 6)
         }
