@@ -1,7 +1,7 @@
 ---
 # opencode-pocket-h4qn
 title: P2 code fence copy and highlighting parity
-status: todo
+status: completed
 type: task
 priority: normal
 tags:
@@ -10,7 +10,7 @@ tags:
     - ux
     - parity
 created_at: 2026-02-22T21:08:24Z
-updated_at: 2026-02-22T21:08:24Z
+updated_at: 2026-02-22T21:40:00Z
 ---
 
 Restore polished code-block UX after the Textual migration.
