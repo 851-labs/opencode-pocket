@@ -1,7 +1,7 @@
 ---
 # opencode-pocket-d3fw
 title: P2 add TranscriptUI preview fixtures
-status: todo
+status: completed
 type: task
 priority: normal
 tags:
@@ -10,7 +10,7 @@ tags:
     - transcript
     - developer-experience
 created_at: 2026-02-22T21:08:24Z
-updated_at: 2026-02-22T21:08:24Z
+updated_at: 2026-02-22T21:45:00Z
 ---
 
 Add a preview catalog to make markdown rendering regressions visible during development.
