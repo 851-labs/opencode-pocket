@@ -106,6 +106,47 @@ public struct FileDiff: Codable, Hashable, Identifiable, Sendable {
   }
 }
 
+public struct PathInfo: Codable, Hashable, Sendable {
+  public let home: String
+  public let state: String
+  public let config: String
+  public let worktree: String
+  public let directory: String
+
+  public init(home: String, state: String, config: String, worktree: String, directory: String) {
+    self.home = home
+    self.state = state
+    self.config = config
+    self.worktree = worktree
+    self.directory = directory
+  }
+}
+
+public enum FileNodeType: String, Codable, Hashable, Sendable {
+  case file
+  case directory
+}
+
+public struct FileNode: Codable, Hashable, Identifiable, Sendable {
+  public let name: String
+  public let path: String
+  public let absolute: String
+  public let type: FileNodeType
+  public let ignored: Bool
+
+  public var id: String {
+    absolute
+  }
+
+  public init(name: String, path: String, absolute: String, type: FileNodeType, ignored: Bool) {
+    self.name = name
+    self.path = path
+    self.absolute = absolute
+    self.type = type
+    self.ignored = ignored
+  }
+}
+
 public struct AgentDescriptor: Codable, Hashable, Identifiable, Sendable {
   public let name: String
   public let description: String?

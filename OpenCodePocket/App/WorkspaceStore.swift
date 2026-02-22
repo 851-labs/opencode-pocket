@@ -879,6 +879,11 @@ final class WorkspaceStore {
     }
 
     let normalized = URL(fileURLWithPath: trimmed).standardizedFileURL.path
+
+    if connection.isConnected && !connection.isMockWorkspace {
+      return normalized
+    }
+
     var isDirectory = ObjCBool(false)
     guard FileManager.default.fileExists(atPath: normalized, isDirectory: &isDirectory), isDirectory.boolValue else {
       return nil

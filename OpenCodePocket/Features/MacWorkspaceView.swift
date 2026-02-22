@@ -447,13 +447,21 @@ private struct MacAddProjectSheet: View {
   @Bindable var store: WorkspaceStore
 
   @State private var directory = ""
+  @State private var isServerBrowserPresented = false
 
   var body: some View {
     VStack(alignment: .leading, spacing: 14) {
       Text("Add Project")
         .font(.headline)
 
-      TextField("/path/to/project", text: $directory)
+      HStack(spacing: 8) {
+        TextField("/path/to/project", text: $directory)
+
+        Button("Browse Server…") {
+          isServerBrowserPresented = true
+        }
+        .accessibilityIdentifier("projects.browse.server")
+      }
 
       HStack {
         Spacer()
@@ -471,6 +479,11 @@ private struct MacAddProjectSheet: View {
     }
     .padding(18)
     .frame(width: 420)
+    .sheet(isPresented: $isServerBrowserPresented) {
+      MacServerDirectoryBrowserSheet(store: store, initialDirectory: directory) { selectedDirectory in
+        directory = selectedDirectory
+      }
+    }
   }
 
   private func addProject() {
@@ -482,6 +495,300 @@ private struct MacAddProjectSheet: View {
       await store.refreshAgentAndModelOptions()
       await store.refreshSessions()
       dismiss()
+    }
+  }
+}
+
+private struct MacServerDirectoryBrowserSheet: View {
+  @Environment(\.dismiss) private var dismiss
+
+  @Bindable var store: WorkspaceStore
+  let initialDirectory: String
+  let onSelect: (String) -> Void
+
+  @State private var rootDirectory = ""
+  @State private var selectedDirectory: String?
+  @State private var expandedDirectories: Set<String> = []
+  @State private var childrenByDirectory: [String: [FileNode]] = [:]
+  @State private var loadingDirectories: Set<String> = []
+
+  @State private var searchQuery = ""
+  @State private var searchResults: [String] = []
+  @State private var isSearching = false
+  @State private var searchTask: Task<Void, Never>?
+
+  @State private var isLoadingRoot = false
+  @State private var errorMessage: String?
+
+  private struct DirectoryRow: Identifiable {
+    let path: String
+    let depth: Int
+
+    var id: String {
+      path
+    }
+  }
+
+  private var trimmedSearchQuery: String {
+    searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+  }
+
+  private var directoryRows: [DirectoryRow] {
+    guard !rootDirectory.isEmpty else {
+      return []
+    }
+
+    var rows: [DirectoryRow] = []
+    appendDirectoryRows(path: rootDirectory, depth: 0, rows: &rows)
+    return rows
+  }
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 12) {
+      Text("Browse Server")
+        .font(.headline)
+
+      TextField("Search directories", text: $searchQuery)
+        .textFieldStyle(.roundedBorder)
+
+      if let errorMessage, !errorMessage.isEmpty {
+        Text(errorMessage)
+          .font(.caption)
+          .foregroundStyle(.red)
+      }
+
+      Group {
+        if isLoadingRoot {
+          ProgressView("Loading directories…")
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+        } else if !trimmedSearchQuery.isEmpty {
+          searchResultsContent
+        } else {
+          treeContent
+        }
+      }
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
+      .background(
+        RoundedRectangle(cornerRadius: 8, style: .continuous)
+          .fill(Color.gray.opacity(0.08))
+      )
+
+      HStack(spacing: 10) {
+        Text(selectedDirectory ?? rootDirectory)
+          .font(.caption)
+          .foregroundStyle(.secondary)
+          .lineLimit(1)
+          .truncationMode(.middle)
+
+        Spacer()
+
+        Button("Cancel") {
+          dismiss()
+        }
+
+        Button("Use Selected") {
+          guard let selectedDirectory, let normalized = selectedDirectory.trimmedNonEmpty else {
+            return
+          }
+          onSelect(normalized)
+          dismiss()
+        }
+        .disabled((selectedDirectory ?? "").trimmedNonEmpty == nil)
+        .keyboardShortcut(.defaultAction)
+      }
+    }
+    .padding(18)
+    .frame(width: 760, height: 560)
+    .task {
+      await loadRootDirectory()
+    }
+    .onChange(of: searchQuery) { _, _ in
+      scheduleSearch()
+    }
+    .onDisappear {
+      searchTask?.cancel()
+    }
+  }
+
+  private var treeContent: some View {
+    List(selection: $selectedDirectory) {
+      ForEach(directoryRows) { row in
+        directoryRowView(row)
+          .tag(Optional(row.path))
+      }
+    }
+    .listStyle(.inset)
+    .accessibilityIdentifier("projects.server.browser.tree")
+  }
+
+  @ViewBuilder
+  private var searchResultsContent: some View {
+    if isSearching {
+      ProgressView("Searching…")
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+    } else if searchResults.isEmpty {
+      ContentUnavailableView(
+        "No Folders Found",
+        systemImage: "magnifyingglass",
+        description: Text("Try a different search query.")
+      )
+    } else {
+      List(searchResults, id: \.self, selection: $selectedDirectory) { path in
+        HStack(spacing: 8) {
+          Image(systemName: "folder")
+            .foregroundStyle(.secondary)
+          Text(path)
+            .lineLimit(1)
+            .truncationMode(.middle)
+        }
+        .tag(Optional(path))
+      }
+      .listStyle(.inset)
+      .accessibilityIdentifier("projects.server.browser.search")
+    }
+  }
+
+  @ViewBuilder
+  private func directoryRowView(_ row: DirectoryRow) -> some View {
+    let isExpanded = expandedDirectories.contains(row.path)
+    let isLoading = loadingDirectories.contains(row.path)
+
+    HStack(spacing: 6) {
+      Button {
+        toggleExpansion(for: row.path)
+      } label: {
+        if isLoading {
+          ProgressView()
+            .controlSize(.mini)
+            .frame(width: 12, height: 12)
+        } else {
+          Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+            .font(.caption2)
+            .foregroundStyle(.secondary)
+            .frame(width: 12, height: 12)
+        }
+      }
+      .buttonStyle(.plain)
+
+      Image(systemName: "folder")
+        .foregroundStyle(.secondary)
+
+      Text(displayName(for: row.path))
+        .lineLimit(1)
+
+      Spacer(minLength: 0)
+    }
+    .padding(.leading, CGFloat(row.depth) * 14)
+    .contentShape(Rectangle())
+    .onTapGesture(count: 2) {
+      selectedDirectory = row.path
+      onSelect(row.path)
+      dismiss()
+    }
+  }
+
+  private func appendDirectoryRows(path: String, depth: Int, rows: inout [DirectoryRow]) {
+    rows.append(DirectoryRow(path: path, depth: depth))
+    guard expandedDirectories.contains(path), let children = childrenByDirectory[path] else {
+      return
+    }
+
+    for child in children where child.type == .directory {
+      appendDirectoryRows(path: child.absolute, depth: depth + 1, rows: &rows)
+    }
+  }
+
+  private func toggleExpansion(for path: String) {
+    if expandedDirectories.contains(path) {
+      expandedDirectories.remove(path)
+      return
+    }
+
+    expandedDirectories.insert(path)
+    Task {
+      await loadChildren(for: path)
+    }
+  }
+
+  private func displayName(for path: String) -> String {
+    if path == "/" {
+      return "/"
+    }
+    return URL(fileURLWithPath: path).lastPathComponent
+  }
+
+  private func loadRootDirectory() async {
+    guard rootDirectory.isEmpty else {
+      return
+    }
+
+    isLoadingRoot = true
+    defer {
+      isLoadingRoot = false
+    }
+
+    do {
+      let root = try await store.fetchServerBrowseRootDirectory()
+      rootDirectory = root
+      expandedDirectories.insert(root)
+
+      if let selected = initialDirectory.trimmedNonEmpty {
+        selectedDirectory = URL(fileURLWithPath: selected).standardizedFileURL.path
+      } else {
+        selectedDirectory = root
+      }
+
+      await loadChildren(for: root)
+    } catch {
+      errorMessage = error.localizedDescription
+    }
+  }
+
+  private func loadChildren(for directory: String) async {
+    if childrenByDirectory[directory] != nil || loadingDirectories.contains(directory) {
+      return
+    }
+
+    loadingDirectories.insert(directory)
+    defer {
+      loadingDirectories.remove(directory)
+    }
+
+    do {
+      let nodes = try await store.listServerDirectory(path: directory)
+      childrenByDirectory[directory] = nodes.filter { $0.type == .directory }
+    } catch {
+      errorMessage = error.localizedDescription
+    }
+  }
+
+  private func scheduleSearch() {
+    searchTask?.cancel()
+    let query = trimmedSearchQuery
+
+    guard !query.isEmpty, !rootDirectory.isEmpty else {
+      isSearching = false
+      searchResults = []
+      return
+    }
+
+    searchTask = Task { @MainActor in
+      try? await Task.sleep(nanoseconds: 250_000_000)
+      guard !Task.isCancelled else {
+        return
+      }
+
+      isSearching = true
+      defer {
+        isSearching = false
+      }
+
+      do {
+        searchResults = try await store.searchServerDirectories(path: rootDirectory, query: query)
+      } catch {
+        searchResults = []
+        errorMessage = error.localizedDescription
+      }
     }
   }
 }

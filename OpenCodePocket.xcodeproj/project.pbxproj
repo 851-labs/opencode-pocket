@@ -31,6 +31,7 @@
 		5F3464B95811048FD9CC8AD2 /* WorkspaceSessionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10AF29913FFA1E7F68A717FA /* WorkspaceSessionSheet.swift */; };
 		63026B59410D0B0ECD612B80 /* WorkspaceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D525B8CA3040B4A99022C401 /* WorkspaceStore.swift */; };
 		67F17F31CE15083C9A4F8868 /* WorkspaceStore+Mock.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB8F0277F3C7C35009845EF3 /* WorkspaceStore+Mock.swift */; };
+		68C2F0012FE42D3C0FA0B34C /* WorkspaceStore+ProjectBrowser.swift in Sources */ = {isa = PBXBuildFile; fileRef = AADE98A1BF9D37A9CA435170 /* WorkspaceStore+ProjectBrowser.swift */; };
 		7D451B4CBFBF8C727DB990DD /* MacWorkspaceSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = F39921D7F52F1501F71404A9 /* MacWorkspaceSettings.swift */; };
 		7FB3E376778D6785B2D944B2 /* ConnectionSecurityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 026E56A9451C809E58A4241D /* ConnectionSecurityTests.swift */; };
 		8B06F4CD56748969A2052037 /* ConnectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C69CD8CF636DA57803128B44 /* ConnectView.swift */; };
@@ -98,6 +99,7 @@
 		8E5D2399CD06F9BB20324AC1 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		9931F30547081E6D53C02DC3 /* WorkspacePromptCards.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspacePromptCards.swift; sourceTree = "<group>"; };
 		9D83BD8354E87398437EA542 /* WorkspaceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceView.swift; sourceTree = "<group>"; };
+		AADE98A1BF9D37A9CA435170 /* WorkspaceStore+ProjectBrowser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "WorkspaceStore+ProjectBrowser.swift"; sourceTree = "<group>"; };
 		AC2CC938232EF5A9B2B732C2 /* WorkspaceTranscriptPane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceTranscriptPane.swift; sourceTree = "<group>"; };
 		AD77BF34D8ED8192C6406A29 /* JSONDecodingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSONDecodingTests.swift; sourceTree = "<group>"; };
 		ADC557896D3FDDF79E3A3B07 /* OpenCodePocketUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenCodePocketUITests.swift; sourceTree = "<group>"; };
@@ -227,6 +229,7 @@
 				D525B8CA3040B4A99022C401 /* WorkspaceStore.swift */,
 				CA4E53111CBF7808F9A97E2F /* WorkspaceStore+Events.swift */,
 				BB8F0277F3C7C35009845EF3 /* WorkspaceStore+Mock.swift */,
+				AADE98A1BF9D37A9CA435170 /* WorkspaceStore+ProjectBrowser.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -429,6 +432,7 @@
 				3457A341B95471F19DD82C6E /* WorkspaceShared.swift in Sources */,
 				DCB7F275FF6B52F9A24A507D /* WorkspaceStore+Events.swift in Sources */,
 				67F17F31CE15083C9A4F8868 /* WorkspaceStore+Mock.swift in Sources */,
+				68C2F0012FE42D3C0FA0B34C /* WorkspaceStore+ProjectBrowser.swift in Sources */,
 				63026B59410D0B0ECD612B80 /* WorkspaceStore.swift in Sources */,
 				D20092E005C9CF653022A13D /* WorkspaceToolCards.swift in Sources */,
 				1C41181F4F63BF1375D0887D /* WorkspaceTranscriptPane.swift in Sources */,

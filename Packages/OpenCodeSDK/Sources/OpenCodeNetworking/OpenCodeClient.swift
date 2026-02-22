@@ -34,6 +34,38 @@ public final class OpenCodeClient {
     try await request(.get, path: "/global/health", response: HealthResponse.self)
   }
 
+  public func getPath() async throws -> PathInfo {
+    try await request(.get, path: "/path", response: PathInfo.self)
+  }
+
+  public func listFiles(path: String, directory: String? = nil) async throws -> [FileNode] {
+    var queryItems = mergedDirectoryQuery(directory)
+    queryItems.append(URLQueryItem(name: "path", value: path))
+    return try await request(.get, path: "/file", query: queryItems, response: [FileNode].self)
+  }
+
+  public func findFiles(
+    query searchQuery: String,
+    includeDirectories: Bool? = nil,
+    type: FileNodeType? = nil,
+    limit: Int? = nil,
+    directory: String? = nil
+  ) async throws -> [String] {
+    var queryItems = mergedDirectoryQuery(directory)
+    queryItems.append(URLQueryItem(name: "query", value: searchQuery))
+    if let includeDirectories {
+      queryItems.append(URLQueryItem(name: "dirs", value: includeDirectories ? "true" : "false"))
+    }
+    if let type {
+      queryItems.append(URLQueryItem(name: "type", value: type.rawValue))
+    }
+    if let limit {
+      queryItems.append(URLQueryItem(name: "limit", value: String(limit)))
+    }
+
+    return try await request(.get, path: "/find/file", query: queryItems, response: [String].self)
+  }
+
   public func listSessions(directory: String? = nil) async throws -> [Session] {
     try await request(.get, path: "/session", query: mergedDirectoryQuery(directory), response: [Session].self)
   }

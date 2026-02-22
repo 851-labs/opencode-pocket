@@ -21,6 +21,18 @@ final class OpenCodeClientTests: XCTestCase {
         return try makeJSONResponse(request: request, json: """
         {"healthy":true,"version":"1.2.3"}
         """)
+      case ("GET", "/path"):
+        return try makeJSONResponse(request: request, json: """
+        {"home":"/Users/opencode","state":"/Users/opencode/.config/opencode/state","config":"/Users/opencode/.config/opencode/config","worktree":"/Users/opencode/.local/opencode/worktree","directory":"/Users/opencode/projects"}
+        """)
+      case ("GET", "/file"):
+        return try makeJSONResponse(request: request, json: """
+        [{"name":"src","path":"src","absolute":"/tmp/project/src","type":"directory","ignored":false},{"name":"README.md","path":"README.md","absolute":"/tmp/project/README.md","type":"file","ignored":false}]
+        """)
+      case ("GET", "/find/file"):
+        return try makeJSONResponse(request: request, json: """
+        ["src","tests"]
+        """)
       case ("GET", "/session"):
         return try makeJSONResponse(request: request, json: """
         [{"id":"ses_1","slug":"slug","projectID":"prj_1","directory":"/tmp/project","parentID":null,"title":"Session","version":"1","time":{"created":1,"updated":2,"archived":null},"summary":null,"share":null,"revert":null}]
@@ -71,6 +83,22 @@ final class OpenCodeClientTests: XCTestCase {
     XCTAssertTrue(health.healthy)
     XCTAssertEqual(health.version, "1.2.3")
 
+    let pathInfo = try await client.getPath()
+    XCTAssertEqual(pathInfo.home, "/Users/opencode")
+
+    let listedFiles = try await client.listFiles(path: "", directory: "/tmp/project")
+    XCTAssertEqual(listedFiles.count, 2)
+    XCTAssertEqual(listedFiles.first?.type, .directory)
+
+    let directoryMatches = try await client.findFiles(
+      query: "src",
+      includeDirectories: true,
+      type: .directory,
+      limit: 10,
+      directory: "/tmp/project"
+    )
+    XCTAssertEqual(directoryMatches, ["src", "tests"])
+
     let sessions = try await client.listSessions()
     XCTAssertEqual(sessions.count, 1)
 
@@ -112,6 +140,11 @@ final class OpenCodeClientTests: XCTestCase {
     let requests = URLProtocolStub.recordedRequests
     XCTAssertTrue(requests.contains { $0.url?.path == "/session" && $0.httpMethod == "GET" })
     XCTAssertTrue(requests.contains { $0.url?.path == "/session" && $0.url?.query?.contains("directory=/tmp/default") == true })
+    XCTAssertTrue(requests.contains { $0.url?.path == "/path" && $0.httpMethod == "GET" })
+    XCTAssertTrue(requests.contains { $0.url?.path == "/file" && $0.url?.query?.contains("path=") == true })
+    XCTAssertTrue(requests.contains { $0.url?.path == "/find/file" && $0.url?.query?.contains("type=directory") == true })
+    XCTAssertTrue(requests.contains { $0.url?.path == "/find/file" && $0.url?.query?.contains("dirs=true") == true })
+    XCTAssertTrue(requests.contains { $0.url?.path == "/find/file" && $0.url?.query?.contains("limit=10") == true })
     XCTAssertTrue(requests.contains { $0.url?.path.contains("/session/ses") == true && $0.httpMethod == "GET" })
     XCTAssertTrue(requests.contains { $0.url?.absoluteString.contains("limit=5") == true })
     XCTAssertTrue(requests.contains { $0.url?.absoluteString.contains("messageID=msg_1") == true })
