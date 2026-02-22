@@ -1,7 +1,7 @@
 ---
 # opencode-pocket-v9mk
 title: P1 migrate markdown rendering to Textual StructuredText
-status: todo
+status: completed
 type: task
 priority: high
 tags:
@@ -10,7 +10,7 @@ tags:
     - transcript
     - parity
 created_at: 2026-02-22T21:08:24Z
-updated_at: 2026-02-22T21:08:24Z
+updated_at: 2026-02-22T21:31:00Z
 ---
 
 Replace the current `AttributedString(markdown:)` prose pipeline with Textual so block structure (lists, paragraph spacing, headings, blockquotes) is preserved.
