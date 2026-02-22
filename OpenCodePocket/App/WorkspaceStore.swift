@@ -24,7 +24,7 @@ final class WorkspaceStore {
   var selectedAgentName: String
   var selectedModel: ModelSelector?
   var selectedModelVariant: String?
-  var showReasoningSummaries = true
+  var showReasoningSummaries = false
 
   var draftMessage = ""
   var isSending = false
