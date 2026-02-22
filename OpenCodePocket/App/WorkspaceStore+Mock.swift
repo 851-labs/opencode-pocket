@@ -66,8 +66,15 @@ extension WorkspaceStore {
     reconcileSelectedModel(using: [:])
     reconcileSelectedModelVariant()
 
+    var seededMessages: [MessageEnvelope] = []
     if let greeting = makeMockMessage(sessionID: primary.id, role: .assistant, text: "Welcome to the mock workspace.") {
-      messagesBySession[primary.id] = [greeting]
+      seededMessages.append(greeting)
+    }
+    if let markdownFixture = makeMockMessage(sessionID: primary.id, role: .assistant, text: mockMarkdownTranscriptFixture) {
+      seededMessages.append(markdownFixture)
+    }
+    if !seededMessages.isEmpty {
+      messagesBySession[primary.id] = seededMessages
     }
 
     connection.isConnected = true
@@ -105,5 +112,23 @@ extension WorkspaceStore {
     }
 
     return envelope
+  }
+
+  private var mockMarkdownTranscriptFixture: String {
+    """
+    From our best current science, here is the short version:
+
+    - About 13.8 billion years ago, the universe began in a hot, dense state (the Big Bang).
+    - In the first tiny fractions of a second, space expanded extremely fast (inflation), then cooled.
+    - Within minutes, the first simple nuclei formed (mostly hydrogen and helium).
+    - After about 380,000 years, atoms formed and light could travel freely.
+    - Over billions of years, stars and galaxies formed and evolved.
+
+    For details, see [Swift.org](https://swift.org).
+
+    ```swift
+    print("hello cosmos")
+    ```
+    """
   }
 }

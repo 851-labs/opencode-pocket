@@ -114,4 +114,33 @@ final class OpenCodePocketUITests: XCTestCase {
 
     XCTAssertTrue(app.descendants(matching: .any)["composer.status"].exists, "Expected composer status label")
   }
+
+  @MainActor
+  func testTranscriptMarkdownFixtureContracts() throws {
+    let app = makeWorkspaceApp()
+    app.launch()
+
+    XCTAssertTrue(
+      app.staticTexts["From our best current science, here is the short version:"].waitForExistence(timeout: 10),
+      "Expected markdown fixture heading in transcript"
+    )
+
+    XCTAssertTrue(
+      app.staticTexts["About 13.8 billion years ago, the universe began in a hot, dense state (the Big Bang)."]
+        .waitForExistence(timeout: 4),
+      "Expected rendered bullet-list item in transcript"
+    )
+
+    XCTAssertTrue(
+      app.staticTexts["print(\"hello cosmos\")"].waitForExistence(timeout: 4),
+      "Expected rendered code block content in transcript"
+    )
+
+    let swiftLink = app.links["Swift.org"]
+    let swiftText = app.staticTexts["Swift.org"]
+    XCTAssertTrue(
+      swiftLink.waitForExistence(timeout: 3) || swiftText.waitForExistence(timeout: 1),
+      "Expected markdown link label to be visible"
+    )
+  }
 }

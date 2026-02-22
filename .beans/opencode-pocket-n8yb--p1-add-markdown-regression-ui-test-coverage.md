@@ -1,7 +1,7 @@
 ---
 # opencode-pocket-n8yb
 title: P1 add markdown regression UI test coverage
-status: todo
+status: completed
 type: task
 priority: high
 tags:
@@ -10,7 +10,7 @@ tags:
     - markdown
     - parity
 created_at: 2026-02-22T21:08:24Z
-updated_at: 2026-02-22T21:08:24Z
+updated_at: 2026-02-22T21:52:00Z
 ---
 
 Add stable UI regression coverage for markdown transcript rendering so list and spacing regressions are caught early.
