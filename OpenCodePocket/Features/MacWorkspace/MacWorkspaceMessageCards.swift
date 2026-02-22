@@ -294,11 +294,16 @@ struct MacAssistantMessageCard: View {
 
   private var groupedParts: [MacAssistantItem] {
     let visibleParts = message.parts.filter { part in
-      if part.type != "tool" {
-        if part.type == "reasoning" {
-          return showReasoningSummaries
-        }
-        return true
+      if part.type == "text" {
+        return !(part.text?.trimmedForInput ?? "").isEmpty
+      }
+
+      if part.type == "reasoning" {
+        return showReasoningSummaries && !(part.text?.trimmedForInput ?? "").isEmpty
+      }
+
+      guard part.type == "tool" else {
+        return false
       }
 
       if part.tool == "todowrite" || part.tool == "todoread" {
@@ -471,11 +476,7 @@ private struct MacAssistantPartView: View {
     case "tool":
       MacToolPartCard(part: part)
     default:
-      if let rendered = part.renderedText {
-        Text(rendered)
-          .font(.caption)
-          .foregroundStyle(.secondary)
-      }
+      EmptyView()
     }
   }
 }

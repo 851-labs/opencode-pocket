@@ -277,11 +277,16 @@ struct AssistantMessageCard: View {
 
   private var items: [AssistantRenderItem] {
     let visibleParts = message.parts.filter { part in
-      if part.type != "tool" {
-        if part.type == "reasoning" {
-          return showReasoningSummaries
-        }
-        return true
+      if part.type == "text" {
+        return !(part.text?.trimmedForInput ?? "").isEmpty
+      }
+
+      if part.type == "reasoning" {
+        return showReasoningSummaries && !(part.text?.trimmedForInput ?? "").isEmpty
+      }
+
+      guard part.type == "tool" else {
+        return false
       }
 
       if part.tool == "todowrite" || part.tool == "todoread" {
@@ -445,11 +450,7 @@ private struct AssistantPartView: View {
     case "tool":
       ToolPartCard(part: part)
     default:
-      if let renderedText = part.renderedText {
-        Text(renderedText)
-          .font(.caption)
-          .foregroundStyle(.secondary)
-      }
+      EmptyView()
     }
   }
 }
