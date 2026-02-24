@@ -1,5 +1,5 @@
-import SwiftUI
 import OpenCodeModels
+import SwiftUI
 
 private enum WorkspacePanel: String, CaseIterable, Identifiable {
   case session = "Session"

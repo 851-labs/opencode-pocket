@@ -12,8 +12,8 @@ extension WorkspaceStore {
     let pathInfo = try await client.getPath()
     guard
       let root = pathInfo.home.trimmedNonEmpty
-        ?? pathInfo.directory.trimmedNonEmpty
-        ?? pathInfo.worktree.trimmedNonEmpty
+      ?? pathInfo.directory.trimmedNonEmpty
+      ?? pathInfo.worktree.trimmedNonEmpty
     else {
       throw OpenCodeClientError.message("Server did not return a usable root directory.")
     }

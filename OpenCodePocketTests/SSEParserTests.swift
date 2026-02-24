@@ -1,5 +1,5 @@
-import XCTest
 import OpenCodeNetworking
+import XCTest
 
 final class SSEParserTests: XCTestCase {
   func testParsesSingleMessage() {

@@ -1,5 +1,5 @@
-import XCTest
 import OpenCodeModels
+import XCTest
 
 final class JSONDecodingTests: XCTestCase {
   func testDecodesSession() throws {
@@ -113,7 +113,7 @@ final class JSONDecodingTests: XCTestCase {
     XCTAssertEqual(status.type.rawValue, "retry")
     XCTAssertEqual(status.attempt, 2)
     XCTAssertEqual(status.message, "Retrying")
-    XCTAssertEqual(status.next, 174000)
+    XCTAssertEqual(status.next, 174_000)
     XCTAssertTrue(status.isRunning)
   }
 }

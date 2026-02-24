@@ -1,18 +1,18 @@
 #if os(macOS)
-import SwiftUI
+  import SwiftUI
 
-extension String {
-  var trimmedForInput: String {
-    trimmingCharacters(in: .whitespacesAndNewlines)
-  }
-}
-
-extension Array {
-  subscript(safe index: Index) -> Element? {
-    guard indices.contains(index) else {
-      return nil
+  extension String {
+    var trimmedForInput: String {
+      trimmingCharacters(in: .whitespacesAndNewlines)
     }
-    return self[index]
   }
-}
+
+  extension Array {
+    subscript(safe index: Index) -> Element? {
+      guard indices.contains(index) else {
+        return nil
+      }
+      return self[index]
+    }
+  }
 #endif

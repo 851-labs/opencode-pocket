@@ -308,7 +308,7 @@ public final class OpenCodeClient {
 
             let backoffMilliseconds = min(
               Int(Double(retryDelayMilliseconds) * pow(2.0, Double(max(0, attempts - 1)))),
-              30_000
+              30000
             )
 
             try? await Task.sleep(nanoseconds: UInt64(backoffMilliseconds) * 1_000_000)

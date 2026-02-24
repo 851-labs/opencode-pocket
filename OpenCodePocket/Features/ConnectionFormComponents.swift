@@ -13,39 +13,39 @@ struct ConnectionServerSection: View {
 
   @ViewBuilder
   private var baseURLField: some View {
-#if os(iOS)
-    if applyInputTraits {
+    #if os(iOS)
+      if applyInputTraits {
+        TextField("Base URL", text: $store.baseURL)
+          .keyboardType(.URL)
+          .autocorrectionDisabled()
+          .textInputAutocapitalization(.never)
+          .accessibilityIdentifier("connect.baseURL")
+      } else {
+        TextField("Base URL", text: $store.baseURL)
+          .accessibilityIdentifier("connect.baseURL")
+      }
+    #else
       TextField("Base URL", text: $store.baseURL)
-        .keyboardType(.URL)
-        .autocorrectionDisabled()
-        .textInputAutocapitalization(.never)
         .accessibilityIdentifier("connect.baseURL")
-    } else {
-      TextField("Base URL", text: $store.baseURL)
-        .accessibilityIdentifier("connect.baseURL")
-    }
-#else
-    TextField("Base URL", text: $store.baseURL)
-      .accessibilityIdentifier("connect.baseURL")
-#endif
+    #endif
   }
 
   @ViewBuilder
   private var directoryField: some View {
-#if os(iOS)
-    if applyInputTraits {
+    #if os(iOS)
+      if applyInputTraits {
+        TextField("Workspace directory (optional)", text: $store.directory)
+          .autocorrectionDisabled()
+          .textInputAutocapitalization(.never)
+          .accessibilityIdentifier("connect.directory")
+      } else {
+        TextField("Workspace directory (optional)", text: $store.directory)
+          .accessibilityIdentifier("connect.directory")
+      }
+    #else
       TextField("Workspace directory (optional)", text: $store.directory)
-        .autocorrectionDisabled()
-        .textInputAutocapitalization(.never)
         .accessibilityIdentifier("connect.directory")
-    } else {
-      TextField("Workspace directory (optional)", text: $store.directory)
-        .accessibilityIdentifier("connect.directory")
-    }
-#else
-    TextField("Workspace directory (optional)", text: $store.directory)
-      .accessibilityIdentifier("connect.directory")
-#endif
+    #endif
   }
 }
 
@@ -69,20 +69,20 @@ struct ConnectionAuthenticationSection: View {
 
   @ViewBuilder
   private var usernameField: some View {
-#if os(iOS)
-    if applyInputTraits {
+    #if os(iOS)
+      if applyInputTraits {
+        TextField("Username", text: $store.username)
+          .autocorrectionDisabled()
+          .textInputAutocapitalization(.never)
+          .accessibilityIdentifier("connect.username")
+      } else {
+        TextField("Username", text: $store.username)
+          .accessibilityIdentifier("connect.username")
+      }
+    #else
       TextField("Username", text: $store.username)
-        .autocorrectionDisabled()
-        .textInputAutocapitalization(.never)
         .accessibilityIdentifier("connect.username")
-    } else {
-      TextField("Username", text: $store.username)
-        .accessibilityIdentifier("connect.username")
-    }
-#else
-    TextField("Username", text: $store.username)
-      .accessibilityIdentifier("connect.username")
-#endif
+    #endif
   }
 }
 

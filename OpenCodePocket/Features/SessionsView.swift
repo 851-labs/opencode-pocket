@@ -1,5 +1,5 @@
-import SwiftUI
 import OpenCodeModels
+import SwiftUI
 
 struct SessionsView: View {
   @Bindable var store: WorkspaceStore

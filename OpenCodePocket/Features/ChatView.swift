@@ -1,5 +1,5 @@
-import SwiftUI
 import OpenCodeModels
+import SwiftUI
 
 struct ChatView: View {
   @Bindable var store: WorkspaceStore

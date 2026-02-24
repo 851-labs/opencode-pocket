@@ -16,19 +16,19 @@ struct RootView: View {
 
   @ViewBuilder
   private var connectedContent: some View {
-#if os(macOS)
-    MacWorkspaceView(store: workspace)
-#else
-    WorkspaceView(store: workspace)
-#endif
+    #if os(macOS)
+      MacWorkspaceView(store: workspace)
+    #else
+      WorkspaceView(store: workspace)
+    #endif
   }
 
   @ViewBuilder
   private var disconnectedContent: some View {
-#if os(macOS)
-    MacConnectView(store: connection)
-#else
-    ConnectView(store: connection)
-#endif
+    #if os(macOS)
+      MacConnectView(store: connection)
+    #else
+      ConnectView(store: connection)
+    #endif
   }
 }

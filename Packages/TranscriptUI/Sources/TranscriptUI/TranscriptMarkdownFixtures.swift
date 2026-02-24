@@ -54,26 +54,26 @@ enum TranscriptMarkdownFixtures {
 }
 
 #if DEBUG
-import SwiftUI
+  import SwiftUI
 
-private struct TranscriptMarkdownPreviewDeck: View {
-  var body: some View {
-    ScrollView {
-      VStack(alignment: .leading, spacing: 20) {
-        TranscriptMarkdownView(text: TranscriptMarkdownFixtures.timeline)
-        TranscriptMarkdownView(text: TranscriptMarkdownFixtures.nestedLists)
-        TranscriptMarkdownView(text: TranscriptMarkdownFixtures.mixed)
-        TranscriptMarkdownView(text: TranscriptMarkdownFixtures.table)
-        TranscriptMarkdownView(text: TranscriptMarkdownFixtures.reasoning)
+  private struct TranscriptMarkdownPreviewDeck: View {
+    var body: some View {
+      ScrollView {
+        VStack(alignment: .leading, spacing: 20) {
+          TranscriptMarkdownView(text: TranscriptMarkdownFixtures.timeline)
+          TranscriptMarkdownView(text: TranscriptMarkdownFixtures.nestedLists)
+          TranscriptMarkdownView(text: TranscriptMarkdownFixtures.mixed)
+          TranscriptMarkdownView(text: TranscriptMarkdownFixtures.table)
+          TranscriptMarkdownView(text: TranscriptMarkdownFixtures.reasoning)
+        }
+        .padding(20)
+        .frame(maxWidth: 860, alignment: .leading)
       }
-      .padding(20)
-      .frame(maxWidth: 860, alignment: .leading)
+      .frame(minWidth: 700, minHeight: 760)
     }
-    .frame(minWidth: 700, minHeight: 760)
   }
-}
 
-#Preview("Transcript Markdown Fixtures") {
-  TranscriptMarkdownPreviewDeck()
-}
+  #Preview("Transcript Markdown Fixtures") {
+    TranscriptMarkdownPreviewDeck()
+  }
 #endif

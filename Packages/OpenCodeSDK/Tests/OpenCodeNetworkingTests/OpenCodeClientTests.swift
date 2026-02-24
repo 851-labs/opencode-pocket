@@ -49,27 +49,27 @@ final class OpenCodeClientTests: XCTestCase {
         return try makeJSONResponse(request: request, json: """
         {"id":"ses_new","slug":"slug","projectID":"prj_1","directory":"/tmp/project","parentID":null,"title":"Created","version":"1","time":{"created":1,"updated":1,"archived":null},"summary":null,"share":null,"revert":null}
         """)
-      case ("GET", let path) where path?.contains("/message/") == true:
+      case let ("GET", path) where path?.contains("/message/") == true:
         return try makeJSONResponse(request: request, json: Self.messageJSON(id: "msg_get", sessionID: "ses_1", text: "hello"))
-      case ("GET", let path) where path?.hasSuffix("/message") == true:
+      case let ("GET", path) where path?.hasSuffix("/message") == true:
         return try makeJSONResponse(request: request, json: "[\(Self.messageJSON(id: "msg_list", sessionID: "ses_1", text: "listed"))]")
-      case ("GET", let path) where path?.hasSuffix("/diff") == true:
+      case let ("GET", path) where path?.hasSuffix("/diff") == true:
         return try makeJSONResponse(request: request, json: "[{\"file\":\"a.swift\",\"before\":\"\",\"after\":\"\",\"additions\":2,\"deletions\":1,\"status\":\"modified\"}]")
-      case ("GET", let path) where path?.hasPrefix("/session/") == true:
+      case let ("GET", path) where path?.hasPrefix("/session/") == true:
         return try makeJSONResponse(request: request, json: """
         {"id":"ses_get","slug":"slug","projectID":"prj_1","directory":"/tmp/project","parentID":null,"title":"Fetched","version":"1","time":{"created":1,"updated":1,"archived":null},"summary":null,"share":null,"revert":null}
         """)
-      case ("PATCH", let path) where path?.hasPrefix("/session/") == true:
+      case let ("PATCH", path) where path?.hasPrefix("/session/") == true:
         return try makeJSONResponse(request: request, json: """
         {"id":"ses_patch","slug":"slug","projectID":"prj_1","directory":"/tmp/project","parentID":null,"title":"Patched","version":"1","time":{"created":1,"updated":2,"archived":null},"summary":null,"share":null,"revert":null}
         """)
-      case ("DELETE", let path) where path?.hasPrefix("/session/") == true:
+      case let ("DELETE", path) where path?.hasPrefix("/session/") == true:
         return try makeJSONResponse(request: request, json: "true")
-      case ("POST", let path) where path?.hasSuffix("/message") == true:
+      case let ("POST", path) where path?.hasSuffix("/message") == true:
         return try makeJSONResponse(request: request, json: Self.messageJSON(id: "msg_send", sessionID: "ses_1", text: "sent"))
-      case ("POST", let path) where path?.hasSuffix("/prompt_async") == true:
+      case let ("POST", path) where path?.hasSuffix("/prompt_async") == true:
         return try makeJSONResponse(request: request, json: "{}")
-      case ("POST", let path) where path?.hasSuffix("/abort") == true:
+      case let ("POST", path) where path?.hasSuffix("/abort") == true:
         return try makeJSONResponse(request: request, json: "true")
       default:
         XCTFail("Unexpected request: \(request.httpMethod ?? "?") \(request.url?.absoluteString ?? "nil")")
@@ -183,12 +183,12 @@ final class OpenCodeClientTests: XCTestCase {
 
   func testRequestFailsWithInvalidResponse() async {
     URLProtocolStub.handler = { request in
-      let response = URLResponse(url: try XCTUnwrap(request.url), mimeType: "application/json", expectedContentLength: 2, textEncodingName: nil)
+      let response = try URLResponse(url: XCTUnwrap(request.url), mimeType: "application/json", expectedContentLength: 2, textEncodingName: nil)
       return (response, Data("{}".utf8))
     }
 
     let client = makeClient()
-    await assertClientError(try await client.health(), expected: .invalidResponse)
+    try await assertClientError(await client.health(), expected: .invalidResponse)
   }
 
   func testRequestWrapsTransportError() async {
@@ -197,7 +197,7 @@ final class OpenCodeClientTests: XCTestCase {
     }
 
     let client = makeClient()
-    await assertClientError(try await client.health(), expected: .transport)
+    try await assertClientError(await client.health(), expected: .transport)
   }
 
   func testRequestThrowsDecodingError() async {
@@ -206,7 +206,7 @@ final class OpenCodeClientTests: XCTestCase {
     }
 
     let client = makeClient()
-    await assertClientError(try await client.health(), expected: .decoding)
+    try await assertClientError(await client.health(), expected: .decoding)
   }
 
   func testParsesNotFoundEnvelopeError() async {
@@ -219,7 +219,7 @@ final class OpenCodeClientTests: XCTestCase {
     }
 
     let client = makeClient()
-    await assertHTTPStatusError(try await client.health(), code: 404, contains: "Missing")
+    try await assertHTTPStatusError(await client.health(), code: 404, contains: "Missing")
   }
 
   func testParsesNotFoundEnvelopeWithoutMessage() async {
@@ -232,7 +232,7 @@ final class OpenCodeClientTests: XCTestCase {
     }
 
     let client = makeClient()
-    await assertHTTPStatusError(try await client.health(), code: 404, contains: "Not found")
+    try await assertHTTPStatusError(await client.health(), code: 404, contains: "Not found")
   }
 
   func testParsesBadRequestErrorArrayEnvelope() async {
@@ -245,7 +245,7 @@ final class OpenCodeClientTests: XCTestCase {
     }
 
     let client = makeClient()
-    await assertHTTPStatusError(try await client.health(), code: 400, contains: "Bad input")
+    try await assertHTTPStatusError(await client.health(), code: 400, contains: "Bad input")
   }
 
   func testParsesBadRequestDataEnvelope() async {
@@ -258,7 +258,7 @@ final class OpenCodeClientTests: XCTestCase {
     }
 
     let client = makeClient()
-    await assertHTTPStatusError(try await client.health(), code: 400, contains: "Data error")
+    try await assertHTTPStatusError(await client.health(), code: 400, contains: "Data error")
   }
 
   func testParsesRawBodyError() async {
@@ -267,7 +267,7 @@ final class OpenCodeClientTests: XCTestCase {
     }
 
     let client = makeClient()
-    await assertHTTPStatusError(try await client.health(), code: 500, contains: "boom")
+    try await assertHTTPStatusError(await client.health(), code: 500, contains: "boom")
   }
 
   func testParsesEmptyBodyError() async {
@@ -276,7 +276,7 @@ final class OpenCodeClientTests: XCTestCase {
     }
 
     let client = makeClient()
-    await assertHTTPStatusError(try await client.health(), code: 500, contains: nil)
+    try await assertHTTPStatusError(await client.health(), code: 500, contains: nil)
   }
 
   func testRequestNoContentPathWrapsTransportError() async {
@@ -285,8 +285,8 @@ final class OpenCodeClientTests: XCTestCase {
     }
 
     let client = makeClient()
-    await assertClientError(
-      try await client.sendMessageAsync(sessionID: "ses_1", body: PromptRequest(parts: [.text("x")])),
+    try await assertClientError(
+      await client.sendMessageAsync(sessionID: "ses_1", body: PromptRequest(parts: [.text("x")])),
       expected: .transport
     )
   }
@@ -301,8 +301,8 @@ final class OpenCodeClientTests: XCTestCase {
     }
 
     let client = makeClient()
-    await assertHTTPStatusError(
-      try await client.sendMessageAsync(sessionID: "ses_1", body: PromptRequest(parts: [.text("x")])),
+    try await assertHTTPStatusError(
+      await client.sendMessageAsync(sessionID: "ses_1", body: PromptRequest(parts: [.text("x")])),
       code: 400,
       contains: "No content failed"
     )
@@ -310,13 +310,13 @@ final class OpenCodeClientTests: XCTestCase {
 
   func testRequestNoContentPathFailsWithInvalidResponse() async {
     URLProtocolStub.handler = { request in
-      let response = URLResponse(url: try XCTUnwrap(request.url), mimeType: "application/json", expectedContentLength: 0, textEncodingName: nil)
+      let response = try URLResponse(url: XCTUnwrap(request.url), mimeType: "application/json", expectedContentLength: 0, textEncodingName: nil)
       return (response, Data())
     }
 
     let client = makeClient()
-    await assertClientError(
-      try await client.sendMessageAsync(sessionID: "ses_1", body: PromptRequest(parts: [.text("x")])),
+    try await assertClientError(
+      await client.sendMessageAsync(sessionID: "ses_1", body: PromptRequest(parts: [.text("x")])),
       expected: .invalidResponse
     )
   }
@@ -327,8 +327,8 @@ final class OpenCodeClientTests: XCTestCase {
     }
 
     let client = makeClient()
-    await assertClientError(
-      try await client.updateSession(
+    try await assertClientError(
+      await client.updateSession(
         id: "ses_1",
         body: SessionUpdateRequest(time: SessionUpdateTime(archived: .nan))
       ),
@@ -357,8 +357,8 @@ final class OpenCodeClientTests: XCTestCase {
         )
       case 2:
         XCTAssertEqual(request.value(forHTTPHeaderField: "Last-Event-ID"), "evt-1")
-        let response = URLResponse(
-          url: try XCTUnwrap(request.url),
+        let response = try URLResponse(
+          url: XCTUnwrap(request.url),
           mimeType: "text/event-stream",
           expectedContentLength: 0,
           textEncodingName: nil
@@ -591,7 +591,7 @@ private final class URLProtocolStub: URLProtocol {
     lock.unlock()
   }
 
-  override class func canInit(with request: URLRequest) -> Bool {
+  override class func canInit(with _: URLRequest) -> Bool {
     true
   }
 

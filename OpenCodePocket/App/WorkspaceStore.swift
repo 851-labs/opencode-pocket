@@ -880,7 +880,7 @@ final class WorkspaceStore {
 
     let normalized = URL(fileURLWithPath: trimmed).standardizedFileURL.path
 
-    if connection.isConnected && !connection.isMockWorkspace {
+    if connection.isConnected, !connection.isMockWorkspace {
       return normalized
     }
 
@@ -908,5 +908,4 @@ final class WorkspaceStore {
     let name = url.lastPathComponent.isEmpty ? directory : url.lastPathComponent
     return SavedProject(id: "prj_\(UUID().uuidString.lowercased())", name: name, directory: directory)
   }
-
 }

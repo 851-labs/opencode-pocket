@@ -9,10 +9,10 @@ struct OpenCodePocketApp: App {
       RootView(connection: store.connection, workspace: store.workspace)
     }
 
-#if os(macOS)
-    Settings {
-      MacSettingsView(store: store.workspace)
-    }
-#endif
+    #if os(macOS)
+      Settings {
+        MacSettingsView(store: store.workspace)
+      }
+    #endif
   }
 }

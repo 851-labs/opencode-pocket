@@ -1,6 +1,6 @@
 import Foundation
-import XCTest
 @testable import OpenCodePocket
+import XCTest
 
 final class ConnectionSecurityTests: XCTestCase {
   @MainActor
