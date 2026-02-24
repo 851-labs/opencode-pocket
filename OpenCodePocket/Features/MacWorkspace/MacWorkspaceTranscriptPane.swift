@@ -189,6 +189,10 @@ private struct MacTurnView: View {
       .contains { $0.type == "text" && !($0.text?.trimmedForInput ?? "").isEmpty }
   }
 
+  private var turnDurationMs: Double? {
+    macTurnDurationMilliseconds(for: turn)
+  }
+
   var body: some View {
     VStack(alignment: .leading, spacing: 10) {
       if let user = turn.user {
@@ -199,7 +203,8 @@ private struct MacTurnView: View {
         MacAssistantMessageCard(
           message: assistant,
           busy: isWorking && index == turn.assistantMessages.count - 1,
-          showReasoningSummaries: showReasoningSummaries
+          showReasoningSummaries: showReasoningSummaries,
+          turnDurationMs: turnDurationMs
         )
       }
 
@@ -230,5 +235,27 @@ private struct MacTurnView: View {
       }
     }
   }
+}
+
+private func macTurnDurationMilliseconds(for turn: MacTranscriptTurn) -> Double? {
+  guard let startRaw = turn.user?.info.createdAt else {
+    return nil
+  }
+
+  let startMs = macTranscriptEpochMilliseconds(from: startRaw)
+  let endMs = turn.assistantMessages
+    .compactMap { $0.info.completedAt }
+    .map(macTranscriptEpochMilliseconds(from:))
+    .max()
+
+  guard let endMs, endMs >= startMs else {
+    return nil
+  }
+
+  return endMs - startMs
+}
+
+private func macTranscriptEpochMilliseconds(from raw: Double) -> Double {
+  raw > 10_000_000_000 ? raw : raw * 1000
 }
 #endif

@@ -213,15 +213,53 @@ private func formattedClockTime(from raw: Double?) -> String? {
   return formatter.string(from: date)
 }
 
-private func assistantMessageMetadata(for message: MessageEnvelope) -> String {
+private func assistantMessageMetadata(for message: MessageEnvelope, turnDurationMs: Double?) -> String {
   var chunks: [String] = []
   if let model = message.info.modelID?.trimmedForInput, !model.isEmpty {
     chunks.append(model)
   }
-  if let time = formattedClockTime(from: message.info.createdAt) {
-    chunks.append(time)
+  if
+    let duration = formattedReplyDuration(
+      turnDurationMs: turnDurationMs,
+      createdRaw: message.info.createdAt,
+      completedRaw: message.info.completedAt
+    )
+  {
+    chunks.append(duration)
   }
   return chunks.joined(separator: " · ")
+}
+
+private func formattedReplyDuration(turnDurationMs: Double?, createdRaw: Double?, completedRaw: Double?) -> String? {
+  let durationMs: Double
+  if let turnDurationMs, turnDurationMs >= 0 {
+    durationMs = turnDurationMs
+  } else {
+    guard let createdRaw, let completedRaw else {
+      return nil
+    }
+
+    let createdMs = epochMilliseconds(from: createdRaw)
+    let completedMs = epochMilliseconds(from: completedRaw)
+    let fallbackMs = completedMs - createdMs
+    guard fallbackMs >= 0 else {
+      return nil
+    }
+    durationMs = fallbackMs
+  }
+
+  let totalSeconds = Int((durationMs / 1000).rounded())
+  if totalSeconds < 60 {
+    return "\(totalSeconds)s"
+  }
+
+  let minutes = totalSeconds / 60
+  let seconds = totalSeconds % 60
+  return "\(minutes)m \(seconds)s"
+}
+
+private func epochMilliseconds(from raw: Double) -> Double {
+  raw > 10_000_000_000 ? raw : raw * 1000
 }
 
 private func assistantCopyText(for message: MessageEnvelope, includeReasoning: Bool) -> String {
@@ -263,6 +301,7 @@ struct AssistantMessageCard: View {
   let message: MessageEnvelope
   let busy: Bool
   let showReasoningSummaries: Bool
+  let turnDurationMs: Double?
 
   private var lastTextPartID: String? {
     items.compactMap { item in
@@ -340,7 +379,8 @@ struct AssistantMessageCard: View {
             part: part,
             message: message,
             showReasoningSummaries: showReasoningSummaries,
-            isLastTextPart: part.id == lastTextPartID
+            isLastTextPart: part.id == lastTextPartID,
+            turnDurationMs: turnDurationMs
           )
         case let .context(_, tools):
           ContextToolGroupCard(parts: tools, busy: busy && index == items.count - 1)
@@ -389,11 +429,12 @@ private struct AssistantPartView: View {
   let message: MessageEnvelope
   let showReasoningSummaries: Bool
   let isLastTextPart: Bool
+  let turnDurationMs: Double?
 
   @State private var copied = false
 
   private var metadata: String {
-    assistantMessageMetadata(for: message)
+    assistantMessageMetadata(for: message, turnDurationMs: turnDurationMs)
   }
 
   private var copyTextValue: String {

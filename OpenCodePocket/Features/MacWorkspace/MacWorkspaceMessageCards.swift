@@ -226,15 +226,53 @@ private func macFormattedClockTime(from raw: Double?) -> String? {
   return formatter.string(from: date)
 }
 
-private func macAssistantMessageMetadata(for message: MessageEnvelope) -> String {
+private func macAssistantMessageMetadata(for message: MessageEnvelope, turnDurationMs: Double?) -> String {
   var chunks: [String] = []
   if let model = message.info.modelID?.trimmedForInput, !model.isEmpty {
     chunks.append(model)
   }
-  if let time = macFormattedClockTime(from: message.info.createdAt) {
-    chunks.append(time)
+  if
+    let duration = macFormattedReplyDuration(
+      turnDurationMs: turnDurationMs,
+      createdRaw: message.info.createdAt,
+      completedRaw: message.info.completedAt
+    )
+  {
+    chunks.append(duration)
   }
   return chunks.joined(separator: " · ")
+}
+
+private func macFormattedReplyDuration(turnDurationMs: Double?, createdRaw: Double?, completedRaw: Double?) -> String? {
+  let durationMs: Double
+  if let turnDurationMs, turnDurationMs >= 0 {
+    durationMs = turnDurationMs
+  } else {
+    guard let createdRaw, let completedRaw else {
+      return nil
+    }
+
+    let createdMs = macEpochMilliseconds(from: createdRaw)
+    let completedMs = macEpochMilliseconds(from: completedRaw)
+    let fallbackMs = completedMs - createdMs
+    guard fallbackMs >= 0 else {
+      return nil
+    }
+    durationMs = fallbackMs
+  }
+
+  let totalSeconds = Int((durationMs / 1000).rounded())
+  if totalSeconds < 60 {
+    return "\(totalSeconds)s"
+  }
+
+  let minutes = totalSeconds / 60
+  let seconds = totalSeconds % 60
+  return "\(minutes)m \(seconds)s"
+}
+
+private func macEpochMilliseconds(from raw: Double) -> Double {
+  raw > 10_000_000_000 ? raw : raw * 1000
 }
 
 private func macAssistantCopyText(for message: MessageEnvelope, includeReasoning: Bool) -> String {
@@ -282,6 +320,7 @@ struct MacAssistantMessageCard: View {
   let message: MessageEnvelope
   let busy: Bool
   let showReasoningSummaries: Bool
+  let turnDurationMs: Double?
 
   @State private var isHovering = false
 
@@ -362,7 +401,8 @@ struct MacAssistantMessageCard: View {
             message: message,
             showReasoningSummaries: showReasoningSummaries,
             isLastTextPart: part.id == lastTextPartID,
-            showMetadataRow: isHovering
+            showMetadataRow: isHovering,
+            turnDurationMs: turnDurationMs
           )
         case let .context(_, tools):
           MacContextToolGroupCard(parts: tools, busy: busy && index == groupedParts.count - 1)
@@ -416,11 +456,12 @@ private struct MacAssistantPartView: View {
   let showReasoningSummaries: Bool
   let isLastTextPart: Bool
   let showMetadataRow: Bool
+  let turnDurationMs: Double?
 
   @State private var copied = false
 
   private var metadata: String {
-    macAssistantMessageMetadata(for: message)
+    macAssistantMessageMetadata(for: message, turnDurationMs: turnDurationMs)
   }
 
   private var copyTextValue: String {
