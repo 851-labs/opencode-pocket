@@ -133,7 +133,10 @@ final class ConnectionSecurityTests: XCTestCase {
       selectedModelVariant: nil,
       hiddenModelKeys: [],
       projects: [],
-      selectedProjectID: nil
+      selectedProjectID: nil,
+      showReasoningSummaries: false,
+      expandShellToolParts: true,
+      expandEditToolParts: false
     )
   }
 

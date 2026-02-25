@@ -28,6 +28,9 @@ final class ConnectionStore {
   let initialHiddenModelKeys: Set<String>
   let initialProjects: [SavedProject]
   let initialSelectedProjectID: String?
+  let initialShowReasoningSummaries: Bool
+  let initialExpandShellToolParts: Bool
+  let initialExpandEditToolParts: Bool
 
   private let settingsStore: ConnectionSettingsStore
 
@@ -64,6 +67,9 @@ final class ConnectionStore {
     initialHiddenModelKeys = Set(settings.hiddenModelKeys)
     initialProjects = settings.projects
     initialSelectedProjectID = settings.selectedProjectID
+    initialShowReasoningSummaries = settings.showReasoningSummaries
+    initialExpandShellToolParts = settings.expandShellToolParts
+    initialExpandEditToolParts = settings.expandEditToolParts
   }
 
   var resolvedDirectory: String? {
@@ -126,7 +132,10 @@ final class ConnectionStore {
         selectedModelVariant: workspace?.selectedModelVariant,
         hiddenModelKeys: workspace?.hiddenModelKeys ?? [],
         projects: workspace?.projects ?? [],
-        selectedProjectID: workspace?.selectedProjectID
+        selectedProjectID: workspace?.selectedProjectID,
+        showReasoningSummaries: workspace?.showReasoningSummaries ?? false,
+        expandShellToolParts: workspace?.expandShellToolParts ?? true,
+        expandEditToolParts: workspace?.expandEditToolParts ?? false
       )
 
       await workspace?.refreshAgentAndModelOptions()
@@ -157,7 +166,10 @@ final class ConnectionStore {
     selectedModelVariant: String?,
     hiddenModelKeys: Set<String>,
     projects: [SavedProject],
-    selectedProjectID: String?
+    selectedProjectID: String?,
+    showReasoningSummaries: Bool,
+    expandShellToolParts: Bool,
+    expandEditToolParts: Bool
   ) {
     let normalized: String
     if let url = try? normalizedBaseURL() {
@@ -175,7 +187,10 @@ final class ConnectionStore {
       selectedModelVariant: selectedModelVariant?.trimmedNonEmpty,
       hiddenModelKeys: hiddenModelKeys,
       projects: projects,
-      selectedProjectID: selectedProjectID
+      selectedProjectID: selectedProjectID,
+      showReasoningSummaries: showReasoningSummaries,
+      expandShellToolParts: expandShellToolParts,
+      expandEditToolParts: expandEditToolParts
     )
   }
 
@@ -203,7 +218,10 @@ final class ConnectionStore {
     selectedModelVariant: String?,
     hiddenModelKeys: Set<String>,
     projects: [SavedProject],
-    selectedProjectID: String?
+    selectedProjectID: String?,
+    showReasoningSummaries: Bool,
+    expandShellToolParts: Bool,
+    expandEditToolParts: Bool
   ) {
     let hadSavedSettings = settingsStore.hasSavedSettings()
     let previousSettings = settingsStore.loadSettings()
@@ -225,7 +243,10 @@ final class ConnectionStore {
       selectedModelVariant: selectedModelVariant,
       hiddenModelKeys: hiddenModelKeys.sorted(),
       projects: projects,
-      selectedProjectID: selectedProjectID
+      selectedProjectID: selectedProjectID,
+      showReasoningSummaries: showReasoningSummaries,
+      expandShellToolParts: expandShellToolParts,
+      expandEditToolParts: expandEditToolParts
     )
     settingsStore.saveSettings(settings)
 

@@ -24,9 +24,26 @@ final class WorkspaceStore {
   var selectedAgentName: String
   var selectedModel: ModelSelector?
   var selectedModelVariant: String?
-  var showReasoningSummaries = false
-  var expandShellToolParts = true
-  var expandEditToolParts = false
+  var showReasoningSummaries = false {
+    didSet {
+      guard oldValue != showReasoningSummaries else { return }
+      persistWorkspaceSettings()
+    }
+  }
+
+  var expandShellToolParts = true {
+    didSet {
+      guard oldValue != expandShellToolParts else { return }
+      persistWorkspaceSettings()
+    }
+  }
+
+  var expandEditToolParts = false {
+    didSet {
+      guard oldValue != expandEditToolParts else { return }
+      persistWorkspaceSettings()
+    }
+  }
 
   var draftMessage = ""
   var isSending = false
@@ -46,6 +63,9 @@ final class WorkspaceStore {
     selectedAgentName = connection.initialSelectedAgentName
     selectedModel = connection.initialSelectedModel
     selectedModelVariant = connection.initialSelectedModelVariant
+    showReasoningSummaries = connection.initialShowReasoningSummaries
+    expandShellToolParts = connection.initialExpandShellToolParts
+    expandEditToolParts = connection.initialExpandEditToolParts
 
     if connection.initialProjects.isEmpty {
       let defaultDirectory = connection.directory.trimmedNonEmpty ?? NSHomeDirectory()
@@ -901,7 +921,10 @@ final class WorkspaceStore {
       selectedModelVariant: selectedModelVariant,
       hiddenModelKeys: hiddenModelKeys,
       projects: projects,
-      selectedProjectID: selectedProjectID
+      selectedProjectID: selectedProjectID,
+      showReasoningSummaries: showReasoningSummaries,
+      expandShellToolParts: expandShellToolParts,
+      expandEditToolParts: expandEditToolParts
     )
   }
 
