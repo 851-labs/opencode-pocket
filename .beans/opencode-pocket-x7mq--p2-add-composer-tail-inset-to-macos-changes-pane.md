@@ -1,7 +1,7 @@
 ---
 # opencode-pocket-x7mq
 title: P2 apply composer bottom inset to macOS changes pane
-status: in_progress
+status: completed
 type: task
 priority: normal
 tags:
@@ -10,7 +10,7 @@ tags:
     - changes
     - composer
 created_at: 2026-02-25T01:43:44Z
-updated_at: 2026-02-25T01:50:55Z
+updated_at: 2026-02-25T02:06:35Z
 ---
 
 Apply the same bottom-inset spacing strategy used by transcript to the macOS Changes pane so diff rows can scroll above the overlaid composer.

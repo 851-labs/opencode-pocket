@@ -32,12 +32,11 @@
   struct MacWorkspaceView: View {
     @Bindable var store: WorkspaceStore
 
-    @Environment(\.openSettings) private var openSettings
-
     @State private var selectedPanel: MacWorkspacePanel = .transcript
     @State private var bootstrapState: MacWorkspaceBootstrapState = .loading
     @State private var activeSheet: MacWorkspaceSheet?
     @State private var isDeleteConfirmationPresented = false
+    @State private var expandedProjectIDs: Set<String> = []
 
     private var selectedSessionID: String? {
       store.selectedSessionID
@@ -81,11 +80,29 @@
 
     private var sidebar: some View {
       List(selection: $store.selectedSessionID) {
-        ForEach(store.projects) { project in
-          MacSidebarProjectSection(store: store, project: project)
+        Section("Threads") {
+          ForEach(store.projects) { project in
+            MacSidebarProjectSection(
+              store: store,
+              project: project,
+              isExpanded: projectExpansionBinding(for: project.id)
+            ) {
+              selectProjectFromSidebar(project.id)
+            }
+          }
         }
       }
       .navigationTitle("Sessions")
+      .onAppear {
+        syncExpandedProjects()
+      }
+      .onChange(of: store.projects.map(\.id)) { _, _ in
+        syncExpandedProjects()
+      }
+      .onChange(of: store.selectedProjectID) { _, newValue in
+        guard let newValue else { return }
+        expandedProjectIDs.insert(newValue)
+      }
       .overlay {
         if store.projects.isEmpty {
           ContentUnavailableView(
@@ -190,18 +207,43 @@
             isDeleteConfirmationPresented = true
           }
           .disabled(selectedSessionID == nil)
-
-          Toggle(isOn: $store.showReasoningSummaries) {
-            Text("Show Reasoning Summaries")
-          }
-
-          Button("Settings…") {
-            openSettings()
-          }
         } label: {
           Label("Session Actions", systemImage: "ellipsis.circle")
         }
         .accessibilityIdentifier("workspace.actions.menu")
+      }
+    }
+
+    private func projectExpansionBinding(for projectID: String) -> Binding<Bool> {
+      Binding(
+        get: {
+          expandedProjectIDs.contains(projectID)
+        },
+        set: { isExpanded in
+          if isExpanded {
+            expandedProjectIDs.insert(projectID)
+          } else {
+            expandedProjectIDs.remove(projectID)
+          }
+        }
+      )
+    }
+
+    private func selectProjectFromSidebar(_ projectID: String) {
+      store.selectProject(projectID)
+      expandedProjectIDs.insert(projectID)
+    }
+
+    private func syncExpandedProjects() {
+      let validProjectIDs = Set(store.projects.map(\.id))
+      expandedProjectIDs = expandedProjectIDs.intersection(validProjectIDs)
+
+      if expandedProjectIDs.isEmpty {
+        if let selectedProjectID = store.selectedProjectID {
+          expandedProjectIDs.insert(selectedProjectID)
+        } else if let firstProjectID = store.projects.first?.id {
+          expandedProjectIDs.insert(firstProjectID)
+        }
       }
     }
 
@@ -246,42 +288,31 @@
   private struct MacSidebarProjectSection: View {
     @Bindable var store: WorkspaceStore
     let project: SavedProject
+    @Binding var isExpanded: Bool
+    let onSelectProject: () -> Void
 
     private var sessions: [Session] {
       store.visibleSessions(for: project.id)
     }
 
     var body: some View {
-      Section(project.name) {
-        Button {
-          store.selectProject(project.id)
-        } label: {
-          HStack(spacing: 8) {
-            Image(systemName: store.selectedProjectID == project.id ? "folder.fill" : "folder")
-              .font(.caption)
-              .foregroundStyle(.secondary)
-
-            Text(project.directory)
-              .font(.caption)
-              .foregroundStyle(.secondary)
-              .lineLimit(1)
-
-            Spacer(minLength: 0)
-          }
-        }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier("sidebar.project.\(project.id)")
-
-        ForEach(sessions) { session in
-          MacSidebarSessionRow(store: store, session: session)
-        }
-
+      DisclosureGroup(isExpanded: $isExpanded) {
         if sessions.isEmpty {
-          Text("No sessions yet")
+          Text("No threads yet")
             .font(.caption)
             .foregroundStyle(.secondary)
+        } else {
+          ForEach(sessions) { session in
+            MacSidebarSessionRow(store: store, session: session)
+          }
+        }
+      } label: {
+        Label(project.name, systemImage: "folder")
+        .onTapGesture {
+          onSelectProject()
         }
       }
+      .accessibilityIdentifier("sidebar.project.\(project.id)")
     }
   }
 
@@ -289,28 +320,49 @@
     @Bindable var store: WorkspaceStore
     let session: Session
 
+    private static let elapsedFormatter: DateComponentsFormatter = {
+      let formatter = DateComponentsFormatter()
+      formatter.allowedUnits = [.weekOfMonth, .day, .hour, .minute]
+      formatter.unitsStyle = .abbreviated
+      formatter.maximumUnitCount = 1
+      formatter.zeroFormattingBehavior = .dropAll
+      return formatter
+    }()
+
+    private var elapsedSinceLastActivity: String {
+      guard let raw = session.time.updated ?? session.time.created else {
+        return "now"
+      }
+
+      let seconds = raw > 10_000_000_000 ? raw / 1000 : raw
+      let interval = max(0, Date().timeIntervalSince1970 - seconds)
+      guard interval >= 60 else {
+        return "now"
+      }
+
+      return Self.elapsedFormatter.string(from: interval) ?? "now"
+    }
+
     var body: some View {
-      VStack(alignment: .leading, spacing: 4) {
-        Text(session.title)
-          .font(.body.weight(.semibold))
-          .lineLimit(1)
-
-        HStack(spacing: 6) {
-          Text(session.id)
-            .font(.caption)
-            .foregroundStyle(.secondary)
-            .lineLimit(1)
-
-          Circle()
-            .fill(.secondary.opacity(0.5))
-            .frame(width: 3, height: 3)
-
-          Text(store.statusLabel(for: session.id))
-            .font(.caption)
-            .foregroundStyle(.secondary)
+      LabeledContent {
+        Text(elapsedSinceLastActivity)
+      } label: {
+        Label {
+          Text(session.title)
+        } icon: {
+          if store.status(for: session.id).type == .idle {
+            EmptyView()
+          } else {
+            ProgressView()
+              .controlSize(.small)
+          }
         }
       }
+      .onTapGesture {
+        store.selectedSessionID = session.id
+      }
       .tag(session.id as String?)
+      .accessibilityIdentifier("sidebar.session.\(session.id)")
     }
   }
 

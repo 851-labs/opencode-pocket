@@ -1,7 +1,7 @@
 ---
 # opencode-pocket-n3vd
 title: P2 remove reasoning summaries toggle from session actions menu
-status: todo
+status: completed
 type: task
 priority: normal
 tags:
@@ -10,7 +10,7 @@ tags:
     - macos
     - parity
 created_at: 2026-02-25T01:43:08Z
-updated_at: 2026-02-25T01:43:08Z
+updated_at: 2026-02-25T02:06:35Z
 ---
 
 Remove the "Show Reasoning Summaries" toggle from the macOS workspace session actions menu and keep this setting controlled only from Settings.
