@@ -25,6 +25,8 @@ final class WorkspaceStore {
   var selectedModel: ModelSelector?
   var selectedModelVariant: String?
   var showReasoningSummaries = false
+  var expandShellToolParts = true
+  var expandEditToolParts = false
 
   var draftMessage = ""
   var isSending = false
