@@ -49,6 +49,6 @@
 
   #Preview("Settings") {
     MacSettingsView()
-      .environment(MacSettingsPreviewStore.makeStore())
+      .withMacSettingsPreviewEnv()
   }
 #endif

@@ -3,22 +3,22 @@ import OpenCodeModels
 
 @MainActor
 extension WorkspaceStore {
-  func seedMockWorkspace() {
+  func seedPreviewWorkspace() {
     let now = Date().timeIntervalSince1970 * 1000
-    let mockDirectory = "/tmp/opencode-pocket"
-    let mockProject = projects.first(where: { $0.directory == mockDirectory })
-      ?? SavedProject(id: "prj_mock_local", name: "opencode-pocket", directory: mockDirectory)
-    projects = [mockProject]
-    selectedProjectID = mockProject.id
-    connection.directory = mockProject.directory
+    let previewDirectory = "/tmp/opencode-pocket"
+    let previewProject = projects.first(where: { $0.directory == previewDirectory })
+      ?? SavedProject(id: "prj_preview_local", name: "opencode-pocket", directory: previewDirectory)
+    projects = [previewProject]
+    selectedProjectID = previewProject.id
+    connection.directory = previewProject.directory
 
     let primary = Session(
-      id: "ses_mock_primary",
-      slug: "mock-primary",
-      projectID: mockProject.id,
-      directory: mockProject.directory,
+      id: "ses_preview_primary",
+      slug: "preview-primary",
+      projectID: previewProject.id,
+      directory: previewProject.directory,
       parentID: nil,
-      title: "Mock Workspace Session",
+      title: "Preview Workspace Session",
       version: "1",
       time: SessionTime(created: now - 50000, updated: now - 5000, archived: nil),
       summary: nil,
@@ -27,12 +27,12 @@ extension WorkspaceStore {
     )
 
     let secondary = Session(
-      id: "ses_mock_secondary",
-      slug: "mock-secondary",
-      projectID: mockProject.id,
-      directory: mockProject.directory,
+      id: "ses_preview_secondary",
+      slug: "preview-secondary",
+      projectID: previewProject.id,
+      directory: previewProject.directory,
       parentID: nil,
-      title: "Mock Planning Session",
+      title: "Preview Planning Session",
       version: "1",
       time: SessionTime(created: now - 140_000, updated: now - 40000, archived: nil),
       summary: nil,
@@ -67,10 +67,10 @@ extension WorkspaceStore {
     reconcileSelectedModelVariant()
 
     var seededMessages: [MessageEnvelope] = []
-    if let greeting = makeMockMessage(sessionID: primary.id, role: .assistant, text: "Welcome to the mock workspace.") {
+    if let greeting = makePreviewMessage(sessionID: primary.id, role: .assistant, text: "Welcome to the preview workspace.") {
       seededMessages.append(greeting)
     }
-    if let markdownFixture = makeMockMessage(sessionID: primary.id, role: .assistant, text: mockMarkdownTranscriptFixture) {
+    if let markdownFixture = makePreviewMessage(sessionID: primary.id, role: .assistant, text: previewMarkdownTranscriptFixture) {
       seededMessages.append(markdownFixture)
     }
     if !seededMessages.isEmpty {
@@ -78,13 +78,13 @@ extension WorkspaceStore {
     }
 
     connection.isConnected = true
-    connection.eventConnectionState = "Mock workspace"
-    connection.serverVersion = "mock"
+    connection.eventConnectionState = "Preview workspace"
+    connection.serverVersion = "preview"
     connection.connectionError = nil
   }
 
-  func makeMockMessage(sessionID: String, role: MessageRole, text: String) -> MessageEnvelope? {
-    let messageID = "msg_mock_\(UUID().uuidString.prefix(10))"
+  func makePreviewMessage(sessionID: String, role: MessageRole, text: String) -> MessageEnvelope? {
+    let messageID = "msg_preview_\(UUID().uuidString.prefix(10))"
 
     let payload: [String: Any] = [
       "info": [
@@ -95,7 +95,7 @@ extension WorkspaceStore {
       ],
       "parts": [
         [
-          "id": "prt_mock_\(UUID().uuidString.prefix(10))",
+          "id": "prt_preview_\(UUID().uuidString.prefix(10))",
           "sessionID": sessionID,
           "messageID": messageID,
           "type": "text",
@@ -114,7 +114,7 @@ extension WorkspaceStore {
     return envelope
   }
 
-  private var mockMarkdownTranscriptFixture: String {
+  private var previewMarkdownTranscriptFixture: String {
     """
     From our best current science, here is the short version:
 

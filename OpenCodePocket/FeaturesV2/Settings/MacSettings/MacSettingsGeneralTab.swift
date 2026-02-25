@@ -47,7 +47,7 @@
 
   #Preview("General") {
     MacSettingsGeneralTab()
-      .environment(MacSettingsPreviewStore.makeStore())
+      .withMacSettingsPreviewEnv()
       .frame(width: 860, height: 560)
   }
 #endif
