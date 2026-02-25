@@ -53,10 +53,6 @@ import TranscriptUI
       }
       .padding(12)
       .frame(maxWidth: .infinity, alignment: .trailing)
-      .background(
-        RoundedRectangle(cornerRadius: 12, style: .continuous)
-          .fill(Color.accentColor.opacity(0.16))
-      )
       .accessibilityElement(children: .contain)
       .accessibilityLabel("User message")
     }
@@ -420,10 +416,6 @@ import TranscriptUI
       }
       .padding(12)
       .frame(maxWidth: .infinity, alignment: .leading)
-      .background(
-        RoundedRectangle(cornerRadius: 12, style: .continuous)
-          .fill(Color.white.opacity(0.72))
-      )
       .accessibilityElement(children: .contain)
       .accessibilityLabel("Assistant message")
     }
