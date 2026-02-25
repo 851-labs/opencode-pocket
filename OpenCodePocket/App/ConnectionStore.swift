@@ -43,16 +43,12 @@ final class ConnectionStore {
     private var connectedLocalServerOwnership: ManagedLocalOpenCodeServer.EndpointOwnership?
   #endif
 
-  init(settingsStore: ConnectionSettingsStore = ConnectionSettingsStore()) {
+  init(
+    settingsStore: ConnectionSettingsStore = ConnectionSettingsStore(),
+    isMockWorkspace: Bool = false
+  ) {
     self.settingsStore = settingsStore
-
-    let processInfo = ProcessInfo.processInfo
-    let isRunningUITests = processInfo.environment["XCTestConfigurationFilePath"] != nil
-    let isExplicitConnectUITest = processInfo.arguments.contains("-ui-testing")
-    isMockWorkspace =
-      processInfo.arguments.contains("-ui-testing-workspace") ||
-      processInfo.environment["OPENCODE_POCKET_UI_TEST_WORKSPACE"] == "1" ||
-      (isRunningUITests && !isExplicitConnectUITest)
+    self.isMockWorkspace = isMockWorkspace
 
     let settings = settingsStore.loadSettings()
     baseURL = settings.baseURL
