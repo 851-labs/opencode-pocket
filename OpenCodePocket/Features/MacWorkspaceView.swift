@@ -82,19 +82,8 @@
     }
 
     private var sidebar: some View {
-      @Bindable var store = store
-
-      return List(selection: $store.selectedSessionID) {
-        Section("Threads") {
-          ForEach(store.projects) { project in
-            MacSidebarProjectSection(
-              project: project,
-              isExpanded: projectExpansionBinding(for: project.id)
-            ) {
-              selectProjectFromSidebar(project.id)
-            }
-          }
-        }
+      List(selection: selectedSessionBinding) {
+        threadsSection
       }
       .navigationTitle("Sessions")
       .onAppear {
@@ -108,12 +97,62 @@
         expandedProjectIDs.insert(newValue)
       }
       .overlay {
-        if store.projects.isEmpty {
-          ContentUnavailableView(
-            "No Projects",
-            systemImage: "folder.badge.plus",
-            description: Text("Add a project directory to start browsing sessions.")
-          )
+        emptyProjectsOverlay
+      }
+    }
+
+    private var selectedSessionBinding: Binding<String?> {
+      Binding(
+        get: { store.selectedSessionID },
+        set: { store.selectedSessionID = $0 }
+      )
+    }
+
+    private var threadsSection: some View {
+      Section {
+        ForEach(store.projects) { project in
+          MacSidebarProjectSection(
+            project: project,
+            isExpanded: projectExpansionBinding(for: project.id)
+          ) {
+            selectProjectFromSidebar(project.id)
+          }
+        }
+      } header: {
+        threadsHeader
+      }
+    }
+
+    private var threadsHeader: some View {
+      HStack(spacing: 8) {
+        Text("Threads")
+
+        Spacer(minLength: 0)
+
+        Button {
+          presentProjectPicker()
+        } label: {
+          Image(systemName: "folder.badge.plus")
+        }
+        .buttonStyle(.borderless)
+        .help("Add Project")
+        .accessibilityIdentifier("projects.add")
+      }
+      .textCase(nil)
+    }
+
+    @ViewBuilder
+    private var emptyProjectsOverlay: some View {
+      if store.projects.isEmpty {
+        ContentUnavailableView {
+          Label("No Projects", systemImage: "folder.badge.plus")
+        } description: {
+          Text("Add a project directory to start browsing sessions.")
+        } actions: {
+          Button("Add Project") {
+            presentProjectPicker()
+          }
+          .accessibilityIdentifier("projects.add.empty")
         }
       }
     }
@@ -179,12 +218,6 @@
         .disabled(store.isCreatingSession)
         .accessibilityIdentifier("sessions.create")
 
-        Button {
-          isProjectPickerPresented = true
-        } label: {
-          Image(systemName: "folder.badge.plus")
-        }
-        .accessibilityIdentifier("projects.add")
       }
 
       ToolbarItem(placement: .primaryAction) {
@@ -255,6 +288,10 @@
       }
 
       bootstrapState = .ready
+    }
+
+    private func presentProjectPicker() {
+      isProjectPickerPresented = true
     }
 
     private func handleProjectDirectoryPick(_ result: Result<[URL], Error>) {
