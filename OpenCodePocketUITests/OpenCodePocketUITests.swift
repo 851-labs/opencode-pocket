@@ -95,6 +95,13 @@ final class OpenCodePocketUITests: XCTestCase {
     XCTAssertTrue(reasoningItem.waitForExistence(timeout: 4), "Expected reasoning summaries toggle in actions menu")
     reasoningItem.tap()
 
+    let reasoningItemSecondPass = app.buttons["Show Reasoning Summaries"]
+    if !reasoningItemSecondPass.exists {
+      actionsMenu.tap()
+    }
+    XCTAssertTrue(reasoningItemSecondPass.waitForExistence(timeout: 4), "Expected reasoning summaries toggle after reopening actions menu")
+    reasoningItemSecondPass.tap()
+
     let composerInput = app.descendants(matching: .any)["composer.input"]
     XCTAssertTrue(composerInput.waitForExistence(timeout: 4), "Expected composer input")
     composerInput.tap()
