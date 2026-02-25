@@ -25,7 +25,6 @@ final class ConnectionStore {
   private(set) var client: OpenCodeClient?
   weak var workspace: WorkspaceStore?
 
-  let isMockWorkspace: Bool
   let initialSelectedAgentName: String
   let initialSelectedModel: ModelSelector?
   let initialSelectedModelVariant: String?
@@ -43,12 +42,8 @@ final class ConnectionStore {
     private var connectedLocalServerOwnership: ManagedLocalOpenCodeServer.EndpointOwnership?
   #endif
 
-  init(
-    settingsStore: ConnectionSettingsStore = ConnectionSettingsStore(),
-    isMockWorkspace: Bool = false
-  ) {
+  init(settingsStore: ConnectionSettingsStore = ConnectionSettingsStore()) {
     self.settingsStore = settingsStore
-    self.isMockWorkspace = isMockWorkspace
 
     let settings = settingsStore.loadSettings()
     baseURL = settings.baseURL
@@ -83,10 +78,6 @@ final class ConnectionStore {
   }
 
   func connect() async {
-    if isMockWorkspace {
-      return
-    }
-
     guard !isConnecting else { return }
 
     isConnecting = true

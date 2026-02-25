@@ -56,9 +56,11 @@ final class WorkspaceStore {
   var eventsTask: Task<Void, Never>?
   var sessionRefreshTasks: [String: Task<Void, Never>] = [:]
   var sessionRefreshNeedsDiff: Set<String> = []
+  let allowsPersistence: Bool
 
-  init(connection: ConnectionStore) {
+  init(connection: ConnectionStore, allowsPersistence: Bool = true) {
     self.connection = connection
+    self.allowsPersistence = allowsPersistence
     hiddenModelKeys = connection.initialHiddenModelKeys
     selectedAgentName = connection.initialSelectedAgentName
     selectedModel = connection.initialSelectedModel
@@ -288,15 +290,6 @@ final class WorkspaceStore {
   }
 
   func refreshSessions() async {
-    if connection.isMockWorkspace {
-      sessions.sort { $0.sortTimestamp > $1.sortTimestamp }
-      if let selectedSessionID, visibleSessions.contains(where: { $0.id == selectedSessionID }) {
-        return
-      }
-      selectedSessionID = visibleSessions.first?.id
-      return
-    }
-
     guard let client = connection.client else { return }
     guard !isRefreshingSessions else { return }
 
@@ -344,30 +337,6 @@ final class WorkspaceStore {
   }
 
   func createSession(title: String? = nil) async {
-    if connection.isMockWorkspace {
-      let now = Date().timeIntervalSince1970 * 1000
-      let directory = activeProject?.directory ?? "/tmp/mock"
-      let created = Session(
-        id: "ses_mock_\(UUID().uuidString.prefix(8))",
-        slug: "mock-session",
-        projectID: activeProject?.id ?? "prj_mock",
-        directory: directory,
-        parentID: nil,
-        title: title?.trimmedNonEmpty ?? "New Session",
-        version: "1",
-        time: SessionTime(created: now, updated: now, archived: nil),
-        summary: nil,
-        share: nil,
-        revert: nil
-      )
-      sessions.insert(created, at: 0)
-      selectedSessionID = created.id
-      messagesBySession[created.id] = []
-      diffsBySession[created.id] = []
-      sessionStatuses[created.id] = .idle
-      return
-    }
-
     guard let client = connection.client else { return }
     guard !isCreatingSession else { return }
 
@@ -407,7 +376,6 @@ final class WorkspaceStore {
   }
 
   func loadMessages(sessionID: String, limit: Int? = nil) async {
-    if connection.isMockWorkspace { return }
     guard let client = connection.client else { return }
 
     do {
@@ -423,7 +391,6 @@ final class WorkspaceStore {
   }
 
   func loadDiffs(sessionID: String) async {
-    if connection.isMockWorkspace { return }
     guard let client = connection.client else { return }
 
     do {
@@ -437,17 +404,6 @@ final class WorkspaceStore {
   func sendDraftMessage(in sessionID: String) async {
     let trimmed = draftMessage.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !trimmed.isEmpty else { return }
-
-    if connection.isMockWorkspace {
-      draftMessage = ""
-      if let userMessage = makeMockMessage(sessionID: sessionID, role: .user, text: trimmed) {
-        messagesBySession[sessionID, default: []].append(userMessage)
-      }
-      if let assistantMessage = makeMockMessage(sessionID: sessionID, role: .assistant, text: "Mock response for \"\(trimmed)\".") {
-        messagesBySession[sessionID, default: []].append(assistantMessage)
-      }
-      return
-    }
 
     guard let client = connection.client else { return }
     let original = trimmed
@@ -477,11 +433,6 @@ final class WorkspaceStore {
   }
 
   func abort(sessionID: String) async {
-    if connection.isMockWorkspace {
-      sessionStatuses[sessionID] = .idle
-      return
-    }
-
     guard let client = connection.client else { return }
     do {
       _ = try await client.abortSession(sessionID: sessionID, directory: connection.resolvedDirectory)
@@ -648,10 +599,6 @@ final class WorkspaceStore {
   }
 
   func refreshPendingPrompts() async {
-    if connection.isMockWorkspace {
-      return
-    }
-
     guard let client = connection.client else { return }
 
     do {
@@ -670,11 +617,6 @@ final class WorkspaceStore {
   }
 
   func respondToPermission(sessionID: String, requestID: String, reply: PermissionReply, message: String? = nil) async {
-    if connection.isMockWorkspace {
-      permissionsBySession[sessionID]?.removeAll { $0.id == requestID }
-      return
-    }
-
     guard let client = connection.client else { return }
     guard !isRespondingToPermission(requestID: requestID) else { return }
 
@@ -697,11 +639,6 @@ final class WorkspaceStore {
   }
 
   func replyToQuestion(sessionID: String, requestID: String, answers: [QuestionAnswer]) async {
-    if connection.isMockWorkspace {
-      questionsBySession[sessionID]?.removeAll { $0.id == requestID }
-      return
-    }
-
     guard let client = connection.client else { return }
     guard !isRespondingToQuestion(requestID: requestID) else { return }
 
@@ -723,11 +660,6 @@ final class WorkspaceStore {
   }
 
   func rejectQuestion(sessionID: String, requestID: String) async {
-    if connection.isMockWorkspace {
-      questionsBySession[sessionID]?.removeAll { $0.id == requestID }
-      return
-    }
-
     guard let client = connection.client else { return }
     guard !isRespondingToQuestion(requestID: requestID) else { return }
 
@@ -748,27 +680,6 @@ final class WorkspaceStore {
     let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !trimmedTitle.isEmpty else { return }
 
-    if connection.isMockWorkspace {
-      if let index = sessions.firstIndex(where: { $0.id == sessionID }) {
-        var updated = sessions[index]
-        updated = Session(
-          id: updated.id,
-          slug: updated.slug,
-          projectID: updated.projectID,
-          directory: updated.directory,
-          parentID: updated.parentID,
-          title: trimmedTitle,
-          version: updated.version,
-          time: updated.time,
-          summary: updated.summary,
-          share: updated.share,
-          revert: updated.revert
-        )
-        sessions[index] = updated
-      }
-      return
-    }
-
     guard let client = connection.client else { return }
     do {
       _ = try await client.updateSession(
@@ -785,30 +696,6 @@ final class WorkspaceStore {
   func archiveSession(sessionID: String) async {
     let archiveTime = Date().timeIntervalSince1970 * 1000
 
-    if connection.isMockWorkspace {
-      if let index = sessions.firstIndex(where: { $0.id == sessionID }) {
-        var updated = sessions[index]
-        updated = Session(
-          id: updated.id,
-          slug: updated.slug,
-          projectID: updated.projectID,
-          directory: updated.directory,
-          parentID: updated.parentID,
-          title: updated.title,
-          version: updated.version,
-          time: SessionTime(created: updated.time.created, updated: updated.time.updated, archived: archiveTime),
-          summary: updated.summary,
-          share: updated.share,
-          revert: updated.revert
-        )
-        sessions[index] = updated
-        if selectedSessionID == sessionID {
-          selectedSessionID = visibleSessions.first?.id
-        }
-      }
-      return
-    }
-
     guard let client = connection.client else { return }
     do {
       _ = try await client.updateSession(
@@ -823,20 +710,6 @@ final class WorkspaceStore {
   }
 
   func deleteSession(sessionID: String) async {
-    if connection.isMockWorkspace {
-      sessions.removeAll { $0.id == sessionID }
-      messagesBySession[sessionID] = nil
-      diffsBySession[sessionID] = nil
-      sessionStatuses[sessionID] = nil
-      permissionsBySession[sessionID] = nil
-      questionsBySession[sessionID] = nil
-      todosBySession[sessionID] = nil
-      if selectedSessionID == sessionID {
-        selectedSessionID = visibleSessions.first?.id
-      }
-      return
-    }
-
     guard let client = connection.client else { return }
     do {
       _ = try await client.deleteSession(id: sessionID, directory: connection.resolvedDirectory)
@@ -902,7 +775,7 @@ final class WorkspaceStore {
 
     let normalized = URL(fileURLWithPath: trimmed).standardizedFileURL.path
 
-    if connection.isConnected, !connection.isMockWorkspace {
+    if connection.isConnected {
       return normalized
     }
 
@@ -915,6 +788,10 @@ final class WorkspaceStore {
   }
 
   private func persistWorkspaceSettings() {
+    guard allowsPersistence else {
+      return
+    }
+
     connection.persistSettingsBestEffort(
       selectedAgentName: selectedAgentName,
       selectedModel: selectedModel,

@@ -6,6 +6,27 @@ import Observation
 #endif
 
 @MainActor
+struct StoreGraph {
+  let connection: ConnectionStore
+  let workspace: WorkspaceStore
+}
+
+@MainActor
+enum StoreGraphFactory {
+  static func make(
+    settingsStore: ConnectionSettingsStore = ConnectionSettingsStore(),
+    allowsPersistence: Bool = true,
+    configureWorkspace: ((WorkspaceStore) -> Void)? = nil
+  ) -> StoreGraph {
+    let connection = ConnectionStore(settingsStore: settingsStore)
+    let workspace = WorkspaceStore(connection: connection, allowsPersistence: allowsPersistence)
+    connection.workspace = workspace
+    configureWorkspace?(workspace)
+    return StoreGraph(connection: connection, workspace: workspace)
+  }
+}
+
+@MainActor
 final class AppStore {
   let connection: ConnectionStore
   let workspace: WorkspaceStore
@@ -15,17 +36,12 @@ final class AppStore {
   #endif
 
   init(settingsStore: ConnectionSettingsStore = ConnectionSettingsStore()) {
-    let connection = ConnectionStore(settingsStore: settingsStore)
-    let workspace = WorkspaceStore(connection: connection)
+    let graph = StoreGraphFactory.make(settingsStore: settingsStore)
+    let connection = graph.connection
+    let workspace = graph.workspace
 
     self.connection = connection
     self.workspace = workspace
-
-    connection.workspace = workspace
-
-    if connection.isMockWorkspace {
-      workspace.seedMockWorkspace()
-    }
 
     #if os(macOS)
       terminationObserver = NotificationCenter.default.addObserver(
@@ -38,10 +54,8 @@ final class AppStore {
         }
       }
 
-      if !connection.isMockWorkspace {
-        Task { [weak connection] in
-          await connection?.connect()
-        }
+      Task { [weak connection] in
+        await connection?.connect()
       }
     #endif
   }
