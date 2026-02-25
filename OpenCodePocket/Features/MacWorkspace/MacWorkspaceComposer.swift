@@ -139,7 +139,7 @@
           }
         }
       } label: {
-        Text(store.selectedModelVariantDisplayName)
+        Label(store.selectedModelVariantDisplayName, systemImage: "brain")
           .lineLimit(1)
       }
     }

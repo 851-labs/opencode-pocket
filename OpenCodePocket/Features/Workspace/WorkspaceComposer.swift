@@ -181,7 +181,7 @@ import SwiftUI
           }
         }
       } label: {
-        Text(store.selectedModelVariantDisplayName)
+        Label(store.selectedModelVariantDisplayName, systemImage: "brain")
           .font(.caption.weight(.semibold))
           .lineLimit(1)
       }
