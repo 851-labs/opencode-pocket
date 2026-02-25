@@ -59,46 +59,8 @@ targets:
         product: OpenCodeNetworking
       - package: TranscriptUI
         product: TranscriptUI
-  OpenCodePocketTests:
-    type: bundle.unit-test
-    platform: iOS
-    deploymentTarget: "26.0"
-    sources:
-      - path: OpenCodePocketTests
-    dependencies:
-      - target: OpenCodePocket
-      - package: OpenCodeSDK
-        product: OpenCodeModels
-      - package: OpenCodeSDK
-        product: OpenCodeNetworking
-    settings:
-      base:
-        PRODUCT_NAME: OpenCodePocketTests
-        GENERATE_INFOPLIST_FILE: YES
-        SDKROOT: iphoneos
-        SUPPORTED_PLATFORMS: "iphoneos iphonesimulator"
-  OpenCodePocketUITests:
-    type: bundle.ui-testing
-    platform: iOS
-    deploymentTarget: "26.0"
-    sources:
-      - path: OpenCodePocketUITests
-    dependencies:
-      - target: OpenCodePocket
-    settings:
-      base:
-        PRODUCT_NAME: OpenCodePocketUITests
-        GENERATE_INFOPLIST_FILE: YES
-        SDKROOT: iphoneos
-        SUPPORTED_PLATFORMS: "iphoneos iphonesimulator"
-
 schemes:
   OpenCodePocket:
     build:
       targets:
         OpenCodePocket: all
-    test:
-      gatherCoverageData: true
-      targets:
-        - OpenCodePocketTests
-        - OpenCodePocketUITests

@@ -5,14 +5,17 @@ import XCTest
 final class LiveServerIntegrationTests: XCTestCase {
   func testHealthAndSessionListAgainstLiveServer() async throws {
     let env = ProcessInfo.processInfo.environment
+
+    guard env["OPENCODE_RUN_LIVE_TESTS"] == "1" else {
+      throw XCTSkip("Skipping live tests because OPENCODE_RUN_LIVE_TESTS is not enabled")
+    }
+
     if env["OPENCODE_SKIP_LIVE_TESTS"] == "1" {
       throw XCTSkip("Skipping live tests because OPENCODE_SKIP_LIVE_TESTS=1")
     }
 
-    let baseURLString = env["OPENCODE_BASE_URL"] ?? "http://claudl.taile64ce5.ts.net:4096"
-    guard let baseURL = URL(string: baseURLString) else {
-      XCTFail("Invalid OPENCODE_BASE_URL: \(baseURLString)")
-      return
+    guard let baseURLString = env["OPENCODE_BASE_URL"], let baseURL = URL(string: baseURLString) else {
+      throw XCTSkip("Skipping live tests because OPENCODE_BASE_URL is not configured")
     }
 
     let client = OpenCodeClient(

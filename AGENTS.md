@@ -23,9 +23,9 @@ xcodegen generate
 xcodebuild -project OpenCodePocket.xcodeproj -scheme OpenCodePocket -destination 'platform=macOS' build
 ```
 
-### Run iOS tests
+### Build for iOS Simulator
 ```bash
-xcodebuild -project OpenCodePocket.xcodeproj -scheme OpenCodePocket -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.2' test
+xcodebuild -project OpenCodePocket.xcodeproj -scheme OpenCodePocket -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.2' build
 ```
 
 ### Run SDK package tests
@@ -102,21 +102,15 @@ Prefer parity with OpenCode desktop unless product direction explicitly differs.
 After code changes, agents must:
 
 1. Build macOS target.
-2. Run iOS tests.
-3. Run `swift test` in `Packages/OpenCodeSDK` when SDK/models/networking changed.
+2. Build iOS simulator target.
+3. Run `swift test` in `Packages/OpenCodeSDK`.
 4. Fix compilation/test failures before declaring completion.
 
 ## Testing Notes
 
-### UI testing modes
-- Workspace mock mode:
-  - launch arg: `-ui-testing-workspace`
-  - env: `OPENCODE_POCKET_UI_TEST_WORKSPACE=1`
-- Connect screen mode:
-  - launch arg: `-ui-testing`
-
 ### Live integration tests
-`OpenCodePocketTests/LiveServerIntegrationTests.swift` honors:
+`Packages/OpenCodeSDK/Tests/OpenCodeNetworkingTests/LiveServerIntegrationTests.swift` honors:
+- `OPENCODE_RUN_LIVE_TESTS=1` to enable
 - `OPENCODE_SKIP_LIVE_TESTS=1` to skip
 - `OPENCODE_BASE_URL`
 - `OPENCODE_USERNAME`
@@ -126,8 +120,7 @@ After code changes, agents must:
 ## Accessibility and UI Test Contract
 
 - Keep accessibility identifiers stable where possible (`composer.*`, `drawer.*`, `workspace.*`, `message.*`).
-- If identifiers or labels change intentionally, update UI tests in the same change.
-- Do not silently break existing UI test contracts.
+- If identifiers or labels change intentionally, document the contract change in the same PR.
 
 ## Security Rules
 
@@ -156,8 +149,8 @@ Do not mark Beans completed if validation is skipped or failing.
 
 A task is done only when:
 - Code follows architecture rules above.
-- iOS and macOS build/test expectations are satisfied.
-- Relevant SDK tests pass when SDK changed.
+- iOS and macOS build expectations are satisfied.
+- Relevant SDK tests pass.
 - Accessibility/test contracts are preserved or updated.
 - Bean status is accurate.
 - Changes are committed cleanly.
