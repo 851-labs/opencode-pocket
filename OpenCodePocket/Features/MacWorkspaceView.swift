@@ -350,11 +350,12 @@
         Label {
           Text(session.title)
         } icon: {
-          if store.status(for: session.id).type == .idle {
-            EmptyView()
-          } else {
+          if store.status(for: session.id).isRunning {
             ProgressView()
               .controlSize(.small)
+          } else {
+            Image(systemName: "circle.fill")
+              .hidden()
           }
         }
       }
