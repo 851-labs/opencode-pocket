@@ -82,7 +82,18 @@ import TranscriptUI
 
   struct ToolPartCard: View {
     let part: MessagePart
+    let expandShellToolParts: Bool
+    let expandEditToolParts: Bool
     @State private var showOutput = false
+
+    init(part: MessagePart, expandShellToolParts: Bool, expandEditToolParts: Bool) {
+      self.part = part
+      self.expandShellToolParts = expandShellToolParts
+      self.expandEditToolParts = expandEditToolParts
+
+      let openOutputByDefault = (part.tool == "edit" || part.tool == "write" || part.tool == "apply_patch") && expandEditToolParts
+      _showOutput = State(initialValue: openOutputByDefault)
+    }
 
     private var toolName: String {
       toolDisplayName(for: part.tool)
@@ -130,13 +141,13 @@ import TranscriptUI
       case "webfetch":
         ToolWebfetchDetail(part: part)
       case "bash":
-        ToolBashDetail(part: part)
+        ToolBashDetail(part: part, expandedByDefault: expandShellToolParts)
       case "edit":
-        ToolEditPreview(part: part)
+        ToolEditPreview(part: part, expandedByDefault: expandEditToolParts)
       case "write":
-        ToolWritePreview(part: part)
+        ToolWritePreview(part: part, expandedByDefault: expandEditToolParts)
       case "apply_patch":
-        ToolPatchPreview(part: part)
+        ToolPatchPreview(part: part, expandedByDefault: expandEditToolParts)
       default:
         EmptyView()
       }
@@ -195,7 +206,12 @@ import TranscriptUI
 
   private struct ToolEditPreview: View {
     let part: MessagePart
-    @State private var isExpanded = false
+    @State private var isExpanded: Bool
+
+    init(part: MessagePart, expandedByDefault: Bool) {
+      self.part = part
+      _isExpanded = State(initialValue: expandedByDefault)
+    }
 
     private var filePath: String? {
       part.toolInputString("filePath")
@@ -238,7 +254,12 @@ import TranscriptUI
 
   private struct ToolWritePreview: View {
     let part: MessagePart
-    @State private var isExpanded = false
+    @State private var isExpanded: Bool
+
+    init(part: MessagePart, expandedByDefault: Bool) {
+      self.part = part
+      _isExpanded = State(initialValue: expandedByDefault)
+    }
 
     private var filePath: String? {
       part.toolInputString("filePath")
@@ -269,7 +290,12 @@ import TranscriptUI
 
   private struct ToolPatchPreview: View {
     let part: MessagePart
-    @State private var isExpanded = false
+    @State private var isExpanded: Bool
+
+    init(part: MessagePart, expandedByDefault: Bool) {
+      self.part = part
+      _isExpanded = State(initialValue: expandedByDefault)
+    }
 
     private var files: [String] {
       let fromInput = part.toolState?.input["files"]?.arrayValue?.compactMap { $0.stringValue } ?? []
@@ -378,7 +404,13 @@ import TranscriptUI
 
   private struct ToolBashDetail: View {
     let part: MessagePart
+    @State private var isExpanded: Bool
     @State private var copied = false
+
+    init(part: MessagePart, expandedByDefault: Bool) {
+      self.part = part
+      _isExpanded = State(initialValue: expandedByDefault)
+    }
 
     private var text: String {
       let command = part.toolInputString("command") ?? ""
@@ -394,30 +426,34 @@ import TranscriptUI
 
     var body: some View {
       if !text.isEmpty {
-        VStack(alignment: .leading, spacing: 6) {
-          HStack {
-            Spacer(minLength: 0)
-            Button {
-              copyText(text)
-              copied = true
-              DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                copied = false
+        DisclosureGroup("Shell Output", isExpanded: $isExpanded) {
+          VStack(alignment: .leading, spacing: 6) {
+            HStack {
+              Spacer(minLength: 0)
+              Button {
+                copyText(text)
+                copied = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                  copied = false
+                }
+              } label: {
+                Label(copied ? "Copied" : "Copy", systemImage: copied ? "checkmark" : "doc.on.doc")
+                  .font(.caption2)
               }
-            } label: {
-              Label(copied ? "Copied" : "Copy", systemImage: copied ? "checkmark" : "doc.on.doc")
-                .font(.caption2)
+              .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
-          }
 
-          TranscriptMarkdownView(text: text)
-            .font(.caption)
-            .padding(8)
-            .background(
-              RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(Color.secondary.opacity(0.07))
-            )
+            TranscriptMarkdownView(text: text)
+              .font(.caption)
+              .padding(8)
+              .background(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                  .fill(Color.secondary.opacity(0.07))
+              )
+          }
+          .padding(.top, 6)
         }
+        .font(.caption)
       }
     }
   }

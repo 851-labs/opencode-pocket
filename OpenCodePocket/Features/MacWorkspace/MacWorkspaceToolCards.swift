@@ -1,4 +1,5 @@
 #if os(macOS)
+  import AppKit
   import OpenCodeModels
   import SwiftUI
   import TranscriptUI
@@ -156,7 +157,20 @@
 
   struct MacToolPartCard: View {
     let part: MessagePart
+    let expandShellToolParts: Bool
+    let expandEditToolParts: Bool
     @State private var showOutput = false
+
+    init(part: MessagePart, expandShellToolParts: Bool, expandEditToolParts: Bool) {
+      self.part = part
+      self.expandShellToolParts = expandShellToolParts
+      self.expandEditToolParts = expandEditToolParts
+
+      let openOutputByDefault =
+        (part.tool == "bash" && expandShellToolParts)
+          || ((part.tool == "edit" || part.tool == "write" || part.tool == "apply_patch") && expandEditToolParts)
+      _showOutput = State(initialValue: openOutputByDefault)
+    }
 
     private var statusText: String {
       guard let status = part.toolState?.status else {
@@ -195,12 +209,14 @@
     @ViewBuilder
     private var detailContent: some View {
       switch part.tool {
+      case "bash":
+        MacToolBashDetail(part: part, expandedByDefault: expandShellToolParts)
       case "edit":
-        MacToolEditPreview(part: part)
+        MacToolEditPreview(part: part, expandedByDefault: expandEditToolParts)
       case "write":
-        MacToolWritePreview(part: part)
+        MacToolWritePreview(part: part, expandedByDefault: expandEditToolParts)
       case "apply_patch":
-        MacToolPatchPreview(part: part)
+        MacToolPatchPreview(part: part, expandedByDefault: expandEditToolParts)
       default:
         EmptyView()
       }
@@ -235,7 +251,11 @@
 
         detailContent
 
-        if let output = part.toolState?.output?.trimmingCharacters(in: .whitespacesAndNewlines), !output.isEmpty {
+        if
+          part.tool != "bash",
+          let output = part.toolState?.output?.trimmingCharacters(in: .whitespacesAndNewlines),
+          !output.isEmpty
+        {
           DisclosureGroup("Output", isExpanded: $showOutput) {
             TranscriptMarkdownView(text: output)
               .font(.caption)
@@ -253,7 +273,12 @@
 
   private struct MacToolEditPreview: View {
     let part: MessagePart
-    @State private var isExpanded = false
+    @State private var isExpanded: Bool
+
+    init(part: MessagePart, expandedByDefault: Bool) {
+      self.part = part
+      _isExpanded = State(initialValue: expandedByDefault)
+    }
 
     private var filePath: String? {
       part.toolInputString("filePath")
@@ -296,7 +321,12 @@
 
   private struct MacToolWritePreview: View {
     let part: MessagePart
-    @State private var isExpanded = false
+    @State private var isExpanded: Bool
+
+    init(part: MessagePart, expandedByDefault: Bool) {
+      self.part = part
+      _isExpanded = State(initialValue: expandedByDefault)
+    }
 
     private var filePath: String? {
       part.toolInputString("filePath")
@@ -327,7 +357,12 @@
 
   private struct MacToolPatchPreview: View {
     let part: MessagePart
-    @State private var isExpanded = false
+    @State private var isExpanded: Bool
+
+    init(part: MessagePart, expandedByDefault: Bool) {
+      self.part = part
+      _isExpanded = State(initialValue: expandedByDefault)
+    }
 
     private var files: [String] {
       let fromInput = part.toolState?.input["files"]?.arrayValue?.compactMap { $0.stringValue } ?? []
@@ -366,6 +401,62 @@
             .font(.caption)
           }
         }
+      }
+    }
+  }
+
+  private struct MacToolBashDetail: View {
+    let part: MessagePart
+    @State private var isExpanded: Bool
+    @State private var copied = false
+
+    init(part: MessagePart, expandedByDefault: Bool) {
+      self.part = part
+      _isExpanded = State(initialValue: expandedByDefault)
+    }
+
+    private var text: String {
+      let command = part.toolInputString("command") ?? ""
+      let output = part.toolState?.output ?? ""
+      if command.isEmpty {
+        return output
+      }
+      if output.isEmpty {
+        return "$ \(command)"
+      }
+      return "$ \(command)\n\n\(output)"
+    }
+
+    var body: some View {
+      if !text.isEmpty {
+        DisclosureGroup("Shell Output", isExpanded: $isExpanded) {
+          VStack(alignment: .leading, spacing: 6) {
+            HStack {
+              Spacer(minLength: 0)
+              Button {
+                macCopyToClipboard(text)
+                copied = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                  copied = false
+                }
+              } label: {
+                Label(copied ? "Copied" : "Copy", systemImage: copied ? "checkmark" : "doc.on.doc")
+                  .font(.caption2)
+              }
+              .buttonStyle(.plain)
+            }
+
+            TranscriptMarkdownView(text: text)
+              .font(.caption)
+              .padding(8)
+              .background(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                  .fill(Color.secondary.opacity(0.07))
+              )
+          }
+          .padding(.top, 6)
+        }
+        .font(.caption)
       }
     }
   }
@@ -546,5 +637,11 @@
       .last
       .map(String.init)
     return component?.isEmpty == false ? component : trimmed
+  }
+
+  private func macCopyToClipboard(_ text: String) {
+    let pasteboard = NSPasteboard.general
+    pasteboard.clearContents()
+    pasteboard.setString(text, forType: .string)
   }
 #endif

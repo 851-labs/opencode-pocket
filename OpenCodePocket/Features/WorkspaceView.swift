@@ -261,7 +261,9 @@ private struct WorkspacePanelContent: View {
         SessionTranscriptPane(
           messages: store.messagesBySession[selectedSessionID] ?? [],
           sessionStatus: store.status(for: selectedSessionID),
-          showReasoningSummaries: store.showReasoningSummaries
+          showReasoningSummaries: store.showReasoningSummaries,
+          expandShellToolParts: store.expandShellToolParts,
+          expandEditToolParts: store.expandEditToolParts
         )
         .accessibilityIdentifier("workspace.session.pane")
       case .changes:

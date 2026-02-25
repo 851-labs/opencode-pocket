@@ -321,6 +321,8 @@
     let busy: Bool
     let showReasoningSummaries: Bool
     let turnDurationMs: Double?
+    let expandShellToolParts: Bool
+    let expandEditToolParts: Bool
 
     @State private var isHovering = false
 
@@ -402,7 +404,9 @@
               showReasoningSummaries: showReasoningSummaries,
               isLastTextPart: part.id == lastTextPartID,
               showMetadataRow: isHovering,
-              turnDurationMs: turnDurationMs
+              turnDurationMs: turnDurationMs,
+              expandShellToolParts: expandShellToolParts,
+              expandEditToolParts: expandEditToolParts
             )
           case let .context(_, tools):
             MacContextToolGroupCard(parts: tools, busy: busy && index == groupedParts.count - 1)
@@ -457,6 +461,8 @@
     let isLastTextPart: Bool
     let showMetadataRow: Bool
     let turnDurationMs: Double?
+    let expandShellToolParts: Bool
+    let expandEditToolParts: Bool
 
     @State private var copied = false
 
@@ -524,7 +530,12 @@
           }
         }
       case "tool":
-        MacToolPartCard(part: part)
+        MacToolPartCard(
+          part: part,
+          expandShellToolParts: expandShellToolParts,
+          expandEditToolParts: expandEditToolParts
+        )
+        .id("\(part.id)::\(expandShellToolParts)::\(expandEditToolParts)")
       default:
         EmptyView()
       }

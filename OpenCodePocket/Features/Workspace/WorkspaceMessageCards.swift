@@ -302,6 +302,8 @@ import TranscriptUI
     let busy: Bool
     let showReasoningSummaries: Bool
     let turnDurationMs: Double?
+    let expandShellToolParts: Bool
+    let expandEditToolParts: Bool
 
     private var lastTextPartID: String? {
       items.compactMap { item in
@@ -380,7 +382,9 @@ import TranscriptUI
               message: message,
               showReasoningSummaries: showReasoningSummaries,
               isLastTextPart: part.id == lastTextPartID,
-              turnDurationMs: turnDurationMs
+              turnDurationMs: turnDurationMs,
+              expandShellToolParts: expandShellToolParts,
+              expandEditToolParts: expandEditToolParts
             )
           case let .context(_, tools):
             ContextToolGroupCard(parts: tools, busy: busy && index == items.count - 1)
@@ -430,6 +434,8 @@ import TranscriptUI
     let showReasoningSummaries: Bool
     let isLastTextPart: Bool
     let turnDurationMs: Double?
+    let expandShellToolParts: Bool
+    let expandEditToolParts: Bool
 
     @State private var copied = false
 
@@ -490,7 +496,12 @@ import TranscriptUI
           }
         }
       case "tool":
-        ToolPartCard(part: part)
+        ToolPartCard(
+          part: part,
+          expandShellToolParts: expandShellToolParts,
+          expandEditToolParts: expandEditToolParts
+        )
+        .id("\(part.id)::\(expandShellToolParts)::\(expandEditToolParts)")
       default:
         EmptyView()
       }

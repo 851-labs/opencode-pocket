@@ -7,6 +7,8 @@ import SwiftUI
     let messages: [MessageEnvelope]
     let sessionStatus: SessionStatus
     let showReasoningSummaries: Bool
+    let expandShellToolParts: Bool
+    let expandEditToolParts: Bool
 
     @State private var followTail = true
     @State private var hasPendingTail = false
@@ -58,7 +60,9 @@ import SwiftUI
                   TranscriptTurnView(
                     turn: turn,
                     isWorking: index == visibleTurns.count - 1 && sessionStatus.isRunning,
-                    showReasoningSummaries: showReasoningSummaries
+                    showReasoningSummaries: showReasoningSummaries,
+                    expandShellToolParts: expandShellToolParts,
+                    expandEditToolParts: expandEditToolParts
                   )
                   .id(turn.id)
                   .accessibilityIdentifier("workspace.turn.\(turn.id)")
@@ -189,6 +193,8 @@ import SwiftUI
     let turn: TranscriptTurn
     let isWorking: Bool
     let showReasoningSummaries: Bool
+    let expandShellToolParts: Bool
+    let expandEditToolParts: Bool
 
     private var latestReasoningHeading: String? {
       turn.assistantMessages
@@ -220,7 +226,9 @@ import SwiftUI
             message: assistant,
             busy: isWorking && index == turn.assistantMessages.count - 1,
             showReasoningSummaries: showReasoningSummaries,
-            turnDurationMs: turnDurationMs
+            turnDurationMs: turnDurationMs,
+            expandShellToolParts: expandShellToolParts,
+            expandEditToolParts: expandEditToolParts
           )
         }
 

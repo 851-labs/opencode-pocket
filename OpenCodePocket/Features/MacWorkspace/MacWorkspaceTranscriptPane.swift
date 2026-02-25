@@ -6,6 +6,8 @@
     let messages: [MessageEnvelope]
     let sessionStatus: SessionStatus
     let showReasoningSummaries: Bool
+    let expandShellToolParts: Bool
+    let expandEditToolParts: Bool
 
     @State private var followTail = true
     @State private var hasPendingTail = false
@@ -56,7 +58,9 @@
                   MacTurnView(
                     turn: turn,
                     isWorking: index == visibleTurns.count - 1 && sessionStatus.isRunning,
-                    showReasoningSummaries: showReasoningSummaries
+                    showReasoningSummaries: showReasoningSummaries,
+                    expandShellToolParts: expandShellToolParts,
+                    expandEditToolParts: expandEditToolParts
                   )
                   .id(turn.id)
                 }
@@ -173,6 +177,8 @@
     let turn: MacTranscriptTurn
     let isWorking: Bool
     let showReasoningSummaries: Bool
+    let expandShellToolParts: Bool
+    let expandEditToolParts: Bool
 
     private var latestReasoningHeading: String? {
       turn.assistantMessages
@@ -204,7 +210,9 @@
             message: assistant,
             busy: isWorking && index == turn.assistantMessages.count - 1,
             showReasoningSummaries: showReasoningSummaries,
-            turnDurationMs: turnDurationMs
+            turnDurationMs: turnDurationMs,
+            expandShellToolParts: expandShellToolParts,
+            expandEditToolParts: expandEditToolParts
           )
         }
 

@@ -347,7 +347,9 @@
             MacTranscriptPane(
               messages: store.messagesBySession[selectedSessionID] ?? [],
               sessionStatus: store.status(for: selectedSessionID),
-              showReasoningSummaries: store.showReasoningSummaries
+              showReasoningSummaries: store.showReasoningSummaries,
+              expandShellToolParts: store.expandShellToolParts,
+              expandEditToolParts: store.expandEditToolParts
             )
           case .changes:
             MacChangesPane(diffs: store.diffsBySession[selectedSessionID] ?? [])
