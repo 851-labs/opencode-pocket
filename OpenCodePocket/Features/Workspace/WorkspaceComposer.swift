@@ -3,7 +3,7 @@ import SwiftUI
 #if os(iOS)
 
   struct WorkspaceComposer: View {
-    @Bindable var store: WorkspaceStore
+    @Environment(WorkspaceStore.self) private var store
     let sessionID: String
 
     var body: some View {
@@ -18,7 +18,6 @@ import SwiftUI
     private var promptCards: some View {
       if let permission = store.currentPermissionRequest(for: sessionID) {
         PermissionPromptCard(
-          store: store,
           sessionID: sessionID,
           request: permission
         )
@@ -26,7 +25,6 @@ import SwiftUI
 
       if let question = store.currentQuestionRequest(for: sessionID) {
         QuestionPromptCard(
-          store: store,
           sessionID: sessionID,
           request: question
         )
@@ -78,7 +76,9 @@ import SwiftUI
     }
 
     private func composerInputField(composerBlocked: Bool) -> some View {
-      TextField("Message", text: $store.draftMessage, axis: .vertical)
+      @Bindable var store = store
+
+      return TextField("Message", text: $store.draftMessage, axis: .vertical)
         .lineLimit(1 ... 6)
         .textFieldStyle(.plain)
         .padding(.horizontal, 14)

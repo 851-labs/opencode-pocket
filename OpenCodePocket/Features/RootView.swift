@@ -1,8 +1,8 @@
 import SwiftUI
 
 struct RootView: View {
-  @Bindable var connection: ConnectionStore
-  @Bindable var workspace: WorkspaceStore
+  @Environment(ConnectionStore.self) private var connection
+  @Environment(WorkspaceStore.self) private var workspace
 
   var body: some View {
     Group {
@@ -17,18 +17,18 @@ struct RootView: View {
   @ViewBuilder
   private var connectedContent: some View {
     #if os(macOS)
-      MacWorkspaceView(store: workspace)
+      MacWorkspaceView()
     #else
-      WorkspaceView(store: workspace)
+      WorkspaceView()
     #endif
   }
 
   @ViewBuilder
   private var disconnectedContent: some View {
     #if os(macOS)
-      MacConnectView(store: connection)
+      MacConnectView()
     #else
-      ConnectView(store: connection)
+      ConnectView()
     #endif
   }
 }

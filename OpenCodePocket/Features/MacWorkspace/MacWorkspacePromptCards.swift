@@ -114,7 +114,7 @@
   }
 
   struct MacPermissionPromptCard: View {
-    @Bindable var store: WorkspaceStore
+    @Environment(WorkspaceStore.self) private var store
     let sessionID: String
     let request: PermissionRequest
 
@@ -247,7 +247,7 @@
   }
 
   struct MacQuestionPromptCard: View {
-    @Bindable var store: WorkspaceStore
+    @Environment(WorkspaceStore.self) private var store
     let sessionID: String
     let request: QuestionRequest
 

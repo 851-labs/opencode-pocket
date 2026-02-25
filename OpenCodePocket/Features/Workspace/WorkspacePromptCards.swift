@@ -115,7 +115,7 @@ import SwiftUI
   }
 
   struct PermissionPromptCard: View {
-    @Bindable var store: WorkspaceStore
+    @Environment(WorkspaceStore.self) private var store
     let sessionID: String
     let request: PermissionRequest
 
@@ -260,7 +260,7 @@ import SwiftUI
   }
 
   struct QuestionPromptCard: View {
-    @Bindable var store: WorkspaceStore
+    @Environment(WorkspaceStore.self) private var store
     let sessionID: String
     let request: QuestionRequest
 

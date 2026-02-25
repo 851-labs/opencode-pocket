@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ConnectView: View {
-  @Bindable var store: ConnectionStore
+  @Environment(ConnectionStore.self) private var store
 
   var body: some View {
     NavigationStack {
@@ -11,8 +11,8 @@ struct ConnectView: View {
 
   private var formContent: some View {
     Form {
-      ConnectionServerSection(store: store, applyInputTraits: true)
-      ConnectionAuthenticationSection(store: store, applyInputTraits: true)
+      ConnectionServerSection(applyInputTraits: true)
+      ConnectionAuthenticationSection(applyInputTraits: true)
       actionsSection
     }
     .navigationTitle("OpenCode Pocket")

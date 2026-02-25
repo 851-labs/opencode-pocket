@@ -2,7 +2,7 @@ import OpenCodeModels
 import SwiftUI
 
 struct ChatView: View {
-  @Bindable var store: WorkspaceStore
+  @Environment(WorkspaceStore.self) private var store
   let sessionID: String
 
   private var messages: [MessageEnvelope] {
@@ -45,7 +45,9 @@ struct ChatView: View {
   }
 
   private var composer: some View {
-    HStack(alignment: .bottom, spacing: 8) {
+    @Bindable var store = store
+
+    return HStack(alignment: .bottom, spacing: 8) {
       TextField("Message", text: $store.draftMessage, axis: .vertical)
         .lineLimit(1 ... 6)
         .accessibilityIdentifier("chat.input")

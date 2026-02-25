@@ -2,7 +2,7 @@
   import SwiftUI
 
   struct MacConnectView: View {
-    @Bindable var store: ConnectionStore
+    @Environment(ConnectionStore.self) private var store
 
     var body: some View {
       VStack(alignment: .leading, spacing: 20) {
@@ -27,8 +27,8 @@
 
     private var formContent: some View {
       Form {
-        ConnectionServerSection(store: store, applyInputTraits: false)
-        ConnectionAuthenticationSection(store: store, applyInputTraits: false)
+        ConnectionServerSection(applyInputTraits: false)
+        ConnectionAuthenticationSection(applyInputTraits: false)
       }
     }
 

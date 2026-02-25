@@ -4,7 +4,7 @@ import SwiftUI
 #if os(iOS)
 
   struct SessionSheet: View {
-    @Bindable var store: WorkspaceStore
+    @Environment(WorkspaceStore.self) private var store
     @Binding var isPresented: Bool
 
     @State private var isAddProjectPromptPresented = false
@@ -66,7 +66,7 @@ import SwiftUI
     @ViewBuilder
     private var projectSections: some View {
       ForEach(store.projects) { project in
-        SessionSheetProjectSection(store: store, isPresented: $isPresented, project: project)
+        SessionSheetProjectSection(isPresented: $isPresented, project: project)
       }
     }
 
@@ -92,7 +92,7 @@ import SwiftUI
   }
 
   private struct SessionSheetProjectSection: View {
-    @Bindable var store: WorkspaceStore
+    @Environment(WorkspaceStore.self) private var store
     @Binding var isPresented: Bool
     let project: SavedProject
 
@@ -115,7 +115,7 @@ import SwiftUI
         .accessibilityIdentifier("drawer.project.\(project.id)")
 
         ForEach(sessions) { session in
-          SessionSheetSessionRow(store: store, isPresented: $isPresented, session: session)
+          SessionSheetSessionRow(isPresented: $isPresented, session: session)
         }
 
         if sessions.isEmpty {
@@ -128,7 +128,7 @@ import SwiftUI
   }
 
   private struct SessionSheetSessionRow: View {
-    @Bindable var store: WorkspaceStore
+    @Environment(WorkspaceStore.self) private var store
     @Binding var isPresented: Bool
     let session: Session
 

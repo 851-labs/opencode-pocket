@@ -6,12 +6,14 @@ struct OpenCodePocketApp: App {
 
   var body: some Scene {
     WindowGroup {
-      RootView(connection: store.connection, workspace: store.workspace)
+      RootView()
+        .withAppDependencyGraph(connection: store.connection, workspace: store.workspace)
     }
 
     #if os(macOS)
       Settings {
-        MacSettingsView(store: store.workspace)
+        MacSettingsView()
+          .withAppDependencyGraph(connection: store.connection, workspace: store.workspace)
       }
     #endif
   }

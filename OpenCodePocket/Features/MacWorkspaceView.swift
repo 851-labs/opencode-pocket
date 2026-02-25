@@ -30,7 +30,7 @@
   }
 
   struct MacWorkspaceView: View {
-    @Bindable var store: WorkspaceStore
+    @Environment(WorkspaceStore.self) private var store
 
     @State private var selectedPanel: MacWorkspacePanel = .transcript
     @State private var bootstrapState: MacWorkspaceBootstrapState = .loading
@@ -60,9 +60,9 @@
       .sheet(item: $activeSheet) { sheet in
         switch sheet {
         case let .renameSession(sessionID, currentTitle):
-          MacRenameSessionSheet(store: store, sessionID: sessionID, currentTitle: currentTitle)
+          MacRenameSessionSheet(sessionID: sessionID, currentTitle: currentTitle)
         case .addProject:
-          MacAddProjectSheet(store: store)
+          MacAddProjectSheet()
         }
       }
       .confirmationDialog("Delete Session?", isPresented: $isDeleteConfirmationPresented) {
@@ -79,11 +79,12 @@
     }
 
     private var sidebar: some View {
-      List(selection: $store.selectedSessionID) {
+      @Bindable var store = store
+
+      return List(selection: $store.selectedSessionID) {
         Section("Threads") {
           ForEach(store.projects) { project in
             MacSidebarProjectSection(
-              store: store,
               project: project,
               isExpanded: projectExpansionBinding(for: project.id)
             ) {
@@ -128,7 +129,6 @@
       case .ready:
         if let selectedSessionID {
           MacWorkspaceDetailContent(
-            store: store,
             selectedSessionID: selectedSessionID,
             selectedPanel: $selectedPanel
           )
@@ -286,7 +286,7 @@
   }
 
   private struct MacSidebarProjectSection: View {
-    @Bindable var store: WorkspaceStore
+    @Environment(WorkspaceStore.self) private var store
     let project: SavedProject
     @Binding var isExpanded: Bool
     let onSelectProject: () -> Void
@@ -303,7 +303,7 @@
             .foregroundStyle(.secondary)
         } else {
           ForEach(sessions) { session in
-            MacSidebarSessionRow(store: store, session: session)
+            MacSidebarSessionRow(session: session)
           }
         }
       } label: {
@@ -317,7 +317,7 @@
   }
 
   private struct MacSidebarSessionRow: View {
-    @Bindable var store: WorkspaceStore
+    @Environment(WorkspaceStore.self) private var store
     let session: Session
 
     private static let elapsedFormatter: DateComponentsFormatter = {
@@ -367,7 +367,7 @@
   }
 
   private struct MacWorkspaceDetailContent: View {
-    @Bindable var store: WorkspaceStore
+    @Environment(WorkspaceStore.self) private var store
     let selectedSessionID: String
     @Binding var selectedPanel: MacWorkspacePanel
 
@@ -420,7 +420,7 @@
           }
           .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-          MacComposerView(store: store, sessionID: selectedSessionID)
+          MacComposerView(sessionID: selectedSessionID)
             .padding(12)
             .background {
               GeometryReader { proxy in
@@ -478,14 +478,13 @@
 
   private struct MacRenameSessionSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(WorkspaceStore.self) private var store
 
-    @Bindable var store: WorkspaceStore
     let sessionID: String
 
     @State private var title: String
 
-    init(store: WorkspaceStore, sessionID: String, currentTitle: String) {
-      self.store = store
+    init(sessionID: String, currentTitle: String) {
       self.sessionID = sessionID
       _title = State(initialValue: currentTitle)
     }
@@ -524,8 +523,7 @@
 
   private struct MacAddProjectSheet: View {
     @Environment(\.dismiss) private var dismiss
-
-    @Bindable var store: WorkspaceStore
+    @Environment(WorkspaceStore.self) private var store
 
     @State private var directory = ""
     @State private var isServerBrowserPresented = false
@@ -561,7 +559,7 @@
       .padding(18)
       .frame(width: 420)
       .sheet(isPresented: $isServerBrowserPresented) {
-        MacServerDirectoryBrowserSheet(store: store, initialDirectory: directory) { selectedDirectory in
+        MacServerDirectoryBrowserSheet(initialDirectory: directory) { selectedDirectory in
           directory = selectedDirectory
         }
       }
@@ -582,8 +580,8 @@
 
   private struct MacServerDirectoryBrowserSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(WorkspaceStore.self) private var store
 
-    @Bindable var store: WorkspaceStore
     let initialDirectory: String
     let onSelect: (String) -> Void
 

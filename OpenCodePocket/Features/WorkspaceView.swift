@@ -15,7 +15,7 @@ private enum WorkspaceBootstrapState {
 }
 
 struct WorkspaceView: View {
-  @Bindable var store: WorkspaceStore
+  @Environment(WorkspaceStore.self) private var store
 
   @State private var selectedPanel: WorkspacePanel = .session
   @State private var bootstrapState: WorkspaceBootstrapState = .loading
@@ -66,7 +66,6 @@ struct WorkspaceView: View {
       }
     case .ready:
       WorkspacePanelContent(
-        store: store,
         selectedSessionID: selectedSessionID,
         selectedPanel: selectedPanel
       )
@@ -76,7 +75,9 @@ struct WorkspaceView: View {
 
 private extension WorkspaceView {
   var workspaceRoot: some View {
-    ZStack {
+    @Bindable var store = store
+
+    return ZStack {
       LinearGradient(
         colors: [
           Color(red: 0.93, green: 0.95, blue: 0.99),
@@ -94,14 +95,14 @@ private extension WorkspaceView {
       workspaceToolbar
     }
     .sheet(isPresented: $isDrawerPresented) {
-      SessionSheet(store: store, isPresented: $isDrawerPresented)
+      SessionSheet(isPresented: $isDrawerPresented)
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
         .accessibilityIdentifier("workspace.drawer")
     }
     .safeAreaInset(edge: .bottom) {
       if case .ready = bootstrapState, let selectedSessionID {
-        WorkspaceComposer(store: store, sessionID: selectedSessionID)
+        WorkspaceComposer(sessionID: selectedSessionID)
           .padding(.horizontal, 14)
           .padding(.bottom, 8)
           .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -111,6 +112,8 @@ private extension WorkspaceView {
 
   @ToolbarContentBuilder
   var workspaceToolbar: some ToolbarContent {
+    @Bindable var store = store
+
     ToolbarItem(placement: .topBarLeading) {
       Button {
         toggleDrawer()
@@ -250,7 +253,7 @@ private struct WorkspaceBootstrapErrorView: View {
 }
 
 private struct WorkspacePanelContent: View {
-  @Bindable var store: WorkspaceStore
+  @Environment(WorkspaceStore.self) private var store
   let selectedSessionID: String?
   let selectedPanel: WorkspacePanel
 

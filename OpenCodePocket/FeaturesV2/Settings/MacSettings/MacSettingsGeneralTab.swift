@@ -2,9 +2,11 @@
   import SwiftUI
 
   struct MacSettingsGeneralTab: View {
-    @Bindable var store: WorkspaceStore
+    @Environment(WorkspaceStore.self) private var store
 
     var body: some View {
+      @Bindable var store = store
+
       Form {
         Section("Feed") {
           FeedToggleRow(
@@ -44,7 +46,8 @@
   }
 
   #Preview("General") {
-    MacSettingsGeneralTab(store: MacSettingsPreviewStore.makeStore())
+    MacSettingsGeneralTab()
+      .environment(MacSettingsPreviewStore.makeStore())
       .frame(width: 860, height: 560)
   }
 #endif

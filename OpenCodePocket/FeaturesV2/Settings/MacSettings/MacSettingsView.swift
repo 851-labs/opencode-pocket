@@ -27,19 +27,19 @@
   }
 
   struct MacSettingsView: View {
-    @Bindable var store: WorkspaceStore
+    @Environment(WorkspaceStore.self) private var store
 
     @State private var selectedTab: MacSettingsTab = .general
 
     var body: some View {
       TabView(selection: $selectedTab) {
-        MacSettingsGeneralTab(store: store)
+        MacSettingsGeneralTab()
           .tag(MacSettingsTab.general)
           .tabItem {
             Label(MacSettingsTab.general.title, systemImage: MacSettingsTab.general.systemImage)
           }
 
-        MacSettingsModelsTab(store: store)
+        MacSettingsModelsTab()
           .tag(MacSettingsTab.models)
           .tabItem {
             Label(MacSettingsTab.models.title, systemImage: MacSettingsTab.models.systemImage)
@@ -50,6 +50,7 @@
   }
 
   #Preview("Settings") {
-    MacSettingsView(store: MacSettingsPreviewStore.makeStore())
+    MacSettingsView()
+      .environment(MacSettingsPreviewStore.makeStore())
   }
 #endif

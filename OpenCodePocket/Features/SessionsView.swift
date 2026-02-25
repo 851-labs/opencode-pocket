@@ -2,9 +2,11 @@ import OpenCodeModels
 import SwiftUI
 
 struct SessionsView: View {
-  @Bindable var store: WorkspaceStore
+  @Environment(WorkspaceStore.self) private var store
 
   var body: some View {
+    @Bindable var store = store
+
     List(selection: $store.selectedSessionID) {
       sessionsList
     }
@@ -30,7 +32,7 @@ struct SessionsView: View {
   @ViewBuilder
   private var sessionsList: some View {
     ForEach(store.sessions) { session in
-      SessionRow(store: store, session: session)
+      SessionRow(session: session)
     }
   }
 
@@ -88,7 +90,7 @@ struct SessionsView: View {
 }
 
 private struct SessionRow: View {
-  @Bindable var store: WorkspaceStore
+  @Environment(WorkspaceStore.self) private var store
   let session: Session
 
   private var title: String {
