@@ -118,7 +118,6 @@ final class OpenCodePocketUITests: XCTestCase {
       .matching(NSPredicate(format: "identifier BEGINSWITH %@", "message.user.copy."))
       .firstMatch
     XCTAssertTrue(userCopyButton.waitForExistence(timeout: 6), "Expected user copy control in transcript")
-
   }
 
   @MainActor

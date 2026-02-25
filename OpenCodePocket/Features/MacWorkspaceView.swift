@@ -308,9 +308,9 @@
         }
       } label: {
         Label(project.name, systemImage: "folder")
-        .onTapGesture {
-          onSelectProject()
-        }
+          .onTapGesture {
+            onSelectProject()
+          }
       }
       .accessibilityIdentifier("sidebar.project.\(project.id)")
     }
@@ -917,7 +917,7 @@
             .listRowInsets(.init())
             .listRowSeparator(.hidden)
             .listRowBackground(Color.clear)
-          }
+        }
         .listStyle(.inset)
       }
     }
