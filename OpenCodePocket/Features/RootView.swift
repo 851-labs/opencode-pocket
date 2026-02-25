@@ -2,16 +2,35 @@ import SwiftUI
 
 struct RootView: View {
   @Environment(ConnectionStore.self) private var connection
-  @Environment(WorkspaceStore.self) private var workspace
+
+  private var shouldShowMacConnectFallback: Bool {
+    guard !connection.isConnected, !connection.isConnecting else {
+      return false
+    }
+
+    guard let error = connection.connectionError else {
+      return false
+    }
+
+    return !error.isEmpty
+  }
 
   var body: some View {
-    Group {
-      if connection.isConnected {
-        connectedContent
+    #if os(macOS)
+      if shouldShowMacConnectFallback {
+        MacConnectView()
       } else {
-        disconnectedContent
+        MacWorkspaceView()
       }
-    }
+    #else
+      Group {
+        if connection.isConnected {
+          connectedContent
+        } else {
+          disconnectedContent
+        }
+      }
+    #endif
   }
 
   @ViewBuilder

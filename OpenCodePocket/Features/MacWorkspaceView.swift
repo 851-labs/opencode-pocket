@@ -184,13 +184,6 @@
         .accessibilityIdentifier("projects.add")
       }
 
-      ToolbarItem {
-        Button("Disconnect") {
-          store.disconnect()
-        }
-        .accessibilityIdentifier("sessions.disconnect")
-      }
-
       ToolbarItem(placement: .primaryAction) {
         Menu {
           Button("Rename") {
@@ -249,7 +242,6 @@
 
     private func loadWorkspaceBootstrap() async {
       bootstrapState = .loading
-      store.clearConnectionError()
 
       await store.refreshAgentAndModelOptions()
       await store.refreshSessions()
