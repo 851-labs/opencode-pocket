@@ -4,12 +4,8 @@
   struct MacWorkspaceToolbar: ToolbarContent {
     let isRefreshingSessions: Bool
     let isCreatingSession: Bool
-    let hasSelectedSession: Bool
     let refreshSessions: () -> Void
     let createSession: () -> Void
-    let renameSelectedSession: () -> Void
-    let archiveSelectedSession: () -> Void
-    let confirmDeleteSelectedSession: () -> Void
 
     @ToolbarContentBuilder
     var body: some ToolbarContent {
@@ -35,22 +31,6 @@
         }
         .disabled(isCreatingSession)
         .accessibilityIdentifier("sessions.create")
-      }
-
-      ToolbarItem(placement: .primaryAction) {
-        Menu {
-          Button("Rename", action: renameSelectedSession)
-            .disabled(!hasSelectedSession)
-
-          Button("Archive", action: archiveSelectedSession)
-            .disabled(!hasSelectedSession)
-
-          Button("Delete", role: .destructive, action: confirmDeleteSelectedSession)
-            .disabled(!hasSelectedSession)
-        } label: {
-          Label("Session Actions", systemImage: "ellipsis.circle")
-        }
-        .accessibilityIdentifier("workspace.actions.menu")
       }
     }
   }

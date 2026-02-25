@@ -9,6 +9,9 @@
     @Binding var expandedProjectIDs: Set<String>
     let onSelectProject: (String) -> Void
     let onPresentProjectPicker: () -> Void
+    let onRenameSession: (String) -> Void
+    let onArchiveSession: (String) -> Void
+    let onDeleteSession: (String) -> Void
 
     var body: some View {
       List(selection: $selectedSessionID) {
@@ -16,10 +19,14 @@
           ForEach(store.projects) { project in
             MacSidebarProjectSection(
               project: project,
-              isExpanded: projectExpansionBinding(for: project.id)
-            ) {
-              onSelectProject(project.id)
-            }
+              isExpanded: projectExpansionBinding(for: project.id),
+              onSelectProject: {
+                onSelectProject(project.id)
+              },
+              onRenameSession: onRenameSession,
+              onArchiveSession: onArchiveSession,
+              onDeleteSession: onDeleteSession
+            )
           }
         } header: {
           threadsHeader
@@ -82,6 +89,9 @@
     let project: SavedProject
     @Binding var isExpanded: Bool
     let onSelectProject: () -> Void
+    let onRenameSession: (String) -> Void
+    let onArchiveSession: (String) -> Void
+    let onDeleteSession: (String) -> Void
 
     private var sessions: [Session] {
       store.visibleSessions(for: project.id)
@@ -95,7 +105,12 @@
             .foregroundStyle(.secondary)
         } else {
           ForEach(sessions) { session in
-            MacSidebarSessionRow(session: session)
+            MacSidebarSessionRow(
+              session: session,
+              onRenameSession: onRenameSession,
+              onArchiveSession: onArchiveSession,
+              onDeleteSession: onDeleteSession
+            )
           }
         }
       } label: {
@@ -113,6 +128,9 @@
     @Environment(WorkspaceStore.self) private var store
 
     let session: Session
+    let onRenameSession: (String) -> Void
+    let onArchiveSession: (String) -> Void
+    let onDeleteSession: (String) -> Void
 
     private static let elapsedFormatter: DateComponentsFormatter = {
       let formatter = DateComponentsFormatter()
@@ -154,6 +172,19 @@
         }
       }
       .tag(session.id as String?)
+      .contextMenu {
+        Button("Rename") {
+          onRenameSession(session.id)
+        }
+
+        Button("Archive") {
+          onArchiveSession(session.id)
+        }
+
+        Button("Delete", role: .destructive) {
+          onDeleteSession(session.id)
+        }
+      }
       .accessibilityIdentifier("sidebar.session.\(session.id)")
     }
   }
@@ -179,7 +210,10 @@
         selectedSessionID: $selectedSessionID,
         expandedProjectIDs: $expandedProjectIDs,
         onSelectProject: { _ in },
-        onPresentProjectPicker: {}
+        onPresentProjectPicker: {},
+        onRenameSession: { _ in },
+        onArchiveSession: { _ in },
+        onDeleteSession: { _ in }
       )
     }
   }

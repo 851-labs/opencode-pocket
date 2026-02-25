@@ -33,7 +33,7 @@
     @State private var bootstrapState: MacWorkspaceBootstrapState = .loading
     @State private var activeSheet: MacWorkspaceSheet?
     @State private var isProjectPickerPresented = false
-    @State private var isDeleteConfirmationPresented = false
+    @State private var pendingDeleteSessionID: String?
     @State private var expandedProjectIDs: Set<String> = []
 
     private var selectedSessionID: String? {
@@ -46,7 +46,10 @@
           selectedSessionID: selectedSessionBinding,
           expandedProjectIDs: $expandedProjectIDs,
           onSelectProject: selectProjectFromSidebar,
-          onPresentProjectPicker: presentProjectPicker
+          onPresentProjectPicker: presentProjectPicker,
+          onRenameSession: prepareRenameSession,
+          onArchiveSession: archiveSession,
+          onDeleteSession: confirmDeleteSession
         )
       } detail: {
         MacWorkspaceDetail(
@@ -87,9 +90,9 @@
         allowsMultipleSelection: false,
         onCompletion: handleProjectDirectoryPick
       )
-      .confirmationDialog("Delete Session?", isPresented: $isDeleteConfirmationPresented) {
+      .confirmationDialog("Delete Session?", isPresented: isDeleteConfirmationDialogPresented) {
         Button("Delete", role: .destructive) {
-          deleteSelectedSession()
+          deletePendingSession()
         }
         Button("Cancel", role: .cancel) {}
       } message: {
@@ -99,12 +102,8 @@
         MacWorkspaceToolbar(
           isRefreshingSessions: store.isRefreshingSessions,
           isCreatingSession: store.isCreatingSession,
-          hasSelectedSession: selectedSessionID != nil,
           refreshSessions: refreshSessions,
-          createSession: createSession,
-          renameSelectedSession: prepareRenameSession,
-          archiveSelectedSession: archiveSelectedSession,
-          confirmDeleteSelectedSession: confirmDeleteSelectedSession
+          createSession: createSession
         )
       }
     }
@@ -113,6 +112,17 @@
       Binding(
         get: { store.selectedSessionID },
         set: { store.selectedSessionID = $0 }
+      )
+    }
+
+    private var isDeleteConfirmationDialogPresented: Binding<Bool> {
+      Binding(
+        get: { pendingDeleteSessionID != nil },
+        set: { isPresented in
+          if !isPresented {
+            pendingDeleteSessionID = nil
+          }
+        }
       )
     }
 
@@ -185,30 +195,29 @@
       }
     }
 
-    private func prepareRenameSession() {
-      guard let selectedSessionID else { return }
+    private func prepareRenameSession(_ sessionID: String) {
       activeSheet = .renameSession(
-        sessionID: selectedSessionID,
-        currentTitle: store.sessionTitle(for: selectedSessionID)
+        sessionID: sessionID,
+        currentTitle: store.sessionTitle(for: sessionID)
       )
     }
 
-    private func archiveSelectedSession() {
-      guard let selectedSessionID else { return }
+    private func archiveSession(_ sessionID: String) {
       Task {
-        await store.archiveSession(sessionID: selectedSessionID)
+        await store.archiveSession(sessionID: sessionID)
       }
     }
 
-    private func confirmDeleteSelectedSession() {
-      guard selectedSessionID != nil else { return }
-      isDeleteConfirmationPresented = true
+    private func confirmDeleteSession(_ sessionID: String) {
+      pendingDeleteSessionID = sessionID
     }
 
-    private func deleteSelectedSession() {
-      guard let selectedSessionID else { return }
+    private func deletePendingSession() {
+      guard let sessionID = pendingDeleteSessionID else { return }
+      pendingDeleteSessionID = nil
+
       Task {
-        await store.deleteSession(sessionID: selectedSessionID)
+        await store.deleteSession(sessionID: sessionID)
       }
     }
   }
