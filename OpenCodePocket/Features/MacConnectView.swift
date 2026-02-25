@@ -19,7 +19,7 @@
         Text("OpenCode Pocket")
           .font(.largeTitle.weight(.semibold))
 
-        Text("Connect to your OpenCode server")
+        Text("Connect to a local OpenCode server")
           .font(.subheadline)
           .foregroundStyle(.secondary)
       }
@@ -27,8 +27,14 @@
 
     private var formContent: some View {
       Form {
-        ConnectionServerSection(applyInputTraits: false)
-        ConnectionAuthenticationSection(applyInputTraits: false)
+        managedLocalSection
+      }
+    }
+
+    private var managedLocalSection: some View {
+      Section("Managed Local") {
+        Text("OpenCode Pocket will attach to an existing local server on 127.0.0.1:4096 when available.")
+        Text("If none is running, it launches `opencode serve` automatically from your installed CLI.")
       }
     }
 
@@ -54,7 +60,12 @@
 
     private var connectButton: some View {
       Button(action: connect) {
-        ConnectionPrimaryButtonLabel(isConnecting: store.isConnecting, inlineProgressAndText: false)
+        if store.isConnecting {
+          ProgressView()
+            .controlSize(.small)
+        } else {
+          Text("Start Local Server")
+        }
       }
       .keyboardShortcut(.defaultAction)
       .disabled(store.isConnecting)

@@ -27,8 +27,6 @@
   }
 
   struct MacSettingsView: View {
-    @Environment(WorkspaceStore.self) private var store
-
     @State private var selectedTab: MacSettingsTab = .general
 
     var body: some View {

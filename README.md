@@ -1,6 +1,9 @@
 # opencode-pocket
 
-Native iOS remote-first client for a headless OpenCode server.
+Native SwiftUI client for a headless OpenCode server.
+
+- macOS: managed local server connection.
+- iOS: remote server connection flow.
 
 > This is a community project and is not affiliated with or built by the OpenCode team.
 

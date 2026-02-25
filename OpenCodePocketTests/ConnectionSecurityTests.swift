@@ -125,6 +125,51 @@ final class ConnectionSecurityTests: XCTestCase {
     XCTAssertEqual(settingsStore.loadPassword(baseURL: savedNextBaseURL, username: username), "second-secret")
   }
 
+  func testConnectionSettingsDecodesWithoutConnectionMode() throws {
+    let payload = """
+    {
+      "baseURL": "https://example.com",
+      "username": "user",
+      "useBasicAuth": false,
+      "directory": "",
+      "hiddenModelKeys": [],
+      "projects": [],
+      "showReasoningSummaries": false,
+      "expandShellToolParts": true,
+      "expandEditToolParts": false
+    }
+    """
+
+    let data = Data(payload.utf8)
+    let decoded = try JSONDecoder().decode(ConnectionSettings.self, from: data)
+
+    XCTAssertEqual(decoded.baseURL, "https://example.com")
+    XCTAssertEqual(decoded.username, "user")
+  }
+
+  func testConnectionSettingsDecodesWithLegacyConnectionModeKey() throws {
+    let payload = """
+    {
+      "baseURL": "https://example.com",
+      "username": "user",
+      "useBasicAuth": false,
+      "directory": "",
+      "macConnectionMode": "remote",
+      "hiddenModelKeys": [],
+      "projects": [],
+      "showReasoningSummaries": false,
+      "expandShellToolParts": true,
+      "expandEditToolParts": false
+    }
+    """
+
+    let data = Data(payload.utf8)
+    let decoded = try JSONDecoder().decode(ConnectionSettings.self, from: data)
+
+    XCTAssertEqual(decoded.baseURL, "https://example.com")
+    XCTAssertEqual(decoded.username, "user")
+  }
+
   @MainActor
   private func persist(_ connection: ConnectionStore) {
     connection.persistSettingsBestEffort(
