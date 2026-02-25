@@ -215,6 +215,9 @@ import TranscriptUI
 
   private func assistantMessageMetadata(for message: MessageEnvelope, turnDurationMs: Double?) -> String {
     var chunks: [String] = []
+    if let agent = formattedAgentName(message.info.agent) {
+      chunks.append(agent)
+    }
     if let model = message.info.modelID?.trimmedForInput, !model.isEmpty {
       chunks.append(model)
     }
@@ -228,6 +231,18 @@ import TranscriptUI
       chunks.append(duration)
     }
     return chunks.joined(separator: " · ")
+  }
+
+  private func formattedAgentName(_ raw: String?) -> String? {
+    guard let raw = raw?.trimmingCharacters(in: .whitespacesAndNewlines), !raw.isEmpty else {
+      return nil
+    }
+
+    guard let first = raw.first else {
+      return nil
+    }
+
+    return first.uppercased() + raw.dropFirst()
   }
 
   private func formattedReplyDuration(turnDurationMs: Double?, createdRaw: Double?, completedRaw: Double?) -> String? {

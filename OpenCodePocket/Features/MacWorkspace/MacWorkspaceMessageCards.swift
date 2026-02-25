@@ -228,6 +228,9 @@
 
   private func macAssistantMessageMetadata(for message: MessageEnvelope, turnDurationMs: Double?) -> String {
     var chunks: [String] = []
+    if let agent = macFormattedAgentName(message.info.agent) {
+      chunks.append(agent)
+    }
     if let model = message.info.modelID?.trimmedForInput, !model.isEmpty {
       chunks.append(model)
     }
@@ -241,6 +244,18 @@
       chunks.append(duration)
     }
     return chunks.joined(separator: " · ")
+  }
+
+  private func macFormattedAgentName(_ raw: String?) -> String? {
+    guard let raw = raw?.trimmingCharacters(in: .whitespacesAndNewlines), !raw.isEmpty else {
+      return nil
+    }
+
+    guard let first = raw.first else {
+      return nil
+    }
+
+    return first.uppercased() + raw.dropFirst()
   }
 
   private func macFormattedReplyDuration(turnDurationMs: Double?, createdRaw: Double?, completedRaw: Double?) -> String? {
