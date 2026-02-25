@@ -7,72 +7,47 @@ import SwiftUI
     let sessionID: String
 
     var body: some View {
-      GlassEffectContainer(spacing: 0) {
-        composerBody
-          .glassEffect(
-            .regular
-              .tint(Color.white.opacity(0.12))
-              .interactive(),
-            in: .rect(cornerRadius: 22)
-          )
-          .scrollEdgeEffectStyle(.soft, for: .bottom)
+      VStack(spacing: 10) {
+        promptCards
+
+        composerSurface
       }
     }
 
-    private var composerBody: some View {
-      VStack(spacing: 10) {
-        if let permission = store.currentPermissionRequest(for: sessionID) {
-          PermissionPromptCard(
-            store: store,
-            sessionID: sessionID,
-            request: permission
-          )
-        }
+    @ViewBuilder
+    private var promptCards: some View {
+      if let permission = store.currentPermissionRequest(for: sessionID) {
+        PermissionPromptCard(
+          store: store,
+          sessionID: sessionID,
+          request: permission
+        )
+      }
 
-        if let question = store.currentQuestionRequest(for: sessionID) {
-          QuestionPromptCard(
-            store: store,
-            sessionID: sessionID,
-            request: question
-          )
-        }
+      if let question = store.currentQuestionRequest(for: sessionID) {
+        QuestionPromptCard(
+          store: store,
+          sessionID: sessionID,
+          request: question
+        )
+      }
 
-        let todos = store.todosBySession[sessionID] ?? []
-        if !todos.isEmpty {
-          TodoDockCard(todos: todos)
-        }
+      let todos = store.todosBySession[sessionID] ?? []
+      if !todos.isEmpty {
+        TodoDockCard(todos: todos)
+      }
+    }
 
-        let composerBlocked = store.isComposerBlocked(for: sessionID)
-        let isRunning = store.isSessionRunning(sessionID)
+    private var composerSurface: some View {
+      composerCard
+    }
 
-        HStack(alignment: .bottom, spacing: 10) {
-          TextField("Message", text: $store.draftMessage, axis: .vertical)
-            .lineLimit(1 ... 6)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .disabled(composerBlocked)
-            .accessibilityIdentifier("composer.input")
+    private var composerCard: some View {
+      let composerBlocked = store.isComposerBlocked(for: sessionID)
+      let isRunning = store.isSessionRunning(sessionID)
 
-          Button {
-            Task {
-              if store.isSessionRunning(sessionID) {
-                await store.abort(sessionID: sessionID)
-              } else {
-                await store.sendDraftMessage(in: sessionID)
-              }
-            }
-          } label: {
-            Image(systemName: store.isSessionRunning(sessionID) ? "stop.fill" : "arrow.up")
-              .font(.headline.weight(.bold))
-              .foregroundStyle(.white)
-              .frame(width: 42, height: 42)
-              .background(Circle().fill(Color.accentColor))
-          }
-          .buttonStyle(.plain)
-          .disabled(!isRunning && (composerBlocked || store.draftMessage.trimmedForInput.isEmpty))
-          .accessibilityIdentifier("composer.sendAbort")
-          .accessibilityLabel(store.isSessionRunning(sessionID) ? "Abort" : "Send")
-        }
+      return VStack(alignment: .leading, spacing: 10) {
+        composerInputField(composerBlocked: composerBlocked)
 
         if composerBlocked {
           Text("Respond to the active prompt before sending another message.")
@@ -81,22 +56,105 @@ import SwiftUI
             .frame(maxWidth: .infinity, alignment: .leading)
         }
 
-        HStack(spacing: 8) {
-          agentMenu
-
-          modelMenu
-
-          effortMenu
-
-          Spacer()
-
-          Text(store.statusLabel(for: sessionID))
-            .font(.caption)
-            .foregroundStyle(.secondary)
-            .accessibilityIdentifier("composer.status")
-        }
+        composerControlsRow(composerBlocked: composerBlocked, isRunning: isRunning)
       }
       .padding(12)
+      .background(
+        RoundedRectangle(cornerRadius: 24, style: .continuous)
+          .fill(Color.white.opacity(0.12))
+      )
+      .overlay(
+        RoundedRectangle(cornerRadius: 24, style: .continuous)
+          .strokeBorder(Color.white.opacity(0.3), lineWidth: 0.6)
+      )
+      .shadow(color: Color.black.opacity(0.08), radius: 16, x: 0, y: 8)
+      .glassEffect(
+        .regular
+          .tint(Color.white.opacity(0.14))
+          .interactive(),
+        in: .rect(cornerRadius: 24)
+      )
+      .scrollEdgeEffectStyle(.soft, for: .bottom)
+    }
+
+    private func composerInputField(composerBlocked: Bool) -> some View {
+      TextField("Message", text: $store.draftMessage, axis: .vertical)
+        .lineLimit(1 ... 6)
+        .textFieldStyle(.plain)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(
+          RoundedRectangle(cornerRadius: 16, style: .continuous)
+            .fill(Color.white.opacity(0.2))
+        )
+        .overlay(
+          RoundedRectangle(cornerRadius: 16, style: .continuous)
+            .strokeBorder(Color.white.opacity(0.32), lineWidth: 0.5)
+        )
+        .disabled(composerBlocked)
+        .accessibilityIdentifier("composer.input")
+    }
+
+    private func composerControlsRow(composerBlocked: Bool, isRunning: Bool) -> some View {
+      HStack(spacing: 8) {
+        agentMenu
+
+        modelMenu
+
+        effortMenu
+
+        Spacer(minLength: 6)
+
+        sendButton(composerBlocked: composerBlocked, isRunning: isRunning)
+      }
+    }
+
+    private func sendButton(composerBlocked: Bool, isRunning: Bool) -> some View {
+      Button {
+        Task {
+          if store.isSessionRunning(sessionID) {
+            await store.abort(sessionID: sessionID)
+          } else {
+            await store.sendDraftMessage(in: sessionID)
+          }
+        }
+      } label: {
+        Image(systemName: store.isSessionRunning(sessionID) ? "stop.fill" : "arrow.up")
+          .font(.subheadline.weight(.bold))
+          .foregroundStyle(.white)
+          .frame(width: 36, height: 36)
+          .background(Circle().fill(Color.accentColor))
+      }
+      .buttonStyle(.plain)
+      .disabled(!isRunning && (composerBlocked || store.draftMessage.trimmedForInput.isEmpty))
+      .accessibilityIdentifier("composer.sendAbort")
+      .accessibilityLabel(store.isSessionRunning(sessionID) ? "Abort" : "Send")
+    }
+
+    private func menuChipLabel(_ title: String, systemImage: String) -> some View {
+      HStack(spacing: 6) {
+        Image(systemName: systemImage)
+          .font(.caption2.weight(.semibold))
+
+        Text(title)
+          .lineLimit(1)
+
+        Image(systemName: "chevron.down")
+          .font(.caption2.weight(.semibold))
+          .foregroundStyle(.secondary)
+      }
+      .font(.caption.weight(.semibold))
+      .padding(.horizontal, 10)
+      .padding(.vertical, 6)
+      .background(
+        Capsule(style: .continuous)
+          .fill(Color.white.opacity(0.18))
+      )
+      .overlay(
+        Capsule(style: .continuous)
+          .strokeBorder(Color.white.opacity(0.28), lineWidth: 0.5)
+      )
+      .glassEffect(.regular.interactive(), in: .capsule)
     }
 
     private var agentMenu: some View {
@@ -118,9 +176,7 @@ import SwiftUI
           }
         }
       } label: {
-        Label(store.selectedAgentName.capitalized, systemImage: "wand.and.stars")
-          .font(.caption.weight(.semibold))
-          .lineLimit(1)
+        menuChipLabel(store.selectedAgentName.capitalized, systemImage: "wand.and.stars")
       }
       .accessibilityIdentifier("composer.agentMenu")
       .accessibilityLabel("Agent Menu")
@@ -149,9 +205,7 @@ import SwiftUI
           }
         }
       } label: {
-        Label(store.selectedModelDisplayName, systemImage: "cpu")
-          .font(.caption.weight(.semibold))
-          .lineLimit(1)
+        menuChipLabel(store.selectedModelDisplayName, systemImage: "cpu")
       }
       .accessibilityIdentifier("composer.modelMenu")
       .accessibilityLabel("Model Menu")
@@ -181,9 +235,7 @@ import SwiftUI
           }
         }
       } label: {
-        Label(store.selectedModelVariantDisplayName, systemImage: "brain")
-          .font(.caption.weight(.semibold))
-          .lineLimit(1)
+        menuChipLabel(store.selectedModelVariantDisplayName, systemImage: "brain")
       }
       .accessibilityIdentifier("composer.effortMenu")
       .accessibilityLabel("Thinking Effort Menu")

@@ -119,7 +119,6 @@ final class OpenCodePocketUITests: XCTestCase {
       .firstMatch
     XCTAssertTrue(userCopyButton.waitForExistence(timeout: 6), "Expected user copy control in transcript")
 
-    XCTAssertTrue(app.descendants(matching: .any)["composer.status"].exists, "Expected composer status label")
   }
 
   @MainActor

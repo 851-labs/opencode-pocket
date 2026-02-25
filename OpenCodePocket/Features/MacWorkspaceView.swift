@@ -319,6 +319,12 @@
     let selectedSessionID: String
     @Binding var selectedPanel: MacWorkspacePanel
 
+    @State private var composerHeight: CGFloat = 0
+
+    private var composerBottomInset: CGFloat {
+      max(0, composerHeight + 8)
+    }
+
     var body: some View {
       VStack(spacing: 0) {
         HStack(spacing: 12) {
@@ -341,27 +347,48 @@
 
         Divider()
 
-        Group {
-          switch selectedPanel {
-          case .transcript:
-            MacTranscriptPane(
-              messages: store.messagesBySession[selectedSessionID] ?? [],
-              sessionStatus: store.status(for: selectedSessionID),
-              showReasoningSummaries: store.showReasoningSummaries,
-              expandShellToolParts: store.expandShellToolParts,
-              expandEditToolParts: store.expandEditToolParts
-            )
-          case .changes:
-            MacChangesPane(diffs: store.diffsBySession[selectedSessionID] ?? [])
+        ZStack(alignment: .bottom) {
+          Group {
+            switch selectedPanel {
+            case .transcript:
+              MacTranscriptPane(
+                messages: store.messagesBySession[selectedSessionID] ?? [],
+                sessionStatus: store.status(for: selectedSessionID),
+                showReasoningSummaries: store.showReasoningSummaries,
+                expandShellToolParts: store.expandShellToolParts,
+                expandEditToolParts: store.expandEditToolParts,
+                bottomInset: composerBottomInset
+              )
+            case .changes:
+              MacChangesPane(
+                diffs: store.diffsBySession[selectedSessionID] ?? [],
+                bottomInset: composerBottomInset
+              )
+            }
           }
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+          MacComposerView(store: store, sessionID: selectedSessionID)
+            .padding(12)
+            .background {
+              GeometryReader { proxy in
+                Color.clear
+                  .preference(key: MacComposerHeightPreferenceKey.self, value: proxy.size.height)
+              }
+            }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-        Divider()
-
-        MacComposerView(store: store, sessionID: selectedSessionID)
-          .padding(12)
+        .onPreferenceChange(MacComposerHeightPreferenceKey.self) { value in
+          composerHeight = value
+        }
       }
+    }
+  }
+
+  private struct MacComposerHeightPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+      value = max(value, nextValue())
     }
   }
 
@@ -797,6 +824,7 @@
 
   private struct MacChangesPane: View {
     let diffs: [FileDiff]
+    let bottomInset: CGFloat
 
     var body: some View {
       if diffs.isEmpty {
@@ -806,30 +834,38 @@
           description: Text("Run a coding task to populate this diff view.")
         )
       } else {
-        List(diffs) { diff in
-          HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 4) {
-              Text(diff.file)
-                .font(.subheadline.weight(.semibold))
-                .lineLimit(2)
-              Text(diff.status?.capitalized ?? "Modified")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            }
+        List {
+          ForEach(diffs) { diff in
+            HStack(alignment: .top) {
+              VStack(alignment: .leading, spacing: 4) {
+                Text(diff.file)
+                  .font(.subheadline.weight(.semibold))
+                  .lineLimit(2)
+                Text(diff.status?.capitalized ?? "Modified")
+                  .font(.caption)
+                  .foregroundStyle(.secondary)
+              }
 
-            Spacer()
+              Spacer()
 
-            VStack(alignment: .trailing, spacing: 2) {
-              Text("+\(diff.additionsCount)")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.green)
-              Text("-\(diff.deletionsCount)")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.red)
+              VStack(alignment: .trailing, spacing: 2) {
+                Text("+\(diff.additionsCount)")
+                  .font(.caption.weight(.semibold))
+                  .foregroundStyle(.green)
+                Text("-\(diff.deletionsCount)")
+                  .font(.caption.weight(.semibold))
+                  .foregroundStyle(.red)
+              }
             }
+            .padding(.vertical, 2)
           }
-          .padding(.vertical, 2)
-        }
+
+          Color.clear
+            .frame(height: max(0, bottomInset))
+            .listRowInsets(.init())
+            .listRowSeparator(.hidden)
+            .listRowBackground(Color.clear)
+          }
         .listStyle(.inset)
       }
     }

@@ -8,12 +8,14 @@
     let showReasoningSummaries: Bool
     let expandShellToolParts: Bool
     let expandEditToolParts: Bool
+    let bottomInset: CGFloat
 
     @State private var followTail = true
     @State private var hasPendingTail = false
     @State private var visibleTurnLimit = 40
 
     private let turnBatchSize = 40
+    private let bottomAnchorID = "workspace.transcript.bottomSpacer"
 
     private var turns: [MacTranscriptTurn] {
       MacTranscriptTurn.build(from: messages)
@@ -64,6 +66,10 @@
                   )
                   .id(turn.id)
                 }
+
+                Color.clear
+                  .frame(height: max(0, bottomInset))
+                  .id(bottomAnchorID)
               }
               .padding(16)
             }
@@ -77,10 +83,9 @@
             )
             .onChange(of: messages.count) { _, _ in
               visibleTurnLimit = max(visibleTurnLimit, turnBatchSize)
-              guard let lastID = turns.last?.id else { return }
               if followTail {
                 withAnimation(.easeOut(duration: 0.2)) {
-                  proxy.scrollTo(lastID, anchor: .bottom)
+                  proxy.scrollTo(bottomAnchorID, anchor: .bottom)
                 }
                 hasPendingTail = false
                 return
@@ -88,11 +93,20 @@
               hasPendingTail = true
             }
             .onChange(of: followTail) { _, shouldFollow in
-              guard shouldFollow, let lastID = turns.last?.id else {
+              guard shouldFollow else {
                 return
               }
               withAnimation(.easeOut(duration: 0.2)) {
-                proxy.scrollTo(lastID, anchor: .bottom)
+                proxy.scrollTo(bottomAnchorID, anchor: .bottom)
+              }
+              hasPendingTail = false
+            }
+            .onChange(of: bottomInset) { _, _ in
+              guard followTail else {
+                return
+              }
+              withAnimation(.easeOut(duration: 0.2)) {
+                proxy.scrollTo(bottomAnchorID, anchor: .bottom)
               }
               hasPendingTail = false
             }
@@ -113,7 +127,7 @@
               }
               .buttonStyle(.plain)
               .padding(.trailing, 14)
-              .padding(.bottom, 14)
+              .padding(.bottom, bottomInset + 14)
               .accessibilityIdentifier("workspace.transcript.resume")
             }
           }
