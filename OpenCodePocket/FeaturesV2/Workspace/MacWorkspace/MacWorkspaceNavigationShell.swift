@@ -26,6 +26,7 @@
   final class MacWorkspaceRouterPath {
     var presentedSheet: MacWorkspaceSheetDestination?
     var isProjectPickerPresented = false
+    var pendingArchiveSessionID: String?
     var pendingDeleteSessionID: String?
   }
 
@@ -63,8 +64,7 @@
           selectedSession: selectedSessionBinding,
           expandedProjectIDs: $expandedProjectIDs,
           onSelectProject: selectProjectFromSidebar,
-          onTogglePinSession: togglePinSession,
-          onArchiveSession: archiveSession
+          onTogglePinSession: togglePinSession
         )
       } detail: {
         MacWorkspaceDetail(
@@ -104,6 +104,14 @@
         allowsMultipleSelection: false,
         onCompletion: handleProjectDirectoryPick
       )
+      .confirmationDialog("Archive Session?", isPresented: isArchiveConfirmationDialogPresented) {
+        Button("Archive") {
+          archivePendingSession()
+        }
+        Button("Cancel", role: .cancel) {}
+      } message: {
+        Text("You can unarchive this session later from Settings > Archived.")
+      }
       .confirmationDialog("Delete Session?", isPresented: isDeleteConfirmationDialogPresented) {
         Button("Delete", role: .destructive) {
           deletePendingSession()
@@ -166,6 +174,17 @@
         set: { isPresented in
           if !isPresented {
             routerPath.pendingDeleteSessionID = nil
+          }
+        }
+      )
+    }
+
+    private var isArchiveConfirmationDialogPresented: Binding<Bool> {
+      Binding(
+        get: { routerPath.pendingArchiveSessionID != nil },
+        set: { isPresented in
+          if !isPresented {
+            routerPath.pendingArchiveSessionID = nil
           }
         }
       )
@@ -236,7 +255,10 @@
       }
     }
 
-    private func archiveSession(_ sessionID: String) {
+    private func archivePendingSession() {
+      guard let sessionID = routerPath.pendingArchiveSessionID else { return }
+      routerPath.pendingArchiveSessionID = nil
+
       Task {
         await store.archiveSession(sessionID: sessionID)
       }

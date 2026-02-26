@@ -22,7 +22,6 @@
     @Binding var expandedProjectIDs: Set<String>
     let onSelectProject: (String) -> Void
     let onTogglePinSession: (String) -> Void
-    let onArchiveSession: (String) -> Void
 
     private var pinnedRows: [MacSidebarSessionListRow] {
       store.pinnedSessions.map {
@@ -40,8 +39,7 @@
             ForEach(pinnedRows) { row in
               MacSidebarSessionRow(
                 row: row,
-                onTogglePinSession: onTogglePinSession,
-                onArchiveSession: onArchiveSession
+                onTogglePinSession: onTogglePinSession
               )
             }
           }
@@ -55,8 +53,7 @@
               onSelectProject: {
                 onSelectProject(project.id)
               },
-              onTogglePinSession: onTogglePinSession,
-              onArchiveSession: onArchiveSession
+              onTogglePinSession: onTogglePinSession
             )
           }
         } header: {
@@ -121,7 +118,6 @@
     @Binding var isExpanded: Bool
     let onSelectProject: () -> Void
     let onTogglePinSession: (String) -> Void
-    let onArchiveSession: (String) -> Void
 
     private var sessions: [Session] {
       store.visibleSessions(for: project.id)
@@ -147,8 +143,7 @@
           ForEach(rows) { row in
             MacSidebarSessionRow(
               row: row,
-              onTogglePinSession: onTogglePinSession,
-              onArchiveSession: onArchiveSession
+              onTogglePinSession: onTogglePinSession
             )
           }
         }
@@ -178,7 +173,6 @@
 
     let row: MacSidebarSessionListRow
     let onTogglePinSession: (String) -> Void
-    let onArchiveSession: (String) -> Void
 
     private static let elapsedFormatter: DateComponentsFormatter = {
       let formatter = DateComponentsFormatter()
@@ -231,7 +225,7 @@
           }
 
           Button {
-            onArchiveSession(row.session.id)
+            routerPath.pendingArchiveSessionID = row.session.id
           } label: {
             Label("Archive", systemImage: "archivebox")
           }
@@ -291,8 +285,7 @@
         selectedSession: $selectedSession,
         expandedProjectIDs: $expandedProjectIDs,
         onSelectProject: { _ in },
-        onTogglePinSession: { _ in },
-        onArchiveSession: { _ in }
+        onTogglePinSession: { _ in }
       )
       .environment(MacWorkspaceRouterPath())
     }
