@@ -29,6 +29,7 @@ final class ConnectionStore {
   let initialSelectedModel: ModelSelector?
   let initialSelectedModelVariant: String?
   let initialHiddenModelKeys: Set<String>
+  let initialPinnedSessionIDs: Set<String>
   let initialProjects: [SavedProject]
   let initialSelectedProjectID: String?
   let initialShowReasoningSummaries: Bool
@@ -66,6 +67,7 @@ final class ConnectionStore {
 
     initialSelectedModelVariant = settings.selectedModelVariant?.trimmedNonEmpty
     initialHiddenModelKeys = Set(settings.hiddenModelKeys)
+    initialPinnedSessionIDs = Set(settings.pinnedSessionIDs)
     initialProjects = settings.projects
     initialSelectedProjectID = settings.selectedProjectID
     initialShowReasoningSummaries = settings.showReasoningSummaries
@@ -137,6 +139,7 @@ final class ConnectionStore {
     selectedModel: ModelSelector?,
     selectedModelVariant: String?,
     hiddenModelKeys: Set<String>,
+    pinnedSessionIDs: Set<String>,
     projects: [SavedProject],
     selectedProjectID: String?,
     showReasoningSummaries: Bool,
@@ -158,6 +161,7 @@ final class ConnectionStore {
       selectedModel: selectedModel,
       selectedModelVariant: selectedModelVariant?.trimmedNonEmpty,
       hiddenModelKeys: hiddenModelKeys,
+      pinnedSessionIDs: pinnedSessionIDs,
       projects: projects,
       selectedProjectID: selectedProjectID,
       showReasoningSummaries: showReasoningSummaries,
@@ -241,6 +245,7 @@ final class ConnectionStore {
       selectedModel: workspace?.selectedModel,
       selectedModelVariant: workspace?.selectedModelVariant,
       hiddenModelKeys: workspace?.hiddenModelKeys ?? [],
+      pinnedSessionIDs: workspace?.pinnedSessionIDs ?? [],
       projects: workspace?.projects ?? [],
       selectedProjectID: workspace?.selectedProjectID,
       showReasoningSummaries: workspace?.showReasoningSummaries ?? false,
@@ -283,6 +288,7 @@ final class ConnectionStore {
           selectedModel: workspace?.selectedModel,
           selectedModelVariant: workspace?.selectedModelVariant,
           hiddenModelKeys: workspace?.hiddenModelKeys ?? [],
+          pinnedSessionIDs: workspace?.pinnedSessionIDs ?? [],
           projects: workspace?.projects ?? [],
           selectedProjectID: workspace?.selectedProjectID,
           showReasoningSummaries: workspace?.showReasoningSummaries ?? false,
@@ -303,6 +309,7 @@ final class ConnectionStore {
     selectedModel: ModelSelector?,
     selectedModelVariant: String?,
     hiddenModelKeys: Set<String>,
+    pinnedSessionIDs: Set<String>,
     projects: [SavedProject],
     selectedProjectID: String?,
     showReasoningSummaries: Bool,
@@ -328,6 +335,7 @@ final class ConnectionStore {
       selectedModelID: selectedModel?.modelID,
       selectedModelVariant: selectedModelVariant,
       hiddenModelKeys: hiddenModelKeys.sorted(),
+      pinnedSessionIDs: pinnedSessionIDs.sorted(),
       projects: projects,
       selectedProjectID: selectedProjectID,
       showReasoningSummaries: showReasoningSummaries,

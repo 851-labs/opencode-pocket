@@ -47,6 +47,7 @@
           expandedProjectIDs: $expandedProjectIDs,
           onSelectProject: selectProjectFromSidebar,
           onPresentProjectPicker: presentProjectPicker,
+          onTogglePinSession: togglePinSession,
           onRenameSession: prepareRenameSession,
           onArchiveSession: archiveSession,
           onDeleteSession: confirmDeleteSession
@@ -206,6 +207,10 @@
       Task {
         await store.archiveSession(sessionID: sessionID)
       }
+    }
+
+    private func togglePinSession(_ sessionID: String) {
+      store.togglePinnedSession(sessionID)
     }
 
     private func confirmDeleteSession(_ sessionID: String) {

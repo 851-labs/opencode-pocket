@@ -10,6 +10,7 @@ final class WorkspaceStore {
   var selectedProjectID: String?
 
   var sessions: [Session] = []
+  var pinnedSessionIDs: Set<String> = []
   var selectedSessionID: String?
   var messagesBySession: [String: [MessageEnvelope]] = [:]
   var diffsBySession: [String: [FileDiff]] = [:]
@@ -68,6 +69,7 @@ final class WorkspaceStore {
     showReasoningSummaries = connection.initialShowReasoningSummaries
     expandShellToolParts = connection.initialExpandShellToolParts
     expandEditToolParts = connection.initialExpandEditToolParts
+    pinnedSessionIDs = connection.initialPinnedSessionIDs
 
     if connection.initialProjects.isEmpty {
       let defaultDirectory = connection.directory.trimmedNonEmpty ?? NSHomeDirectory()
@@ -152,6 +154,13 @@ final class WorkspaceStore {
         let rhsArchived = rhs.time.archived ?? rhs.sortTimestamp
         return lhsArchived > rhsArchived
       }
+  }
+
+  var pinnedSessions: [Session] {
+    sessions
+      .filter { pinnedSessionIDs.contains($0.id) }
+      .filter { ($0.time.archived ?? 0) <= 0 }
+      .sorted { $0.sortTimestamp > $1.sortTimestamp }
   }
 
   func visibleSessions(for projectID: String) -> [Session] {
@@ -336,6 +345,13 @@ final class WorkspaceStore {
     nextSessions.sort { $0.sortTimestamp > $1.sortTimestamp }
 
     sessions = nextSessions
+    let activeSessionIDs = Set(nextSessions.filter { ($0.time.archived ?? 0) <= 0 }.map(\.id))
+    let nextPinnedSessionIDs = pinnedSessionIDs.intersection(activeSessionIDs)
+    if nextPinnedSessionIDs != pinnedSessionIDs {
+      pinnedSessionIDs = nextPinnedSessionIDs
+      persistWorkspaceSettings()
+    }
+
     let validSessionIDs = Set(nextSessions.map(\.id))
     messagesBySession = messagesBySession.filter { validSessionIDs.contains($0.key) }
     diffsBySession = diffsBySession.filter { validSessionIDs.contains($0.key) }
@@ -479,6 +495,24 @@ final class WorkspaceStore {
 
   func isSessionRunning(_ sessionID: String) -> Bool {
     status(for: sessionID).isRunning
+  }
+
+  func isSessionPinned(_ sessionID: String) -> Bool {
+    pinnedSessionIDs.contains(sessionID)
+  }
+
+  func togglePinnedSession(_ sessionID: String) {
+    guard sessions.contains(where: { $0.id == sessionID }) else {
+      return
+    }
+
+    if pinnedSessionIDs.contains(sessionID) {
+      pinnedSessionIDs.remove(sessionID)
+    } else {
+      pinnedSessionIDs.insert(sessionID)
+    }
+
+    persistWorkspaceSettings()
   }
 
   func refreshAgentAndModelOptions() async {
@@ -845,6 +879,7 @@ final class WorkspaceStore {
       selectedModel: selectedModel,
       selectedModelVariant: selectedModelVariant,
       hiddenModelKeys: hiddenModelKeys,
+      pinnedSessionIDs: pinnedSessionIDs,
       projects: projects,
       selectedProjectID: selectedProjectID,
       showReasoningSummaries: showReasoningSummaries,

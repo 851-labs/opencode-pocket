@@ -9,12 +9,27 @@
     @Binding var expandedProjectIDs: Set<String>
     let onSelectProject: (String) -> Void
     let onPresentProjectPicker: () -> Void
+    let onTogglePinSession: (String) -> Void
     let onRenameSession: (String) -> Void
     let onArchiveSession: (String) -> Void
     let onDeleteSession: (String) -> Void
 
     var body: some View {
       List(selection: $selectedSessionID) {
+        if !store.pinnedSessions.isEmpty {
+          Section("Pins") {
+            ForEach(store.pinnedSessions) { session in
+              MacSidebarSessionRow(
+                session: session,
+                onTogglePinSession: onTogglePinSession,
+                onRenameSession: onRenameSession,
+                onArchiveSession: onArchiveSession,
+                onDeleteSession: onDeleteSession
+              )
+            }
+          }
+        }
+
         Section {
           ForEach(store.projects) { project in
             MacSidebarProjectSection(
@@ -23,6 +38,7 @@
               onSelectProject: {
                 onSelectProject(project.id)
               },
+              onTogglePinSession: onTogglePinSession,
               onRenameSession: onRenameSession,
               onArchiveSession: onArchiveSession,
               onDeleteSession: onDeleteSession
@@ -89,12 +105,14 @@
     let project: SavedProject
     @Binding var isExpanded: Bool
     let onSelectProject: () -> Void
+    let onTogglePinSession: (String) -> Void
     let onRenameSession: (String) -> Void
     let onArchiveSession: (String) -> Void
     let onDeleteSession: (String) -> Void
 
     private var sessions: [Session] {
       store.visibleSessions(for: project.id)
+        .filter { !store.isSessionPinned($0.id) }
     }
 
     var body: some View {
@@ -107,6 +125,7 @@
           ForEach(sessions) { session in
             MacSidebarSessionRow(
               session: session,
+              onTogglePinSession: onTogglePinSession,
               onRenameSession: onRenameSession,
               onArchiveSession: onArchiveSession,
               onDeleteSession: onDeleteSession
@@ -128,6 +147,7 @@
     @Environment(WorkspaceStore.self) private var store
 
     let session: Session
+    let onTogglePinSession: (String) -> Void
     let onRenameSession: (String) -> Void
     let onArchiveSession: (String) -> Void
     let onDeleteSession: (String) -> Void
@@ -156,6 +176,35 @@
     }
 
     var body: some View {
+      sessionRowContent
+        .tag(session.id as String?)
+        .contextMenu {
+          if store.isSessionPinned(session.id) {
+            Button("Unpin") {
+              onTogglePinSession(session.id)
+            }
+          } else {
+            Button("Pin") {
+              onTogglePinSession(session.id)
+            }
+          }
+
+          Button("Rename") {
+            onRenameSession(session.id)
+          }
+
+          Button("Archive") {
+            onArchiveSession(session.id)
+          }
+
+          Button("Delete", role: .destructive) {
+            onDeleteSession(session.id)
+          }
+        }
+        .accessibilityIdentifier("sidebar.session.\(session.id)")
+    }
+
+    private var sessionRowContent: some View {
       LabeledContent {
         Text(elapsedSinceLastActivity)
       } label: {
@@ -171,27 +220,18 @@
           }
         }
       }
-      .tag(session.id as String?)
-      .contextMenu {
-        Button("Rename") {
-          onRenameSession(session.id)
-        }
-
-        Button("Archive") {
-          onArchiveSession(session.id)
-        }
-
-        Button("Delete", role: .destructive) {
-          onDeleteSession(session.id)
-        }
-      }
-      .accessibilityIdentifier("sidebar.session.\(session.id)")
     }
   }
 
   #Preview("Sidebar - Projects") {
     MacWorkspaceSidebarPreviewHost()
       .withMacWorkspacePreviewEnv()
+      .frame(width: 340, height: 760)
+  }
+
+  #Preview("Sidebar - Pinned") {
+    MacWorkspaceSidebarPreviewHost()
+      .withMacWorkspacePreviewEnv(.pinnedThreads)
       .frame(width: 340, height: 760)
   }
 
@@ -211,6 +251,7 @@
         expandedProjectIDs: $expandedProjectIDs,
         onSelectProject: { _ in },
         onPresentProjectPicker: {},
+        onTogglePinSession: { _ in },
         onRenameSession: { _ in },
         onArchiveSession: { _ in },
         onDeleteSession: { _ in }

@@ -17,6 +17,7 @@ struct ConnectionSettings: Codable, Equatable {
   var selectedModelID: String?
   var selectedModelVariant: String?
   var hiddenModelKeys: [String]
+  var pinnedSessionIDs: [String]
   var projects: [SavedProject]
   var selectedProjectID: String?
   var showReasoningSummaries: Bool
@@ -33,6 +34,7 @@ struct ConnectionSettings: Codable, Equatable {
     selectedModelID: String?,
     selectedModelVariant: String?,
     hiddenModelKeys: [String],
+    pinnedSessionIDs: [String] = [],
     projects: [SavedProject],
     selectedProjectID: String?,
     showReasoningSummaries: Bool = false,
@@ -48,6 +50,7 @@ struct ConnectionSettings: Codable, Equatable {
     self.selectedModelID = selectedModelID
     self.selectedModelVariant = selectedModelVariant
     self.hiddenModelKeys = hiddenModelKeys
+    self.pinnedSessionIDs = pinnedSessionIDs
     self.projects = projects
     self.selectedProjectID = selectedProjectID
     self.showReasoningSummaries = showReasoningSummaries
@@ -65,6 +68,7 @@ struct ConnectionSettings: Codable, Equatable {
     case selectedModelID
     case selectedModelVariant
     case hiddenModelKeys
+    case pinnedSessionIDs
     case projects
     case selectedProjectID
     case showReasoningSummaries
@@ -83,6 +87,7 @@ struct ConnectionSettings: Codable, Equatable {
     selectedModelID = try container.decodeIfPresent(String.self, forKey: .selectedModelID)
     selectedModelVariant = try container.decodeIfPresent(String.self, forKey: .selectedModelVariant)
     hiddenModelKeys = try container.decodeIfPresent([String].self, forKey: .hiddenModelKeys) ?? Self.default.hiddenModelKeys
+    pinnedSessionIDs = try container.decodeIfPresent([String].self, forKey: .pinnedSessionIDs) ?? Self.default.pinnedSessionIDs
     projects = try container.decodeIfPresent([SavedProject].self, forKey: .projects) ?? Self.default.projects
     selectedProjectID = try container.decodeIfPresent(String.self, forKey: .selectedProjectID)
     showReasoningSummaries =
@@ -103,6 +108,7 @@ struct ConnectionSettings: Codable, Equatable {
     selectedModelID: nil,
     selectedModelVariant: nil,
     hiddenModelKeys: [],
+    pinnedSessionIDs: [],
     projects: [],
     selectedProjectID: nil,
     showReasoningSummaries: false,

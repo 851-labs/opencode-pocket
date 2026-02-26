@@ -4,6 +4,7 @@
 
   enum MacWorkspacePreviewScenario {
     case seededWorkspace
+    case pinnedThreads
     case emptyProjects
   }
 
@@ -30,6 +31,11 @@
           switch scenario {
           case .seededWorkspace:
             workspace.seedPreviewWorkspace()
+          case .pinnedThreads:
+            workspace.seedPreviewWorkspace()
+            if let firstSessionID = workspace.sessions.first?.id {
+              workspace.pinnedSessionIDs.insert(firstSessionID)
+            }
           case .emptyProjects:
             workspace.projects = []
             workspace.selectedProjectID = nil
