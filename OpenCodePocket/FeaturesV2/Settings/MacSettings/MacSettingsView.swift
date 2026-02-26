@@ -4,6 +4,7 @@
   private enum MacSettingsTab: String, CaseIterable, Identifiable {
     case general
     case models
+    case archived
 
     var id: Self { self }
 
@@ -13,6 +14,8 @@
         return "General"
       case .models:
         return "Models"
+      case .archived:
+        return "Archived"
       }
     }
 
@@ -22,6 +25,8 @@
         return "gearshape"
       case .models:
         return "cpu"
+      case .archived:
+        return "archivebox"
       }
     }
   }
@@ -41,6 +46,12 @@
           .tag(MacSettingsTab.models)
           .tabItem {
             Label(MacSettingsTab.models.title, systemImage: MacSettingsTab.models.systemImage)
+          }
+
+        MacSettingsArchivedTab()
+          .tag(MacSettingsTab.archived)
+          .tabItem {
+            Label(MacSettingsTab.archived.title, systemImage: MacSettingsTab.archived.systemImage)
           }
       }
       .frame(minWidth: 860, minHeight: 560)

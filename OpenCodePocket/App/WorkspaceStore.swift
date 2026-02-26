@@ -144,6 +144,16 @@ final class WorkspaceStore {
     return visibleSessions(for: selectedProjectID)
   }
 
+  var archivedSessions: [Session] {
+    sessions
+      .filter { ($0.time.archived ?? 0) > 0 }
+      .sorted { lhs, rhs in
+        let lhsArchived = lhs.time.archived ?? lhs.sortTimestamp
+        let rhsArchived = rhs.time.archived ?? rhs.sortTimestamp
+        return lhsArchived > rhsArchived
+      }
+  }
+
   func visibleSessions(for projectID: String) -> [Session] {
     guard let project = projects.first(where: { $0.id == projectID }) else {
       return []
@@ -153,6 +163,19 @@ final class WorkspaceStore {
       .filter { $0.directory == project.directory }
       .filter { ($0.time.archived ?? 0) <= 0 }
       .sorted { $0.sortTimestamp > $1.sortTimestamp }
+  }
+
+  func projectLabel(for directory: String) -> String {
+    if let projectName = projects.first(where: { $0.directory == directory })?.name.trimmedNonEmpty {
+      return projectName
+    }
+
+    let lastPath = URL(fileURLWithPath: directory).lastPathComponent
+    if let lastPath = lastPath.trimmedNonEmpty {
+      return lastPath
+    }
+
+    return directory
   }
 
   var selectedModelDisplayName: String {
@@ -685,7 +708,7 @@ final class WorkspaceStore {
       _ = try await client.updateSession(
         id: sessionID,
         body: SessionUpdateRequest(title: trimmedTitle),
-        directory: connection.resolvedDirectory
+        directory: directoryForSessionAction(sessionID: sessionID)
       )
       await refreshSessions()
     } catch {
@@ -701,9 +724,26 @@ final class WorkspaceStore {
       _ = try await client.updateSession(
         id: sessionID,
         body: SessionUpdateRequest(time: SessionUpdateTime(archived: archiveTime)),
-        directory: connection.resolvedDirectory
+        directory: directoryForSessionAction(sessionID: sessionID)
       )
       await refreshSessions()
+    } catch {
+      connection.connectionError = error.localizedDescription
+    }
+  }
+
+  func unarchiveSession(sessionID: String) async {
+    guard let client = connection.client else { return }
+
+    do {
+      _ = try await client.updateSession(
+        id: sessionID,
+        body: SessionUpdateRequest(time: SessionUpdateTime.clearArchived()),
+        directory: directoryForSessionAction(sessionID: sessionID)
+      )
+      await refreshSessions()
+    } catch let OpenCodeClientError.httpStatus(code, _) where code == 400 || code == 422 {
+      connection.connectionError = "This OpenCode server version does not support unarchiving yet. Update the server and try again."
     } catch {
       connection.connectionError = error.localizedDescription
     }
@@ -712,7 +752,7 @@ final class WorkspaceStore {
   func deleteSession(sessionID: String) async {
     guard let client = connection.client else { return }
     do {
-      _ = try await client.deleteSession(id: sessionID, directory: connection.resolvedDirectory)
+      _ = try await client.deleteSession(id: sessionID, directory: directoryForSessionAction(sessionID: sessionID))
       messagesBySession[sessionID] = nil
       diffsBySession[sessionID] = nil
       sessionStatuses[sessionID] = nil
@@ -764,6 +804,14 @@ final class WorkspaceStore {
 
   func modelVisibilityKey(_ selector: ModelSelector) -> String {
     "\(selector.providerID)::\(selector.modelID)"
+  }
+
+  private func directoryForSessionAction(sessionID: String) -> String? {
+    if let sessionDirectory = sessions.first(where: { $0.id == sessionID })?.directory.trimmedNonEmpty {
+      return sessionDirectory
+    }
+
+    return connection.resolvedDirectory
   }
 
   private func normalizedProjectDirectory(_ raw: String) -> String? {

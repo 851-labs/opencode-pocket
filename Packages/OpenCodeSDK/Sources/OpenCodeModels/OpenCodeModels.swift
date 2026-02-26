@@ -275,9 +275,36 @@ public struct SessionUpdateRequest: Encodable, Sendable {
 
 public struct SessionUpdateTime: Encodable, Sendable {
   public var archived: Double?
+  private var shouldEncodeArchivedNull: Bool
 
   public init(archived: Double? = nil) {
+    self.init(archived: archived, shouldEncodeArchivedNull: false)
+  }
+
+  public static func clearArchived() -> SessionUpdateTime {
+    SessionUpdateTime(archived: nil, shouldEncodeArchivedNull: true)
+  }
+
+  enum CodingKeys: String, CodingKey {
+    case archived
+  }
+
+  public func encode(to encoder: Encoder) throws {
+    var container = encoder.container(keyedBy: CodingKeys.self)
+
+    if shouldEncodeArchivedNull {
+      try container.encodeNil(forKey: .archived)
+      return
+    }
+
+    if let archived {
+      try container.encode(archived, forKey: .archived)
+    }
+  }
+
+  private init(archived: Double?, shouldEncodeArchivedNull: Bool) {
     self.archived = archived
+    self.shouldEncodeArchivedNull = shouldEncodeArchivedNull
   }
 }
 

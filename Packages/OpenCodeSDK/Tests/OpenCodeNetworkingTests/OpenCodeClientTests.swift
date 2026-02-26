@@ -181,6 +181,56 @@ final class OpenCodeClientTests: XCTestCase {
     _ = try await client.listSessions(directory: "   ")
   }
 
+  func testUpdateSessionSendsArchiveTimestampPayload() async throws {
+    let archiveTime = 1_761_224_322_123.0
+
+    URLProtocolStub.handler = { request in
+      XCTAssertEqual(request.httpMethod, "PATCH")
+      XCTAssertEqual(request.url?.path, "/session/ses_1")
+
+      let bodyData = try requestBodyData(request)
+      let bodyObject = try JSONSerialization.jsonObject(with: bodyData)
+      let body = try XCTUnwrap(bodyObject as? [String: Any])
+      let time = try XCTUnwrap(body["time"] as? [String: Any])
+
+      XCTAssertEqual(time["archived"] as? Double, archiveTime)
+
+      return try makeJSONResponse(request: request, json: """
+      {"id":"ses_patch","slug":"slug","projectID":"prj_1","directory":"/tmp/project","parentID":null,"title":"Patched","version":"1","time":{"created":1,"updated":2,"archived":null},"summary":null,"share":null,"revert":null}
+      """)
+    }
+
+    let client = makeClient(directory: "/tmp/project")
+    _ = try await client.updateSession(
+      id: "ses_1",
+      body: SessionUpdateRequest(time: SessionUpdateTime(archived: archiveTime))
+    )
+  }
+
+  func testUpdateSessionSendsArchivedNullPayloadForUnarchive() async throws {
+    URLProtocolStub.handler = { request in
+      XCTAssertEqual(request.httpMethod, "PATCH")
+      XCTAssertEqual(request.url?.path, "/session/ses_1")
+
+      let bodyData = try requestBodyData(request)
+      let bodyObject = try JSONSerialization.jsonObject(with: bodyData)
+      let body = try XCTUnwrap(bodyObject as? [String: Any])
+      let time = try XCTUnwrap(body["time"] as? [String: Any])
+
+      XCTAssertTrue(time["archived"] is NSNull)
+
+      return try makeJSONResponse(request: request, json: """
+      {"id":"ses_patch","slug":"slug","projectID":"prj_1","directory":"/tmp/project","parentID":null,"title":"Patched","version":"1","time":{"created":1,"updated":2,"archived":null},"summary":null,"share":null,"revert":null}
+      """)
+    }
+
+    let client = makeClient(directory: "/tmp/project")
+    _ = try await client.updateSession(
+      id: "ses_1",
+      body: SessionUpdateRequest(time: SessionUpdateTime.clearArchived())
+    )
+  }
+
   func testRequestFailsWithInvalidResponse() async {
     URLProtocolStub.handler = { request in
       let response = try URLResponse(url: XCTUnwrap(request.url), mimeType: "application/json", expectedContentLength: 2, textEncodingName: nil)
@@ -622,6 +672,37 @@ private final class URLProtocolStub: URLProtocol {
   }
 
   override func stopLoading() {}
+}
+
+private func requestBodyData(_ request: URLRequest) throws -> Data {
+  if let body = request.httpBody {
+    return body
+  }
+
+  guard let stream = request.httpBodyStream else {
+    throw OpenCodeClientError.message("Request body is missing")
+  }
+
+  stream.open()
+  defer {
+    stream.close()
+  }
+
+  var data = Data()
+  var buffer = [UInt8](repeating: 0, count: 1024)
+
+  while stream.hasBytesAvailable {
+    let bytesRead = stream.read(&buffer, maxLength: buffer.count)
+    if bytesRead < 0 {
+      throw stream.streamError ?? OpenCodeClientError.invalidResponse
+    }
+    if bytesRead == 0 {
+      break
+    }
+    data.append(buffer, count: bytesRead)
+  }
+
+  return data
 }
 
 private func makeStatusResponse(request: URLRequest, code: Int, body: Data) throws -> (URLResponse, Data) {

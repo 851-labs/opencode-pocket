@@ -20,6 +20,7 @@
 		1355DEB3AE787C31F3505B08 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77054C883C43469DFD38B5A5 /* RootView.swift */; };
 		158D1954B8686764906A8497 /* ConnectionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2EAE689015B7EAED4AFD7A08 /* ConnectionStore.swift */; };
 		1C41181F4F63BF1375D0887D /* WorkspaceTranscriptPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC2CC938232EF5A9B2B732C2 /* WorkspaceTranscriptPane.swift */; };
+		1DCBBFA0C07E81C129AADE4B /* MacSettingsArchivedTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 884A89386B4723F75CA0EC2F /* MacSettingsArchivedTab.swift */; };
 		26B0E2FF8B8C2E1C415E7E44 /* String+Trimmed.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20A9AA4D4D775F7883475871 /* String+Trimmed.swift */; };
 		324471C103BDBD0D43301500 /* MacSettingsModelsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA7091483A4769460FFB163F /* MacSettingsModelsTab.swift */; };
 		3457A341B95471F19DD82C6E /* WorkspaceShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1203AEA599143C5C6B9FAE4 /* WorkspaceShared.swift */; };
@@ -76,6 +77,7 @@
 		6E0B7D1C84E1310D9D09080B /* OpenCodePocket.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = OpenCodePocket.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		77054C883C43469DFD38B5A5 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		87482039779D818117783BD6 /* MacWorkspaceShared.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacWorkspaceShared.swift; sourceTree = "<group>"; };
+		884A89386B4723F75CA0EC2F /* MacSettingsArchivedTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacSettingsArchivedTab.swift; sourceTree = "<group>"; };
 		8E5D2399CD06F9BB20324AC1 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		9339474A4324C58343ACAC6A /* TranscriptUI */ = {isa = PBXFileReference; lastKnownFileType = folder; name = TranscriptUI; path = Packages/TranscriptUI; sourceTree = SOURCE_ROOT; };
 		9931F30547081E6D53C02DC3 /* WorkspacePromptCards.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspacePromptCards.swift; sourceTree = "<group>"; };
@@ -253,6 +255,7 @@
 		EC49FAB6D8BF67F7DC1DE298 /* MacSettings */ = {
 			isa = PBXGroup;
 			children = (
+				884A89386B4723F75CA0EC2F /* MacSettingsArchivedTab.swift */,
 				3FE51EF24FA1B1D888B3B17B /* MacSettingsGeneralTab.swift */,
 				BA7091483A4769460FFB163F /* MacSettingsModelsTab.swift */,
 				A0D65D5276A4E6F10215A7BA /* MacSettingsPreviewSupport.swift */,
@@ -367,6 +370,7 @@
 				C079C36C986C5C291A4157D5 /* ConnectionStorage.swift in Sources */,
 				158D1954B8686764906A8497 /* ConnectionStore.swift in Sources */,
 				381731C83DA3795EDF3A1CE7 /* MacConnectView.swift in Sources */,
+				1DCBBFA0C07E81C129AADE4B /* MacSettingsArchivedTab.swift in Sources */,
 				D9BCBD998BC4D92A2BE2F817 /* MacSettingsGeneralTab.swift in Sources */,
 				324471C103BDBD0D43301500 /* MacSettingsModelsTab.swift in Sources */,
 				D169D096DE719AB775335047 /* MacSettingsPreviewSupport.swift in Sources */,
