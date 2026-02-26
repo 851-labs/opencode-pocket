@@ -21,6 +21,7 @@
             ForEach(store.pinnedSessions) { session in
               MacSidebarSessionRow(
                 session: session,
+                renderID: "pin:\(session.id)",
                 onTogglePinSession: onTogglePinSession,
                 onRenameSession: onRenameSession,
                 onArchiveSession: onArchiveSession,
@@ -125,6 +126,7 @@
           ForEach(sessions) { session in
             MacSidebarSessionRow(
               session: session,
+              renderID: "thread:\(project.id):\(session.id)",
               onTogglePinSession: onTogglePinSession,
               onRenameSession: onRenameSession,
               onArchiveSession: onArchiveSession,
@@ -147,6 +149,7 @@
     @Environment(WorkspaceStore.self) private var store
 
     let session: Session
+    let renderID: String
     let onTogglePinSession: (String) -> Void
     let onRenameSession: (String) -> Void
     let onArchiveSession: (String) -> Void
@@ -177,6 +180,7 @@
 
     var body: some View {
       sessionRowContent
+        .id(renderID)
         .tag(session.id as String?)
         .contextMenu {
           if store.isSessionPinned(session.id) {
