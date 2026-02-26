@@ -15,16 +15,14 @@
   }
 
   struct MacWorkspaceSidebar: View {
+    @Environment(MacWorkspaceRouterPath.self) private var routerPath
     @Environment(WorkspaceStore.self) private var store
 
     @Binding var selectedSession: MacWorkspaceSidebarSelection?
     @Binding var expandedProjectIDs: Set<String>
     let onSelectProject: (String) -> Void
-    let onPresentProjectPicker: () -> Void
     let onTogglePinSession: (String) -> Void
-    let onRenameSession: (String) -> Void
     let onArchiveSession: (String) -> Void
-    let onDeleteSession: (String) -> Void
 
     private var pinnedRows: [MacSidebarSessionListRow] {
       store.pinnedSessions.map {
@@ -43,9 +41,7 @@
               MacSidebarSessionRow(
                 row: row,
                 onTogglePinSession: onTogglePinSession,
-                onRenameSession: onRenameSession,
-                onArchiveSession: onArchiveSession,
-                onDeleteSession: onDeleteSession
+                onArchiveSession: onArchiveSession
               )
             }
           }
@@ -60,9 +56,7 @@
                 onSelectProject(project.id)
               },
               onTogglePinSession: onTogglePinSession,
-              onRenameSession: onRenameSession,
-              onArchiveSession: onArchiveSession,
-              onDeleteSession: onDeleteSession
+              onArchiveSession: onArchiveSession
             )
           }
         } header: {
@@ -78,7 +72,7 @@
             Text("Add a project directory to start browsing sessions.")
           } actions: {
             Button("Add Project") {
-              onPresentProjectPicker()
+              routerPath.isProjectPickerPresented = true
             }
             .accessibilityIdentifier("projects.add.empty")
           }
@@ -93,7 +87,7 @@
         Spacer(minLength: 0)
 
         Button {
-          onPresentProjectPicker()
+          routerPath.isProjectPickerPresented = true
         } label: {
           Image(systemName: "folder.badge.plus")
         }
@@ -127,9 +121,7 @@
     @Binding var isExpanded: Bool
     let onSelectProject: () -> Void
     let onTogglePinSession: (String) -> Void
-    let onRenameSession: (String) -> Void
     let onArchiveSession: (String) -> Void
-    let onDeleteSession: (String) -> Void
 
     private var sessions: [Session] {
       store.visibleSessions(for: project.id)
@@ -156,9 +148,7 @@
             MacSidebarSessionRow(
               row: row,
               onTogglePinSession: onTogglePinSession,
-              onRenameSession: onRenameSession,
-              onArchiveSession: onArchiveSession,
-              onDeleteSession: onDeleteSession
+              onArchiveSession: onArchiveSession
             )
           }
         }
@@ -183,13 +173,12 @@
   }
 
   private struct MacSidebarSessionRow: View {
+    @Environment(MacWorkspaceRouterPath.self) private var routerPath
     @Environment(WorkspaceStore.self) private var store
 
     let row: MacSidebarSessionListRow
     let onTogglePinSession: (String) -> Void
-    let onRenameSession: (String) -> Void
     let onArchiveSession: (String) -> Void
-    let onDeleteSession: (String) -> Void
 
     private static let elapsedFormatter: DateComponentsFormatter = {
       let formatter = DateComponentsFormatter()
@@ -233,7 +222,10 @@
           }
 
           Button {
-            onRenameSession(row.session.id)
+            routerPath.presentedSheet = .renameSession(
+              sessionID: row.session.id,
+              currentTitle: store.sessionTitle(for: row.session.id)
+            )
           } label: {
             Label("Rename", systemImage: "pencil")
           }
@@ -245,7 +237,7 @@
           }
 
           Button(role: .destructive) {
-            onDeleteSession(row.session.id)
+            routerPath.pendingDeleteSessionID = row.session.id
           } label: {
             Label("Delete", systemImage: "trash")
           }
@@ -299,12 +291,10 @@
         selectedSession: $selectedSession,
         expandedProjectIDs: $expandedProjectIDs,
         onSelectProject: { _ in },
-        onPresentProjectPicker: {},
         onTogglePinSession: { _ in },
-        onRenameSession: { _ in },
-        onArchiveSession: { _ in },
-        onDeleteSession: { _ in }
+        onArchiveSession: { _ in }
       )
+      .environment(MacWorkspaceRouterPath())
     }
   }
 #endif

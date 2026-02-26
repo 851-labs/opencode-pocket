@@ -1,4 +1,5 @@
 #if os(macOS)
+  import Observation
   import SwiftUI
   import UniformTypeIdentifiers
 
@@ -9,7 +10,7 @@
     var id: Self { self }
   }
 
-  enum MacWorkspaceSheet: Identifiable {
+  enum MacWorkspaceSheetDestination: Identifiable {
     case renameSession(sessionID: String, currentTitle: String)
 
     var id: String {
@@ -18,6 +19,14 @@
         return "rename-\(sessionID)"
       }
     }
+  }
+
+  @MainActor
+  @Observable
+  final class MacWorkspaceRouterPath {
+    var presentedSheet: MacWorkspaceSheetDestination?
+    var isProjectPickerPresented = false
+    var pendingDeleteSessionID: String?
   }
 
   enum MacWorkspaceBootstrapState {
@@ -31,9 +40,7 @@
 
     @State private var selectedPanel: MacWorkspacePanel = .transcript
     @State private var bootstrapState: MacWorkspaceBootstrapState = .loading
-    @State private var activeSheet: MacWorkspaceSheet?
-    @State private var isProjectPickerPresented = false
-    @State private var pendingDeleteSessionID: String?
+    @State private var routerPath = MacWorkspaceRouterPath()
     @State private var expandedProjectIDs: Set<String> = []
     @State private var selectionTask: Task<Void, Never>?
 
@@ -49,16 +56,15 @@
     }
 
     var body: some View {
+      @Bindable var routerPath = routerPath
+
       NavigationSplitView {
         MacWorkspaceSidebar(
           selectedSession: selectedSessionBinding,
           expandedProjectIDs: $expandedProjectIDs,
           onSelectProject: selectProjectFromSidebar,
-          onPresentProjectPicker: presentProjectPicker,
           onTogglePinSession: togglePinSession,
-          onRenameSession: prepareRenameSession,
-          onArchiveSession: archiveSession,
-          onDeleteSession: confirmDeleteSession
+          onArchiveSession: archiveSession
         )
       } detail: {
         MacWorkspaceDetail(
@@ -86,14 +92,14 @@
       .onDisappear {
         selectionTask?.cancel()
       }
-      .sheet(item: $activeSheet) { sheet in
+      .sheet(item: $routerPath.presentedSheet) { sheet in
         switch sheet {
         case let .renameSession(sessionID, currentTitle):
           MacRenameSessionSheet(sessionID: sessionID, currentTitle: currentTitle)
         }
       }
       .fileImporter(
-        isPresented: $isProjectPickerPresented,
+        isPresented: $routerPath.isProjectPickerPresented,
         allowedContentTypes: [.folder],
         allowsMultipleSelection: false,
         onCompletion: handleProjectDirectoryPick
@@ -116,6 +122,7 @@
           createSession: createSession
         )
       }
+      .environment(routerPath)
     }
 
     private var selectedSessionBinding: Binding<MacWorkspaceSidebarSelection?> {
@@ -155,10 +162,10 @@
 
     private var isDeleteConfirmationDialogPresented: Binding<Bool> {
       Binding(
-        get: { pendingDeleteSessionID != nil },
+        get: { routerPath.pendingDeleteSessionID != nil },
         set: { isPresented in
           if !isPresented {
-            pendingDeleteSessionID = nil
+            routerPath.pendingDeleteSessionID = nil
           }
         }
       )
@@ -214,10 +221,6 @@
       }
     }
 
-    private func presentProjectPicker() {
-      isProjectPickerPresented = true
-    }
-
     private func handleProjectDirectoryPick(_ result: Result<[URL], Error>) {
       guard case let .success(urls) = result, let directoryURL = urls.first else {
         return
@@ -233,13 +236,6 @@
       }
     }
 
-    private func prepareRenameSession(_ sessionID: String) {
-      activeSheet = .renameSession(
-        sessionID: sessionID,
-        currentTitle: store.sessionTitle(for: sessionID)
-      )
-    }
-
     private func archiveSession(_ sessionID: String) {
       Task {
         await store.archiveSession(sessionID: sessionID)
@@ -250,13 +246,9 @@
       store.togglePinnedSession(sessionID)
     }
 
-    private func confirmDeleteSession(_ sessionID: String) {
-      pendingDeleteSessionID = sessionID
-    }
-
     private func deletePendingSession() {
-      guard let sessionID = pendingDeleteSessionID else { return }
-      pendingDeleteSessionID = nil
+      guard let sessionID = routerPath.pendingDeleteSessionID else { return }
+      routerPath.pendingDeleteSessionID = nil
 
       Task {
         await store.deleteSession(sessionID: sessionID)
