@@ -180,25 +180,35 @@
         .tag(session.id as String?)
         .contextMenu {
           if store.isSessionPinned(session.id) {
-            Button("Unpin") {
+            Button {
               onTogglePinSession(session.id)
+            } label: {
+              Label("Unpin", systemImage: "pin.slash")
             }
           } else {
-            Button("Pin") {
+            Button {
               onTogglePinSession(session.id)
+            } label: {
+              Label("Pin", systemImage: "pin")
             }
           }
 
-          Button("Rename") {
+          Button {
             onRenameSession(session.id)
+          } label: {
+            Label("Rename", systemImage: "pencil")
           }
 
-          Button("Archive") {
+          Button {
             onArchiveSession(session.id)
+          } label: {
+            Label("Archive", systemImage: "archivebox")
           }
 
-          Button("Delete", role: .destructive) {
+          Button(role: .destructive) {
             onDeleteSession(session.id)
+          } label: {
+            Label("Delete", systemImage: "trash")
           }
         }
         .accessibilityIdentifier("sidebar.session.\(session.id)")
