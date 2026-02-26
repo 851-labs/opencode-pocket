@@ -41,6 +41,13 @@
       store.selectedSessionID
     }
 
+    private var navigationTitle: String {
+      guard let selectedSessionID else {
+        return "OpenCode Pocket"
+      }
+      return store.sessionTitle(for: selectedSessionID)
+    }
+
     var body: some View {
       NavigationSplitView {
         MacWorkspaceSidebar(
@@ -62,6 +69,7 @@
         )
       }
       .navigationSplitViewStyle(.balanced)
+      .navigationTitle(navigationTitle)
       .task {
         await loadWorkspaceBootstrap()
       }
@@ -100,6 +108,8 @@
       }
       .toolbar {
         MacWorkspaceToolbar(
+          selectedPanel: $selectedPanel,
+          isPanelSelectionEnabled: selectedSessionID != nil,
           isRefreshingSessions: store.isRefreshingSessions,
           isCreatingSession: store.isCreatingSession,
           refreshSessions: refreshSessions,

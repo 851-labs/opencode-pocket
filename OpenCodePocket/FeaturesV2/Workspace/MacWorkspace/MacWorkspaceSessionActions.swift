@@ -2,6 +2,8 @@
   import SwiftUI
 
   struct MacWorkspaceToolbar: ToolbarContent {
+    @Binding var selectedPanel: MacWorkspacePanel
+    let isPanelSelectionEnabled: Bool
     let isRefreshingSessions: Bool
     let isCreatingSession: Bool
     let refreshSessions: () -> Void
@@ -9,6 +11,16 @@
 
     @ToolbarContentBuilder
     var body: some ToolbarContent {
+      ToolbarItem(placement: .principal) {
+        Picker("Panel", selection: $selectedPanel) {
+          ForEach(MacWorkspacePanel.allCases) { panel in
+            Text(panel.rawValue).tag(panel)
+          }
+        }
+        .pickerStyle(.segmented)
+        .disabled(!isPanelSelectionEnabled)
+      }
+
       ToolbarItemGroup {
         Button(action: refreshSessions) {
           if isRefreshingSessions {

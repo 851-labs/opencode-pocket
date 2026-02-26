@@ -46,60 +46,38 @@
     }
 
     var body: some View {
-      VStack(spacing: 0) {
-        HStack(spacing: 12) {
-          Text(store.sessionTitle(for: selectedSessionID))
-            .font(.title3.weight(.semibold))
-            .lineLimit(1)
+      ZStack(alignment: .bottom) {
+        Group {
+          switch selectedPanel {
+          case .transcript:
+            MacTranscriptPane(
+              messages: store.messagesBySession[selectedSessionID] ?? [],
+              sessionStatus: store.status(for: selectedSessionID),
+              showReasoningSummaries: store.showReasoningSummaries,
+              expandShellToolParts: store.expandShellToolParts,
+              expandEditToolParts: store.expandEditToolParts,
+              bottomInset: composerBottomInset
+            )
+          case .changes:
+            MacChangesPane(
+              diffs: store.diffsBySession[selectedSessionID] ?? [],
+              bottomInset: composerBottomInset
+            )
+          }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-          Spacer(minLength: 0)
-
-          Picker("Panel", selection: $selectedPanel) {
-            ForEach(MacWorkspacePanel.allCases) { panel in
-              Text(panel.rawValue).tag(panel)
+        MacComposerView(sessionID: selectedSessionID)
+          .padding(12)
+          .background {
+            GeometryReader { proxy in
+              Color.clear
+                .preference(key: MacComposerHeightPreferenceKey.self, value: proxy.size.height)
             }
           }
-          .pickerStyle(.segmented)
-          .frame(width: 220)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-
-        Divider()
-
-        ZStack(alignment: .bottom) {
-          Group {
-            switch selectedPanel {
-            case .transcript:
-              MacTranscriptPane(
-                messages: store.messagesBySession[selectedSessionID] ?? [],
-                sessionStatus: store.status(for: selectedSessionID),
-                showReasoningSummaries: store.showReasoningSummaries,
-                expandShellToolParts: store.expandShellToolParts,
-                expandEditToolParts: store.expandEditToolParts,
-                bottomInset: composerBottomInset
-              )
-            case .changes:
-              MacChangesPane(
-                diffs: store.diffsBySession[selectedSessionID] ?? [],
-                bottomInset: composerBottomInset
-              )
-            }
-          }
-          .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-          MacComposerView(sessionID: selectedSessionID)
-            .padding(12)
-            .background {
-              GeometryReader { proxy in
-                Color.clear
-                  .preference(key: MacComposerHeightPreferenceKey.self, value: proxy.size.height)
-              }
-            }
-        }
-        .onPreferenceChange(MacComposerHeightPreferenceKey.self) { value in
-          composerHeight = value
-        }
+      }
+      .onPreferenceChange(MacComposerHeightPreferenceKey.self) { value in
+        composerHeight = value
       }
     }
   }
