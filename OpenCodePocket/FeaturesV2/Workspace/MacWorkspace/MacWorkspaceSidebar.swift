@@ -2,10 +2,22 @@
   import OpenCodeModels
   import SwiftUI
 
+  enum MacWorkspaceSidebarSelection: Hashable {
+    case pinned(sessionID: String)
+    case thread(projectID: String, sessionID: String)
+
+    var sessionID: String {
+      switch self {
+      case let .pinned(sessionID), let .thread(_, sessionID):
+        return sessionID
+      }
+    }
+  }
+
   struct MacWorkspaceSidebar: View {
     @Environment(WorkspaceStore.self) private var store
 
-    @Binding var selectedSessionID: String?
+    @Binding var selectedSession: MacWorkspaceSidebarSelection?
     @Binding var expandedProjectIDs: Set<String>
     let onSelectProject: (String) -> Void
     let onPresentProjectPicker: () -> Void
@@ -14,14 +26,22 @@
     let onArchiveSession: (String) -> Void
     let onDeleteSession: (String) -> Void
 
+    private var pinnedRows: [MacSidebarSessionListRow] {
+      store.pinnedSessions.map {
+        MacSidebarSessionListRow(
+          selection: .pinned(sessionID: $0.id),
+          session: $0
+        )
+      }
+    }
+
     var body: some View {
-      List(selection: $selectedSessionID) {
+      List(selection: $selectedSession) {
         if !store.pinnedSessions.isEmpty {
           Section("Pins") {
-            ForEach(store.pinnedSessions) { session in
+            ForEach(pinnedRows) { row in
               MacSidebarSessionRow(
-                session: session,
-                renderID: "pin:\(session.id)",
+                row: row,
                 onTogglePinSession: onTogglePinSession,
                 onRenameSession: onRenameSession,
                 onArchiveSession: onArchiveSession,
@@ -116,6 +136,15 @@
         .filter { !store.isSessionPinned($0.id) }
     }
 
+    private var rows: [MacSidebarSessionListRow] {
+      sessions.map {
+        MacSidebarSessionListRow(
+          selection: .thread(projectID: project.id, sessionID: $0.id),
+          session: $0
+        )
+      }
+    }
+
     var body: some View {
       DisclosureGroup(isExpanded: $isExpanded) {
         if sessions.isEmpty {
@@ -123,10 +152,9 @@
             .font(.caption)
             .foregroundStyle(.secondary)
         } else {
-          ForEach(sessions) { session in
+          ForEach(rows) { row in
             MacSidebarSessionRow(
-              session: session,
-              renderID: "thread:\(project.id):\(session.id)",
+              row: row,
               onTogglePinSession: onTogglePinSession,
               onRenameSession: onRenameSession,
               onArchiveSession: onArchiveSession,
@@ -145,11 +173,19 @@
     }
   }
 
+  private struct MacSidebarSessionListRow: Identifiable {
+    let selection: MacWorkspaceSidebarSelection
+    let session: Session
+
+    var id: MacWorkspaceSidebarSelection {
+      selection
+    }
+  }
+
   private struct MacSidebarSessionRow: View {
     @Environment(WorkspaceStore.self) private var store
 
-    let session: Session
-    let renderID: String
+    let row: MacSidebarSessionListRow
     let onTogglePinSession: (String) -> Void
     let onRenameSession: (String) -> Void
     let onArchiveSession: (String) -> Void
@@ -165,7 +201,7 @@
     }()
 
     private var elapsedSinceLastActivity: String {
-      guard let raw = session.time.updated ?? session.time.created else {
+      guard let raw = row.session.time.updated ?? row.session.time.created else {
         return "now"
       }
 
@@ -180,42 +216,41 @@
 
     var body: some View {
       sessionRowContent
-        .id(renderID)
-        .tag(session.id as String?)
+        .tag(row.selection as MacWorkspaceSidebarSelection?)
         .contextMenu {
-          if store.isSessionPinned(session.id) {
+          if store.isSessionPinned(row.session.id) {
             Button {
-              onTogglePinSession(session.id)
+              onTogglePinSession(row.session.id)
             } label: {
               Label("Unpin", systemImage: "pin.slash")
             }
           } else {
             Button {
-              onTogglePinSession(session.id)
+              onTogglePinSession(row.session.id)
             } label: {
               Label("Pin", systemImage: "pin")
             }
           }
 
           Button {
-            onRenameSession(session.id)
+            onRenameSession(row.session.id)
           } label: {
             Label("Rename", systemImage: "pencil")
           }
 
           Button {
-            onArchiveSession(session.id)
+            onArchiveSession(row.session.id)
           } label: {
             Label("Archive", systemImage: "archivebox")
           }
 
           Button(role: .destructive) {
-            onDeleteSession(session.id)
+            onDeleteSession(row.session.id)
           } label: {
             Label("Delete", systemImage: "trash")
           }
         }
-        .accessibilityIdentifier("sidebar.session.\(session.id)")
+        .accessibilityIdentifier("sidebar.session.\(row.session.id)")
     }
 
     private var sessionRowContent: some View {
@@ -223,9 +258,9 @@
         Text(elapsedSinceLastActivity)
       } label: {
         Label {
-          Text(session.title)
+          Text(row.session.title)
         } icon: {
-          if store.status(for: session.id).isRunning {
+          if store.status(for: row.session.id).isRunning {
             ProgressView()
               .controlSize(.small)
           } else {
@@ -256,12 +291,12 @@
   }
 
   private struct MacWorkspaceSidebarPreviewHost: View {
-    @State private var selectedSessionID: String?
+    @State private var selectedSession: MacWorkspaceSidebarSelection?
     @State private var expandedProjectIDs: Set<String> = []
 
     var body: some View {
       MacWorkspaceSidebar(
-        selectedSessionID: $selectedSessionID,
+        selectedSession: $selectedSession,
         expandedProjectIDs: $expandedProjectIDs,
         onSelectProject: { _ in },
         onPresentProjectPicker: {},

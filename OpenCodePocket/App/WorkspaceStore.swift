@@ -397,19 +397,33 @@ final class WorkspaceStore {
   }
 
   func selectSession(_ sessionID: String?) async {
-    guard let sessionID else { return }
+    guard let sessionID else {
+      selectedSessionID = nil
+      return
+    }
 
-    if
-      let session = sessions.first(where: { $0.id == sessionID }),
-      let project = projects.first(where: { $0.directory == session.directory }),
-      selectedProjectID != project.id
-    {
+    guard let session = sessions.first(where: { $0.id == sessionID }) else {
+      selectedSessionID = nil
+      return
+    }
+
+    if let project = projects.first(where: { $0.directory == session.directory }), selectedProjectID != project.id {
       selectedProjectID = project.id
       connection.directory = project.directory
       persistWorkspaceSettings()
     }
 
+    let shouldReload =
+      selectedSessionID != sessionID ||
+      messagesBySession[sessionID] == nil ||
+      diffsBySession[sessionID] == nil
+
     selectedSessionID = sessionID
+
+    guard shouldReload else {
+      return
+    }
+
     await loadMessages(sessionID: sessionID)
     await loadDiffs(sessionID: sessionID)
   }

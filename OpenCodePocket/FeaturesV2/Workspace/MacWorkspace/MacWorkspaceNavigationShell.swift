@@ -35,6 +35,7 @@
     @State private var isProjectPickerPresented = false
     @State private var pendingDeleteSessionID: String?
     @State private var expandedProjectIDs: Set<String> = []
+    @State private var selectionTask: Task<Void, Never>?
 
     private var selectedSessionID: String? {
       store.selectedSessionID
@@ -43,7 +44,7 @@
     var body: some View {
       NavigationSplitView {
         MacWorkspaceSidebar(
-          selectedSessionID: selectedSessionBinding,
+          selectedSession: selectedSessionBinding,
           expandedProjectIDs: $expandedProjectIDs,
           onSelectProject: selectProjectFromSidebar,
           onPresentProjectPicker: presentProjectPicker,
@@ -67,17 +68,15 @@
       .onAppear {
         syncExpandedProjects()
       }
-      .onChange(of: store.selectedSessionID) { _, newValue in
-        Task {
-          await store.selectSession(newValue)
-        }
-      }
       .onChange(of: store.projects.map(\.id)) { _, _ in
         syncExpandedProjects()
       }
       .onChange(of: store.selectedProjectID) { _, newValue in
         guard let newValue else { return }
         expandedProjectIDs.insert(newValue)
+      }
+      .onDisappear {
+        selectionTask?.cancel()
       }
       .sheet(item: $activeSheet) { sheet in
         switch sheet {
@@ -109,11 +108,39 @@
       }
     }
 
-    private var selectedSessionBinding: Binding<String?> {
+    private var selectedSessionBinding: Binding<MacWorkspaceSidebarSelection?> {
       Binding(
-        get: { store.selectedSessionID },
-        set: { store.selectedSessionID = $0 }
+        get: {
+          sidebarSelection(for: store.selectedSessionID)
+        },
+        set: { selection in
+          selectionTask?.cancel()
+          selectionTask = Task {
+            guard !Task.isCancelled else { return }
+            await store.selectSession(selection?.sessionID)
+          }
+        }
       )
+    }
+
+    private func sidebarSelection(for sessionID: String?) -> MacWorkspaceSidebarSelection? {
+      guard let sessionID else {
+        return nil
+      }
+
+      if store.isSessionPinned(sessionID) {
+        return .pinned(sessionID: sessionID)
+      }
+
+      guard let session = store.sessions.first(where: { $0.id == sessionID }) else {
+        return nil
+      }
+
+      guard let project = store.projects.first(where: { $0.directory == session.directory }) else {
+        return nil
+      }
+
+      return .thread(projectID: project.id, sessionID: sessionID)
     }
 
     private var isDeleteConfirmationDialogPresented: Binding<Bool> {
