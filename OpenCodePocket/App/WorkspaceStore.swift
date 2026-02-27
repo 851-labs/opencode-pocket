@@ -112,29 +112,57 @@ final class WorkspaceStore {
     }
   }
 
+  func hasLoadedMessages(for sessionID: String) -> Bool {
+    messagesBySession[sessionID] != nil
+  }
+
+  func loadedMessages(for sessionID: String) -> [MessageEnvelope]? {
+    messagesBySession[sessionID]
+  }
+
+  func messages(for sessionID: String) -> [MessageEnvelope] {
+    messagesBySession[sessionID] ?? []
+  }
+
+  func diffs(for sessionID: String) -> [FileDiff] {
+    diffsBySession[sessionID] ?? []
+  }
+
+  func permissions(for sessionID: String) -> [PermissionRequest] {
+    permissionsBySession[sessionID] ?? []
+  }
+
+  func questions(for sessionID: String) -> [QuestionRequest] {
+    questionsBySession[sessionID] ?? []
+  }
+
+  func todos(for sessionID: String) -> [TodoItem] {
+    todosBySession[sessionID] ?? []
+  }
+
   var selectedMessages: [MessageEnvelope] {
     guard let selectedSessionID else { return [] }
-    return messagesBySession[selectedSessionID] ?? []
+    return messages(for: selectedSessionID)
   }
 
   var selectedDiffs: [FileDiff] {
     guard let selectedSessionID else { return [] }
-    return diffsBySession[selectedSessionID] ?? []
+    return diffs(for: selectedSessionID)
   }
 
   var selectedPermissions: [PermissionRequest] {
     guard let selectedSessionID else { return [] }
-    return permissionsBySession[selectedSessionID] ?? []
+    return permissions(for: selectedSessionID)
   }
 
   var selectedQuestions: [QuestionRequest] {
     guard let selectedSessionID else { return [] }
-    return questionsBySession[selectedSessionID] ?? []
+    return questions(for: selectedSessionID)
   }
 
   var selectedTodos: [TodoItem] {
     guard let selectedSessionID else { return [] }
-    return todosBySession[selectedSessionID] ?? []
+    return todos(for: selectedSessionID)
   }
 
   var isRespondingToPermission: Bool {

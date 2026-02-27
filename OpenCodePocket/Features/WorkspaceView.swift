@@ -262,7 +262,7 @@ private struct WorkspacePanelContent: View {
       switch selectedPanel {
       case .session:
         SessionTranscriptPane(
-          messages: store.messagesBySession[selectedSessionID] ?? [],
+          messages: store.messages(for: selectedSessionID),
           sessionStatus: store.status(for: selectedSessionID),
           showReasoningSummaries: store.showReasoningSummaries,
           expandShellToolParts: store.expandShellToolParts,
@@ -270,7 +270,7 @@ private struct WorkspacePanelContent: View {
         )
         .accessibilityIdentifier("workspace.session.pane")
       case .changes:
-        ChangesPane(diffs: store.diffsBySession[selectedSessionID] ?? [])
+        ChangesPane(diffs: store.diffs(for: selectedSessionID))
           .accessibilityIdentifier("workspace.changes.pane")
       }
     } else {

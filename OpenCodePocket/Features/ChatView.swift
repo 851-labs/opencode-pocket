@@ -6,7 +6,7 @@ struct ChatView: View {
   let sessionID: String
 
   private var messages: [MessageEnvelope] {
-    store.messagesBySession[sessionID] ?? []
+    store.messages(for: sessionID)
   }
 
   var body: some View {

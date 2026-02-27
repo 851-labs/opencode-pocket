@@ -46,11 +46,11 @@
     }
 
     private var selectedMessages: [MessageEnvelope]? {
-      store.messagesBySession[selectedSessionID]
+      store.loadedMessages(for: selectedSessionID)
     }
 
     private var isInitialTranscriptLoadInProgress: Bool {
-      selectedMessages == nil && store.isLoadingMessages(for: selectedSessionID)
+      !store.hasLoadedMessages(for: selectedSessionID) && store.isLoadingMessages(for: selectedSessionID)
     }
 
     var body: some View {
@@ -69,7 +69,7 @@
             )
           case .changes:
             MacChangesPane(
-              diffs: store.diffsBySession[selectedSessionID] ?? [],
+              diffs: store.diffs(for: selectedSessionID),
               bottomInset: composerBottomInset
             )
           }

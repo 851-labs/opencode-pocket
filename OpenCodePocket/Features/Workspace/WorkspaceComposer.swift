@@ -30,7 +30,7 @@ import SwiftUI
         )
       }
 
-      let todos = store.todosBySession[sessionID] ?? []
+      let todos = store.todos(for: sessionID)
       if !todos.isEmpty {
         TodoDockCard(todos: todos)
       }

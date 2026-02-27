@@ -23,7 +23,7 @@
         MacQuestionPromptCard(sessionID: sessionID, request: question)
       }
 
-      let todos = store.todosBySession[sessionID] ?? []
+      let todos = store.todos(for: sessionID)
       if !todos.isEmpty {
         MacTodoDockCard(todos: todos)
       }
