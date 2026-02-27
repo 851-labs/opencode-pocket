@@ -1,6 +1,11 @@
 import Foundation
 import OpenCodeModels
 
+#if os(macOS)
+  import AppKit
+  import UserNotifications
+#endif
+
 @MainActor
 extension WorkspaceStore {
   func startEventSubscriptionLoop() {
@@ -42,6 +47,7 @@ extension WorkspaceStore {
       if let sessionID = event.properties.objectValue?.string(for: "sessionID") {
         sessionStatuses[sessionID] = .idle
         scheduleSessionRefresh(sessionID: sessionID)
+        notifyAgentIfEnabled(sessionID: sessionID, reason: "complete")
       }
 
     case "session.status":
@@ -66,9 +72,13 @@ extension WorkspaceStore {
       if let sessionID = properties.string(for: "sessionID") {
         sessionStatuses[sessionID] = .idle
       }
+      var errorDescription: String?
       if let errorObject = properties.object(for: "error") {
-        connection.connectionError = JSONValue.object(errorObject).compactDescription
+        let compact = JSONValue.object(errorObject).compactDescription
+        connection.connectionError = compact
+        errorDescription = compact
       }
+      notifyErrorIfEnabled(sessionID: properties.string(for: "sessionID"), errorDescription: errorDescription)
 
     case "session.diff":
       guard
@@ -101,6 +111,7 @@ extension WorkspaceStore {
         return
       }
       upsertPermission(permission)
+      notifyPermissionIfEnabled(permission)
 
     case "permission.replied":
       guard
@@ -117,6 +128,7 @@ extension WorkspaceStore {
         return
       }
       upsertQuestion(question)
+      notifyAgentIfEnabled(sessionID: question.sessionID, reason: "question")
 
     case "question.replied", "question.rejected":
       guard
@@ -356,4 +368,123 @@ extension WorkspaceStore {
     }
     questionsBySession[question.sessionID] = next.sorted { $0.id < $1.id }
   }
+
+  private func shouldNotifyForSession(_ sessionID: String?) -> Bool {
+    guard let sessionID else {
+      return true
+    }
+
+    guard let session = sessions.first(where: { $0.id == sessionID }) else {
+      return true
+    }
+
+    return session.parentID == nil
+  }
+
+  private func notifyAgentIfEnabled(sessionID: String, reason: String) {
+    guard notifyAgentSystemNotifications else {
+      return
+    }
+
+    guard shouldNotifyForSession(sessionID) else {
+      return
+    }
+
+    let title = reason == "question" ? "Agent needs attention" : "Response ready"
+    let body = sessionTitle(for: sessionID)
+
+    #if os(macOS)
+      MacSystemNotificationService.shared.post(title: title, body: body, threadIdentifier: sessionID)
+    #endif
+  }
+
+  private func notifyPermissionIfEnabled(_ permission: PermissionRequest) {
+    guard notifyPermissionSystemNotifications else {
+      return
+    }
+
+    guard shouldNotifyForSession(permission.sessionID) else {
+      return
+    }
+
+    let body = sessionTitle(for: permission.sessionID)
+
+    #if os(macOS)
+      MacSystemNotificationService.shared.post(title: "Permission required", body: body, threadIdentifier: permission.sessionID)
+    #endif
+  }
+
+  private func notifyErrorIfEnabled(sessionID: String?, errorDescription: String?) {
+    guard notifyErrorSystemNotifications else {
+      return
+    }
+
+    guard shouldNotifyForSession(sessionID) else {
+      return
+    }
+
+    let body = sessionID.map { sessionTitle(for: $0) } ?? errorDescription ?? "An error occurred"
+
+    #if os(macOS)
+      MacSystemNotificationService.shared.post(title: "Session error", body: body, threadIdentifier: sessionID)
+    #endif
+  }
 }
+
+#if os(macOS)
+  @MainActor
+  private final class MacSystemNotificationService {
+    static let shared = MacSystemNotificationService()
+
+    private let center: UNUserNotificationCenter
+    private var didRequestAuthorization = false
+
+    init(center: UNUserNotificationCenter = .current()) {
+      self.center = center
+    }
+
+    func post(title: String, body: String, threadIdentifier: String?) {
+      guard !NSApplication.shared.isActive else {
+        return
+      }
+
+      ensureAuthorizationRequested()
+
+      Task {
+        let settings = await center.notificationSettings()
+        guard settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional else {
+          return
+        }
+
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = body
+        content.sound = .default
+
+        if let threadIdentifier {
+          content.threadIdentifier = threadIdentifier
+        }
+
+        let request = UNNotificationRequest(
+          identifier: UUID().uuidString,
+          content: content,
+          trigger: nil
+        )
+
+        try? await center.add(request)
+      }
+    }
+
+    private func ensureAuthorizationRequested() {
+      guard !didRequestAuthorization else {
+        return
+      }
+
+      didRequestAuthorization = true
+
+      Task {
+        _ = try? await center.requestAuthorization(options: [.alert, .sound, .badge])
+      }
+    }
+  }
+#endif

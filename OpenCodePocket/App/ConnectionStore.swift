@@ -35,6 +35,9 @@ final class ConnectionStore {
   let initialShowReasoningSummaries: Bool
   let initialExpandShellToolParts: Bool
   let initialExpandEditToolParts: Bool
+  let initialNotifyAgentSystemNotifications: Bool
+  let initialNotifyPermissionSystemNotifications: Bool
+  let initialNotifyErrorSystemNotifications: Bool
 
   private let settingsStore: ConnectionSettingsStore
 
@@ -73,6 +76,9 @@ final class ConnectionStore {
     initialShowReasoningSummaries = settings.showReasoningSummaries
     initialExpandShellToolParts = settings.expandShellToolParts
     initialExpandEditToolParts = settings.expandEditToolParts
+    initialNotifyAgentSystemNotifications = settings.notifyAgentSystemNotifications
+    initialNotifyPermissionSystemNotifications = settings.notifyPermissionSystemNotifications
+    initialNotifyErrorSystemNotifications = settings.notifyErrorSystemNotifications
   }
 
   var resolvedDirectory: String? {
@@ -144,7 +150,10 @@ final class ConnectionStore {
     selectedProjectID: String?,
     showReasoningSummaries: Bool,
     expandShellToolParts: Bool,
-    expandEditToolParts: Bool
+    expandEditToolParts: Bool,
+    notifyAgentSystemNotifications: Bool,
+    notifyPermissionSystemNotifications: Bool,
+    notifyErrorSystemNotifications: Bool
   ) {
     let normalized: String
     if let url = try? normalizedBaseURL() {
@@ -166,7 +175,10 @@ final class ConnectionStore {
       selectedProjectID: selectedProjectID,
       showReasoningSummaries: showReasoningSummaries,
       expandShellToolParts: expandShellToolParts,
-      expandEditToolParts: expandEditToolParts
+      expandEditToolParts: expandEditToolParts,
+      notifyAgentSystemNotifications: notifyAgentSystemNotifications,
+      notifyPermissionSystemNotifications: notifyPermissionSystemNotifications,
+      notifyErrorSystemNotifications: notifyErrorSystemNotifications
     )
   }
 
@@ -250,7 +262,10 @@ final class ConnectionStore {
       selectedProjectID: workspace?.selectedProjectID,
       showReasoningSummaries: workspace?.showReasoningSummaries ?? false,
       expandShellToolParts: workspace?.expandShellToolParts ?? true,
-      expandEditToolParts: workspace?.expandEditToolParts ?? false
+      expandEditToolParts: workspace?.expandEditToolParts ?? false,
+      notifyAgentSystemNotifications: workspace?.notifyAgentSystemNotifications ?? true,
+      notifyPermissionSystemNotifications: workspace?.notifyPermissionSystemNotifications ?? true,
+      notifyErrorSystemNotifications: workspace?.notifyErrorSystemNotifications ?? false
     )
 
     await workspace?.refreshAgentAndModelOptions()
@@ -293,7 +308,10 @@ final class ConnectionStore {
           selectedProjectID: workspace?.selectedProjectID,
           showReasoningSummaries: workspace?.showReasoningSummaries ?? false,
           expandShellToolParts: workspace?.expandShellToolParts ?? true,
-          expandEditToolParts: workspace?.expandEditToolParts ?? false
+          expandEditToolParts: workspace?.expandEditToolParts ?? false,
+          notifyAgentSystemNotifications: workspace?.notifyAgentSystemNotifications ?? true,
+          notifyPermissionSystemNotifications: workspace?.notifyPermissionSystemNotifications ?? true,
+          notifyErrorSystemNotifications: workspace?.notifyErrorSystemNotifications ?? false
         )
       }
 
@@ -314,7 +332,10 @@ final class ConnectionStore {
     selectedProjectID: String?,
     showReasoningSummaries: Bool,
     expandShellToolParts: Bool,
-    expandEditToolParts: Bool
+    expandEditToolParts: Bool,
+    notifyAgentSystemNotifications: Bool,
+    notifyPermissionSystemNotifications: Bool,
+    notifyErrorSystemNotifications: Bool
   ) {
     let hadSavedSettings = settingsStore.hasSavedSettings()
     let previousSettings = settingsStore.loadSettings()
@@ -340,7 +361,10 @@ final class ConnectionStore {
       selectedProjectID: selectedProjectID,
       showReasoningSummaries: showReasoningSummaries,
       expandShellToolParts: expandShellToolParts,
-      expandEditToolParts: expandEditToolParts
+      expandEditToolParts: expandEditToolParts,
+      notifyAgentSystemNotifications: notifyAgentSystemNotifications,
+      notifyPermissionSystemNotifications: notifyPermissionSystemNotifications,
+      notifyErrorSystemNotifications: notifyErrorSystemNotifications
     )
     settingsStore.saveSettings(settings)
 

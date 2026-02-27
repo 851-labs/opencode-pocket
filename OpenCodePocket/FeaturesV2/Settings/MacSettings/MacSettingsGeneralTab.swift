@@ -27,6 +27,26 @@
             isOn: $store.expandEditToolParts
           )
         }
+
+        Section("System Notifications") {
+          FeedToggleRow(
+            title: "Agent",
+            detail: "Show system notification when the agent is complete or needs attention",
+            isOn: $store.notifyAgentSystemNotifications
+          )
+
+          FeedToggleRow(
+            title: "Permissions",
+            detail: "Show system notification when a permission is required",
+            isOn: $store.notifyPermissionSystemNotifications
+          )
+
+          FeedToggleRow(
+            title: "Errors",
+            detail: "Show system notification when an error occurs",
+            isOn: $store.notifyErrorSystemNotifications
+          )
+        }
       }
       .formStyle(.grouped)
     }

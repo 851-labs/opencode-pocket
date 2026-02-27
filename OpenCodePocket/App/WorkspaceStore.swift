@@ -47,6 +47,27 @@ final class WorkspaceStore {
     }
   }
 
+  var notifyAgentSystemNotifications = true {
+    didSet {
+      guard oldValue != notifyAgentSystemNotifications else { return }
+      persistWorkspaceSettings()
+    }
+  }
+
+  var notifyPermissionSystemNotifications = true {
+    didSet {
+      guard oldValue != notifyPermissionSystemNotifications else { return }
+      persistWorkspaceSettings()
+    }
+  }
+
+  var notifyErrorSystemNotifications = false {
+    didSet {
+      guard oldValue != notifyErrorSystemNotifications else { return }
+      persistWorkspaceSettings()
+    }
+  }
+
   var draftMessage = ""
   var isSending = false
   var isCreatingSession = false
@@ -70,6 +91,9 @@ final class WorkspaceStore {
     showReasoningSummaries = connection.initialShowReasoningSummaries
     expandShellToolParts = connection.initialExpandShellToolParts
     expandEditToolParts = connection.initialExpandEditToolParts
+    notifyAgentSystemNotifications = connection.initialNotifyAgentSystemNotifications
+    notifyPermissionSystemNotifications = connection.initialNotifyPermissionSystemNotifications
+    notifyErrorSystemNotifications = connection.initialNotifyErrorSystemNotifications
     pinnedSessionIDs = connection.initialPinnedSessionIDs
 
     if connection.initialProjects.isEmpty {
@@ -1041,7 +1065,10 @@ final class WorkspaceStore {
       selectedProjectID: selectedProjectID,
       showReasoningSummaries: showReasoningSummaries,
       expandShellToolParts: expandShellToolParts,
-      expandEditToolParts: expandEditToolParts
+      expandEditToolParts: expandEditToolParts,
+      notifyAgentSystemNotifications: notifyAgentSystemNotifications,
+      notifyPermissionSystemNotifications: notifyPermissionSystemNotifications,
+      notifyErrorSystemNotifications: notifyErrorSystemNotifications
     )
   }
 

@@ -24,6 +24,9 @@ struct ConnectionSettings: Codable, Equatable {
   var showReasoningSummaries: Bool
   var expandShellToolParts: Bool
   var expandEditToolParts: Bool
+  var notifyAgentSystemNotifications: Bool
+  var notifyPermissionSystemNotifications: Bool
+  var notifyErrorSystemNotifications: Bool
 
   init(
     baseURL: String,
@@ -40,7 +43,10 @@ struct ConnectionSettings: Codable, Equatable {
     selectedProjectID: String?,
     showReasoningSummaries: Bool = false,
     expandShellToolParts: Bool = true,
-    expandEditToolParts: Bool = false
+    expandEditToolParts: Bool = false,
+    notifyAgentSystemNotifications: Bool = true,
+    notifyPermissionSystemNotifications: Bool = true,
+    notifyErrorSystemNotifications: Bool = false
   ) {
     self.baseURL = baseURL
     self.username = username
@@ -57,6 +63,9 @@ struct ConnectionSettings: Codable, Equatable {
     self.showReasoningSummaries = showReasoningSummaries
     self.expandShellToolParts = expandShellToolParts
     self.expandEditToolParts = expandEditToolParts
+    self.notifyAgentSystemNotifications = notifyAgentSystemNotifications
+    self.notifyPermissionSystemNotifications = notifyPermissionSystemNotifications
+    self.notifyErrorSystemNotifications = notifyErrorSystemNotifications
   }
 
   private enum CodingKeys: String, CodingKey {
@@ -75,6 +84,9 @@ struct ConnectionSettings: Codable, Equatable {
     case showReasoningSummaries
     case expandShellToolParts
     case expandEditToolParts
+    case notifyAgentSystemNotifications
+    case notifyPermissionSystemNotifications
+    case notifyErrorSystemNotifications
   }
 
   init(from decoder: Decoder) throws {
@@ -97,6 +109,15 @@ struct ConnectionSettings: Codable, Equatable {
       try container.decodeIfPresent(Bool.self, forKey: .expandShellToolParts) ?? Self.default.expandShellToolParts
     expandEditToolParts =
       try container.decodeIfPresent(Bool.self, forKey: .expandEditToolParts) ?? Self.default.expandEditToolParts
+    notifyAgentSystemNotifications =
+      try container.decodeIfPresent(Bool.self, forKey: .notifyAgentSystemNotifications)
+        ?? Self.default.notifyAgentSystemNotifications
+    notifyPermissionSystemNotifications =
+      try container.decodeIfPresent(Bool.self, forKey: .notifyPermissionSystemNotifications)
+        ?? Self.default.notifyPermissionSystemNotifications
+    notifyErrorSystemNotifications =
+      try container.decodeIfPresent(Bool.self, forKey: .notifyErrorSystemNotifications)
+        ?? Self.default.notifyErrorSystemNotifications
   }
 
   static let `default` = ConnectionSettings(
@@ -114,7 +135,10 @@ struct ConnectionSettings: Codable, Equatable {
     selectedProjectID: nil,
     showReasoningSummaries: false,
     expandShellToolParts: true,
-    expandEditToolParts: false
+    expandEditToolParts: false,
+    notifyAgentSystemNotifications: true,
+    notifyPermissionSystemNotifications: true,
+    notifyErrorSystemNotifications: false
   )
 }
 
