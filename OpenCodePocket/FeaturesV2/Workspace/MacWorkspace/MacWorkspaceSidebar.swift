@@ -23,6 +23,7 @@
     let onSelectProject: (String) -> Void
     let onTogglePinSession: (String) -> Void
     let onCreateSessionInProject: (String) -> Void
+    let onRequestProjectRename: (String, String) -> Void
 
     private var pinnedRows: [MacSidebarSessionListRow] {
       store.pinnedSessions.map {
@@ -55,7 +56,8 @@
                 onSelectProject(project.id)
               },
               onTogglePinSession: onTogglePinSession,
-              onCreateSessionInProject: onCreateSessionInProject
+              onCreateSessionInProject: onCreateSessionInProject,
+              onRequestProjectRename: onRequestProjectRename
             )
           }
         } header: {
@@ -109,6 +111,7 @@
     let onSelectProject: () -> Void
     let onTogglePinSession: (String) -> Void
     let onCreateSessionInProject: (String) -> Void
+    let onRequestProjectRename: (String, String) -> Void
 
     private var sessions: [Session] {
       store.visibleSessions(for: project.id)
@@ -156,7 +159,7 @@
           }
 
           Button {
-            routerPath.presentedSheet = .renameProject(projectID: project.id, currentName: project.name)
+            onRequestProjectRename(project.id, project.name)
           } label: {
             Label("Rename", systemImage: "pencil")
           }
@@ -320,7 +323,8 @@
         expandedProjectIDs: $expandedProjectIDs,
         onSelectProject: { _ in },
         onTogglePinSession: { _ in },
-        onCreateSessionInProject: { _ in }
+        onCreateSessionInProject: { _ in },
+        onRequestProjectRename: { _, _ in }
       )
       .environment(MacWorkspaceRouterPath())
     }

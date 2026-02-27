@@ -12,15 +12,12 @@
 
   enum MacWorkspaceSheetDestination: Identifiable {
     case renameSession(sessionID: String, currentTitle: String)
-    case renameProject(projectID: String, currentName: String)
     case customizeProject(projectID: String, currentName: String, currentSymbol: String?)
 
     var id: String {
       switch self {
       case let .renameSession(sessionID, _):
         return "rename-\(sessionID)"
-      case let .renameProject(projectID, _):
-        return "rename-project-\(projectID)"
       case let .customizeProject(projectID, _, _):
         return "customize-project-\(projectID)"
       }
@@ -35,6 +32,7 @@
     var pendingArchiveSessionID: String?
     var pendingDeleteSessionID: String?
     var pendingRemoveProjectID: String?
+    var pendingRenameProjectID: String?
   }
 
   enum MacWorkspaceBootstrapState {
@@ -51,6 +49,8 @@
     @State private var routerPath = MacWorkspaceRouterPath()
     @State private var expandedProjectIDs: Set<String> = []
     @State private var selectionTask: Task<Void, Never>?
+    @State private var renameProjectNameDraft = ""
+    @State private var renameProjectTextFieldID = UUID()
 
     private var selectedSessionID: String? {
       store.selectedSessionID
@@ -72,7 +72,8 @@
           expandedProjectIDs: $expandedProjectIDs,
           onSelectProject: selectProjectFromSidebar,
           onTogglePinSession: togglePinSession,
-          onCreateSessionInProject: createSessionInProject
+          onCreateSessionInProject: createSessionInProject,
+          onRequestProjectRename: presentProjectRenameAlert
         )
         .toolbar {
           MacWorkspaceSidebarToolbar(presentProjectPicker: presentProjectPicker)
@@ -107,12 +108,16 @@
         switch sheet {
         case let .renameSession(sessionID, currentTitle):
           MacRenameSessionSheet(sessionID: sessionID, currentTitle: currentTitle)
-        case let .renameProject(projectID, currentName):
-          MacRenameProjectSheet(projectID: projectID, currentName: currentName)
         case let .customizeProject(projectID, currentName, currentSymbol):
           MacCustomizeProjectSheet(projectID: projectID, currentName: currentName, currentSymbol: currentSymbol)
         }
       }
+      .macRenameProjectAlert(
+        isPresented: isRenameProjectAlertPresented,
+        name: $renameProjectNameDraft,
+        textFieldID: renameProjectTextFieldID,
+        onSave: savePendingProjectRename
+      )
       .fileImporter(
         isPresented: $routerPath.isProjectPickerPresented,
         allowedContentTypes: [.folder],
@@ -224,6 +229,17 @@
       )
     }
 
+    private var isRenameProjectAlertPresented: Binding<Bool> {
+      Binding(
+        get: { routerPath.pendingRenameProjectID != nil },
+        set: { isPresented in
+          if !isPresented {
+            routerPath.pendingRenameProjectID = nil
+          }
+        }
+      )
+    }
+
     private func selectProjectFromSidebar(_ projectID: String) {
       store.selectProject(projectID)
       expandedProjectIDs.insert(projectID)
@@ -272,6 +288,12 @@
       Task {
         await store.createSession(inProjectID: projectID)
       }
+    }
+
+    private func presentProjectRenameAlert(projectID: String, currentName: String) {
+      renameProjectNameDraft = currentName
+      renameProjectTextFieldID = UUID()
+      routerPath.pendingRenameProjectID = projectID
     }
 
     private func presentProjectPicker() {
@@ -325,6 +347,12 @@
       guard let projectID = routerPath.pendingRemoveProjectID else { return }
       routerPath.pendingRemoveProjectID = nil
       _ = store.removeProject(projectID: projectID)
+    }
+
+    private func savePendingProjectRename() {
+      guard let projectID = routerPath.pendingRenameProjectID else { return }
+      store.renameProject(projectID: projectID, name: renameProjectNameDraft)
+      routerPath.pendingRenameProjectID = nil
     }
   }
 
