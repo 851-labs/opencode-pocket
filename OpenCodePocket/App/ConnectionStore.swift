@@ -1,6 +1,5 @@
 import Foundation
 import Observation
-import OpenCodeModels
 import OpenCodeNetworking
 
 #if os(macOS)
@@ -25,20 +24,6 @@ final class ConnectionStore {
   private(set) var client: OpenCodeClient?
   weak var workspace: WorkspaceStore?
 
-  let initialSelectedAgentName: String
-  let initialSelectedModel: ModelSelector?
-  let initialSelectedModelVariant: String?
-  let initialHiddenModelKeys: Set<String>
-  let initialPinnedSessionIDs: Set<String>
-  let initialProjects: [SavedProject]
-  let initialSelectedProjectID: String?
-  let initialShowReasoningSummaries: Bool
-  let initialExpandShellToolParts: Bool
-  let initialExpandEditToolParts: Bool
-  let initialNotifyAgentSystemNotifications: Bool
-  let initialNotifyPermissionSystemNotifications: Bool
-  let initialNotifyErrorSystemNotifications: Bool
-
   private let settingsStore: ConnectionSettingsStore
 
   #if os(macOS)
@@ -57,28 +42,6 @@ final class ConnectionStore {
 
     password = settingsStore.loadPassword(baseURL: settings.baseURL, username: settings.username) ?? ""
 
-    initialSelectedAgentName = settings.selectedAgent ?? "build"
-
-    if
-      let selectedProviderID = settings.selectedProviderID,
-      let selectedModelID = settings.selectedModelID
-    {
-      initialSelectedModel = ModelSelector(providerID: selectedProviderID, modelID: selectedModelID)
-    } else {
-      initialSelectedModel = nil
-    }
-
-    initialSelectedModelVariant = settings.selectedModelVariant?.trimmedNonEmpty
-    initialHiddenModelKeys = Set(settings.hiddenModelKeys)
-    initialPinnedSessionIDs = Set(settings.pinnedSessionIDs)
-    initialProjects = settings.projects
-    initialSelectedProjectID = settings.selectedProjectID
-    initialShowReasoningSummaries = settings.showReasoningSummaries
-    initialExpandShellToolParts = settings.expandShellToolParts
-    initialExpandEditToolParts = settings.expandEditToolParts
-    initialNotifyAgentSystemNotifications = settings.notifyAgentSystemNotifications
-    initialNotifyPermissionSystemNotifications = settings.notifyPermissionSystemNotifications
-    initialNotifyErrorSystemNotifications = settings.notifyErrorSystemNotifications
   }
 
   var resolvedDirectory: String? {
@@ -138,48 +101,6 @@ final class ConnectionStore {
       }
       connectedLocalServerOwnership = nil
     #endif
-  }
-
-  func persistSettingsBestEffort(
-    selectedAgentName: String,
-    selectedModel: ModelSelector?,
-    selectedModelVariant: String?,
-    hiddenModelKeys: Set<String>,
-    pinnedSessionIDs: Set<String>,
-    projects: [SavedProject],
-    selectedProjectID: String?,
-    showReasoningSummaries: Bool,
-    expandShellToolParts: Bool,
-    expandEditToolParts: Bool,
-    notifyAgentSystemNotifications: Bool,
-    notifyPermissionSystemNotifications: Bool,
-    notifyErrorSystemNotifications: Bool
-  ) {
-    let normalized: String
-    if let url = try? normalizedBaseURL() {
-      normalized = url.absoluteString
-    } else {
-      normalized = baseURL.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    guard !normalized.isEmpty else { return }
-
-    saveConnectionSettings(
-      using: normalized,
-      selectedAgentName: selectedAgentName.trimmedNonEmpty,
-      selectedModel: selectedModel,
-      selectedModelVariant: selectedModelVariant?.trimmedNonEmpty,
-      hiddenModelKeys: hiddenModelKeys,
-      pinnedSessionIDs: pinnedSessionIDs,
-      projects: projects,
-      selectedProjectID: selectedProjectID,
-      showReasoningSummaries: showReasoningSummaries,
-      expandShellToolParts: expandShellToolParts,
-      expandEditToolParts: expandEditToolParts,
-      notifyAgentSystemNotifications: notifyAgentSystemNotifications,
-      notifyPermissionSystemNotifications: notifyPermissionSystemNotifications,
-      notifyErrorSystemNotifications: notifyErrorSystemNotifications
-    )
   }
 
   private func normalizedBaseURL() throws -> URL {
@@ -252,20 +173,7 @@ final class ConnectionStore {
     #endif
 
     saveConnectionSettings(
-      using: normalizedURL.absoluteString,
-      selectedAgentName: workspace?.selectedAgentName.trimmedNonEmpty,
-      selectedModel: workspace?.selectedModel,
-      selectedModelVariant: workspace?.selectedModelVariant,
-      hiddenModelKeys: workspace?.hiddenModelKeys ?? [],
-      pinnedSessionIDs: workspace?.pinnedSessionIDs ?? [],
-      projects: workspace?.projects ?? [],
-      selectedProjectID: workspace?.selectedProjectID,
-      showReasoningSummaries: workspace?.showReasoningSummaries ?? false,
-      expandShellToolParts: workspace?.expandShellToolParts ?? true,
-      expandEditToolParts: workspace?.expandEditToolParts ?? false,
-      notifyAgentSystemNotifications: workspace?.notifyAgentSystemNotifications ?? true,
-      notifyPermissionSystemNotifications: workspace?.notifyPermissionSystemNotifications ?? true,
-      notifyErrorSystemNotifications: workspace?.notifyErrorSystemNotifications ?? false
+      using: normalizedURL.absoluteString
     )
 
     await workspace?.refreshAgentAndModelOptions()
@@ -298,20 +206,7 @@ final class ConnectionStore {
       let persistedBaseURL = normalizedBaseURLForPersistence(fallback: endpoint.baseURL)
       if !persistedBaseURL.isEmpty {
         saveConnectionSettings(
-          using: persistedBaseURL,
-          selectedAgentName: workspace?.selectedAgentName.trimmedNonEmpty,
-          selectedModel: workspace?.selectedModel,
-          selectedModelVariant: workspace?.selectedModelVariant,
-          hiddenModelKeys: workspace?.hiddenModelKeys ?? [],
-          pinnedSessionIDs: workspace?.pinnedSessionIDs ?? [],
-          projects: workspace?.projects ?? [],
-          selectedProjectID: workspace?.selectedProjectID,
-          showReasoningSummaries: workspace?.showReasoningSummaries ?? false,
-          expandShellToolParts: workspace?.expandShellToolParts ?? true,
-          expandEditToolParts: workspace?.expandEditToolParts ?? false,
-          notifyAgentSystemNotifications: workspace?.notifyAgentSystemNotifications ?? true,
-          notifyPermissionSystemNotifications: workspace?.notifyPermissionSystemNotifications ?? true,
-          notifyErrorSystemNotifications: workspace?.notifyErrorSystemNotifications ?? false
+          using: persistedBaseURL
         )
       }
 
@@ -322,20 +217,7 @@ final class ConnectionStore {
   #endif
 
   private func saveConnectionSettings(
-    using normalizedBaseURL: String,
-    selectedAgentName: String?,
-    selectedModel: ModelSelector?,
-    selectedModelVariant: String?,
-    hiddenModelKeys: Set<String>,
-    pinnedSessionIDs: Set<String>,
-    projects: [SavedProject],
-    selectedProjectID: String?,
-    showReasoningSummaries: Bool,
-    expandShellToolParts: Bool,
-    expandEditToolParts: Bool,
-    notifyAgentSystemNotifications: Bool,
-    notifyPermissionSystemNotifications: Bool,
-    notifyErrorSystemNotifications: Bool
+    using normalizedBaseURL: String
   ) {
     let hadSavedSettings = settingsStore.hasSavedSettings()
     let previousSettings = settingsStore.loadSettings()
@@ -350,21 +232,7 @@ final class ConnectionStore {
       baseURL: normalizedBaseURL,
       username: username,
       useBasicAuth: useBasicAuth,
-      directory: directory,
-      selectedAgent: selectedAgentName,
-      selectedProviderID: selectedModel?.providerID,
-      selectedModelID: selectedModel?.modelID,
-      selectedModelVariant: selectedModelVariant,
-      hiddenModelKeys: hiddenModelKeys.sorted(),
-      pinnedSessionIDs: pinnedSessionIDs.sorted(),
-      projects: projects,
-      selectedProjectID: selectedProjectID,
-      showReasoningSummaries: showReasoningSummaries,
-      expandShellToolParts: expandShellToolParts,
-      expandEditToolParts: expandEditToolParts,
-      notifyAgentSystemNotifications: notifyAgentSystemNotifications,
-      notifyPermissionSystemNotifications: notifyPermissionSystemNotifications,
-      notifyErrorSystemNotifications: notifyErrorSystemNotifications
+      directory: directory
     )
     settingsStore.saveSettings(settings)
 

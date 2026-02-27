@@ -23,9 +23,11 @@
       defaults.removePersistentDomain(forName: suiteName)
 
       let settingsStore = ConnectionSettingsStore(defaults: defaults)
+      let workspaceSettingsStore = WorkspaceSettingsStore(defaults: defaults)
       settingsStore.saveSettings(makePreviewSettings())
       let graph = StoreGraphFactory.make(
         settingsStore: settingsStore,
+        workspaceSettingsStore: workspaceSettingsStore,
         allowsPersistence: false,
         configureWorkspace: { workspace in
           switch scenario {
@@ -58,17 +60,7 @@
         baseURL: "http://127.0.0.1:4096",
         username: "",
         useBasicAuth: false,
-        directory: "/tmp/opencode-pocket-preview",
-        selectedAgent: "build",
-        selectedProviderID: nil,
-        selectedModelID: nil,
-        selectedModelVariant: nil,
-        hiddenModelKeys: [],
-        projects: [],
-        selectedProjectID: nil,
-        showReasoningSummaries: false,
-        expandShellToolParts: true,
-        expandEditToolParts: false
+        directory: "/tmp/opencode-pocket-preview"
       )
     }
   }

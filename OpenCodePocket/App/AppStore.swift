@@ -15,11 +15,16 @@ struct StoreGraph {
 enum StoreGraphFactory {
   static func make(
     settingsStore: ConnectionSettingsStore = ConnectionSettingsStore(),
+    workspaceSettingsStore: WorkspaceSettingsStore = WorkspaceSettingsStore(),
     allowsPersistence: Bool = true,
     configureWorkspace: ((WorkspaceStore) -> Void)? = nil
   ) -> StoreGraph {
     let connection = ConnectionStore(settingsStore: settingsStore)
-    let workspace = WorkspaceStore(connection: connection, allowsPersistence: allowsPersistence)
+    let workspace = WorkspaceStore(
+      connection: connection,
+      settingsStore: workspaceSettingsStore,
+      allowsPersistence: allowsPersistence
+    )
     connection.workspace = workspace
     configureWorkspace?(workspace)
     return StoreGraph(connection: connection, workspace: workspace)

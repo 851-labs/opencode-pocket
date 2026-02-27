@@ -13,6 +13,43 @@ struct ConnectionSettings: Codable, Equatable {
   var username: String
   var useBasicAuth: Bool
   var directory: String
+
+  init(
+    baseURL: String,
+    username: String,
+    useBasicAuth: Bool,
+    directory: String
+  ) {
+    self.baseURL = baseURL
+    self.username = username
+    self.useBasicAuth = useBasicAuth
+    self.directory = directory
+  }
+
+  private enum CodingKeys: String, CodingKey {
+    case baseURL
+    case username
+    case useBasicAuth
+    case directory
+  }
+
+  init(from decoder: Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    baseURL = try container.decodeIfPresent(String.self, forKey: .baseURL) ?? Self.default.baseURL
+    username = try container.decodeIfPresent(String.self, forKey: .username) ?? Self.default.username
+    useBasicAuth = try container.decodeIfPresent(Bool.self, forKey: .useBasicAuth) ?? Self.default.useBasicAuth
+    directory = try container.decodeIfPresent(String.self, forKey: .directory) ?? Self.default.directory
+  }
+
+  static let `default` = ConnectionSettings(
+    baseURL: "http://claudl.taile64ce5.ts.net:4096",
+    username: "opencode",
+    useBasicAuth: false,
+    directory: ""
+  )
+}
+
+struct WorkspaceSettings: Codable, Equatable {
   var selectedAgent: String?
   var selectedProviderID: String?
   var selectedModelID: String?
@@ -29,10 +66,6 @@ struct ConnectionSettings: Codable, Equatable {
   var notifyErrorSystemNotifications: Bool
 
   init(
-    baseURL: String,
-    username: String,
-    useBasicAuth: Bool,
-    directory: String,
     selectedAgent: String?,
     selectedProviderID: String?,
     selectedModelID: String?,
@@ -48,10 +81,6 @@ struct ConnectionSettings: Codable, Equatable {
     notifyPermissionSystemNotifications: Bool = true,
     notifyErrorSystemNotifications: Bool = false
   ) {
-    self.baseURL = baseURL
-    self.username = username
-    self.useBasicAuth = useBasicAuth
-    self.directory = directory
     self.selectedAgent = selectedAgent
     self.selectedProviderID = selectedProviderID
     self.selectedModelID = selectedModelID
@@ -68,63 +97,7 @@ struct ConnectionSettings: Codable, Equatable {
     self.notifyErrorSystemNotifications = notifyErrorSystemNotifications
   }
 
-  private enum CodingKeys: String, CodingKey {
-    case baseURL
-    case username
-    case useBasicAuth
-    case directory
-    case selectedAgent
-    case selectedProviderID
-    case selectedModelID
-    case selectedModelVariant
-    case hiddenModelKeys
-    case pinnedSessionIDs
-    case projects
-    case selectedProjectID
-    case showReasoningSummaries
-    case expandShellToolParts
-    case expandEditToolParts
-    case notifyAgentSystemNotifications
-    case notifyPermissionSystemNotifications
-    case notifyErrorSystemNotifications
-  }
-
-  init(from decoder: Decoder) throws {
-    let container = try decoder.container(keyedBy: CodingKeys.self)
-    baseURL = try container.decodeIfPresent(String.self, forKey: .baseURL) ?? Self.default.baseURL
-    username = try container.decodeIfPresent(String.self, forKey: .username) ?? Self.default.username
-    useBasicAuth = try container.decodeIfPresent(Bool.self, forKey: .useBasicAuth) ?? Self.default.useBasicAuth
-    directory = try container.decodeIfPresent(String.self, forKey: .directory) ?? Self.default.directory
-    selectedAgent = try container.decodeIfPresent(String.self, forKey: .selectedAgent)
-    selectedProviderID = try container.decodeIfPresent(String.self, forKey: .selectedProviderID)
-    selectedModelID = try container.decodeIfPresent(String.self, forKey: .selectedModelID)
-    selectedModelVariant = try container.decodeIfPresent(String.self, forKey: .selectedModelVariant)
-    hiddenModelKeys = try container.decodeIfPresent([String].self, forKey: .hiddenModelKeys) ?? Self.default.hiddenModelKeys
-    pinnedSessionIDs = try container.decodeIfPresent([String].self, forKey: .pinnedSessionIDs) ?? Self.default.pinnedSessionIDs
-    projects = try container.decodeIfPresent([SavedProject].self, forKey: .projects) ?? Self.default.projects
-    selectedProjectID = try container.decodeIfPresent(String.self, forKey: .selectedProjectID)
-    showReasoningSummaries =
-      try container.decodeIfPresent(Bool.self, forKey: .showReasoningSummaries) ?? Self.default.showReasoningSummaries
-    expandShellToolParts =
-      try container.decodeIfPresent(Bool.self, forKey: .expandShellToolParts) ?? Self.default.expandShellToolParts
-    expandEditToolParts =
-      try container.decodeIfPresent(Bool.self, forKey: .expandEditToolParts) ?? Self.default.expandEditToolParts
-    notifyAgentSystemNotifications =
-      try container.decodeIfPresent(Bool.self, forKey: .notifyAgentSystemNotifications)
-        ?? Self.default.notifyAgentSystemNotifications
-    notifyPermissionSystemNotifications =
-      try container.decodeIfPresent(Bool.self, forKey: .notifyPermissionSystemNotifications)
-        ?? Self.default.notifyPermissionSystemNotifications
-    notifyErrorSystemNotifications =
-      try container.decodeIfPresent(Bool.self, forKey: .notifyErrorSystemNotifications)
-        ?? Self.default.notifyErrorSystemNotifications
-  }
-
-  static let `default` = ConnectionSettings(
-    baseURL: "http://claudl.taile64ce5.ts.net:4096",
-    username: "opencode",
-    useBasicAuth: false,
-    directory: "",
+  static let `default` = WorkspaceSettings(
     selectedAgent: nil,
     selectedProviderID: nil,
     selectedModelID: nil,
@@ -223,5 +196,109 @@ final class ConnectionSettingsStore {
 
   private func accountKey(baseURL: String, username: String) -> String {
     "\(baseURL.lowercased())::\(username.lowercased())"
+  }
+}
+
+final class WorkspaceSettingsStore {
+  private let defaults: UserDefaults
+  private let encoder = JSONEncoder()
+  private let decoder = JSONDecoder()
+
+  private static let defaultsKey = "workspace.settings.v1"
+  private static let legacyDefaultsKey = "connection.settings.v1"
+
+  init(defaults: UserDefaults = .standard) {
+    self.defaults = defaults
+  }
+
+  func loadSettings() -> WorkspaceSettings {
+    if
+      let data = defaults.data(forKey: Self.defaultsKey),
+      let settings = try? decoder.decode(WorkspaceSettings.self, from: data)
+    {
+      return settings
+    }
+
+    if
+      let legacyData = defaults.data(forKey: Self.legacyDefaultsKey),
+      let legacy = try? decoder.decode(LegacyConnectionSettings.self, from: legacyData)
+    {
+      return WorkspaceSettings(
+        selectedAgent: legacy.selectedAgent,
+        selectedProviderID: legacy.selectedProviderID,
+        selectedModelID: legacy.selectedModelID,
+        selectedModelVariant: legacy.selectedModelVariant,
+        hiddenModelKeys: legacy.hiddenModelKeys,
+        pinnedSessionIDs: legacy.pinnedSessionIDs,
+        projects: legacy.projects,
+        selectedProjectID: legacy.selectedProjectID,
+        showReasoningSummaries: legacy.showReasoningSummaries,
+        expandShellToolParts: legacy.expandShellToolParts,
+        expandEditToolParts: legacy.expandEditToolParts,
+        notifyAgentSystemNotifications: legacy.notifyAgentSystemNotifications,
+        notifyPermissionSystemNotifications: legacy.notifyPermissionSystemNotifications,
+        notifyErrorSystemNotifications: legacy.notifyErrorSystemNotifications
+      )
+    }
+
+    return .default
+  }
+
+  func saveSettings(_ settings: WorkspaceSettings) {
+    guard let data = try? encoder.encode(settings) else { return }
+    defaults.set(data, forKey: Self.defaultsKey)
+  }
+}
+
+private struct LegacyConnectionSettings: Codable {
+  var selectedAgent: String?
+  var selectedProviderID: String?
+  var selectedModelID: String?
+  var selectedModelVariant: String?
+  var hiddenModelKeys: [String]
+  var pinnedSessionIDs: [String]
+  var projects: [SavedProject]
+  var selectedProjectID: String?
+  var showReasoningSummaries: Bool
+  var expandShellToolParts: Bool
+  var expandEditToolParts: Bool
+  var notifyAgentSystemNotifications: Bool
+  var notifyPermissionSystemNotifications: Bool
+  var notifyErrorSystemNotifications: Bool
+
+  init(from decoder: Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    selectedAgent = try container.decodeIfPresent(String.self, forKey: .selectedAgent)
+    selectedProviderID = try container.decodeIfPresent(String.self, forKey: .selectedProviderID)
+    selectedModelID = try container.decodeIfPresent(String.self, forKey: .selectedModelID)
+    selectedModelVariant = try container.decodeIfPresent(String.self, forKey: .selectedModelVariant)
+    hiddenModelKeys = try container.decodeIfPresent([String].self, forKey: .hiddenModelKeys) ?? []
+    pinnedSessionIDs = try container.decodeIfPresent([String].self, forKey: .pinnedSessionIDs) ?? []
+    projects = try container.decodeIfPresent([SavedProject].self, forKey: .projects) ?? []
+    selectedProjectID = try container.decodeIfPresent(String.self, forKey: .selectedProjectID)
+    showReasoningSummaries = try container.decodeIfPresent(Bool.self, forKey: .showReasoningSummaries) ?? false
+    expandShellToolParts = try container.decodeIfPresent(Bool.self, forKey: .expandShellToolParts) ?? true
+    expandEditToolParts = try container.decodeIfPresent(Bool.self, forKey: .expandEditToolParts) ?? false
+    notifyAgentSystemNotifications = try container.decodeIfPresent(Bool.self, forKey: .notifyAgentSystemNotifications) ?? true
+    notifyPermissionSystemNotifications =
+      try container.decodeIfPresent(Bool.self, forKey: .notifyPermissionSystemNotifications) ?? true
+    notifyErrorSystemNotifications = try container.decodeIfPresent(Bool.self, forKey: .notifyErrorSystemNotifications) ?? false
+  }
+
+  private enum CodingKeys: String, CodingKey {
+    case selectedAgent
+    case selectedProviderID
+    case selectedModelID
+    case selectedModelVariant
+    case hiddenModelKeys
+    case pinnedSessionIDs
+    case projects
+    case selectedProjectID
+    case showReasoningSummaries
+    case expandShellToolParts
+    case expandEditToolParts
+    case notifyAgentSystemNotifications
+    case notifyPermissionSystemNotifications
+    case notifyErrorSystemNotifications
   }
 }

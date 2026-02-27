@@ -94,30 +94,46 @@ final class WorkspaceStore {
   var sessionRefreshTasks: [String: Task<Void, Never>] = [:]
   var sessionRefreshNeedsDiff: Set<String> = []
   let allowsPersistence: Bool
+  private let settingsStore: WorkspaceSettingsStore
 
-  init(connection: ConnectionStore, allowsPersistence: Bool = true) {
+  init(
+    connection: ConnectionStore,
+    settingsStore: WorkspaceSettingsStore = WorkspaceSettingsStore(),
+    allowsPersistence: Bool = true
+  ) {
     self.connection = connection
+    self.settingsStore = settingsStore
     self.allowsPersistence = allowsPersistence
-    hiddenModelKeys = connection.initialHiddenModelKeys
-    selectedAgentName = connection.initialSelectedAgentName
-    selectedModel = connection.initialSelectedModel
-    selectedModelVariant = connection.initialSelectedModelVariant
-    showReasoningSummaries = connection.initialShowReasoningSummaries
-    expandShellToolParts = connection.initialExpandShellToolParts
-    expandEditToolParts = connection.initialExpandEditToolParts
-    notifyAgentSystemNotifications = connection.initialNotifyAgentSystemNotifications
-    notifyPermissionSystemNotifications = connection.initialNotifyPermissionSystemNotifications
-    notifyErrorSystemNotifications = connection.initialNotifyErrorSystemNotifications
-    pinnedSessionIDs = connection.initialPinnedSessionIDs
+    let settings = settingsStore.loadSettings()
+    hiddenModelKeys = Set(settings.hiddenModelKeys)
+    selectedAgentName = settings.selectedAgent ?? "build"
 
-    if connection.initialProjects.isEmpty {
+    if
+      let selectedProviderID = settings.selectedProviderID,
+      let selectedModelID = settings.selectedModelID
+    {
+      selectedModel = ModelSelector(providerID: selectedProviderID, modelID: selectedModelID)
+    } else {
+      selectedModel = nil
+    }
+
+    selectedModelVariant = settings.selectedModelVariant?.trimmedNonEmpty
+    showReasoningSummaries = settings.showReasoningSummaries
+    expandShellToolParts = settings.expandShellToolParts
+    expandEditToolParts = settings.expandEditToolParts
+    notifyAgentSystemNotifications = settings.notifyAgentSystemNotifications
+    notifyPermissionSystemNotifications = settings.notifyPermissionSystemNotifications
+    notifyErrorSystemNotifications = settings.notifyErrorSystemNotifications
+    pinnedSessionIDs = Set(settings.pinnedSessionIDs)
+
+    if settings.projects.isEmpty {
       let defaultDirectory = connection.directory.trimmedNonEmpty ?? NSHomeDirectory()
       let project = Self.makeProject(directory: defaultDirectory)
       projects = [project]
       selectedProjectID = project.id
     } else {
-      projects = connection.initialProjects
-      let preferredID = connection.initialSelectedProjectID
+      projects = settings.projects
+      let preferredID = settings.selectedProjectID
       selectedProjectID = projects.contains(where: { $0.id == preferredID }) ? preferredID : projects.first?.id
     }
 
@@ -1220,20 +1236,23 @@ final class WorkspaceStore {
       return
     }
 
-    connection.persistSettingsBestEffort(
-      selectedAgentName: selectedAgentName,
-      selectedModel: selectedModel,
-      selectedModelVariant: selectedModelVariant,
-      hiddenModelKeys: hiddenModelKeys,
-      pinnedSessionIDs: pinnedSessionIDs,
-      projects: projects,
-      selectedProjectID: selectedProjectID,
-      showReasoningSummaries: showReasoningSummaries,
-      expandShellToolParts: expandShellToolParts,
-      expandEditToolParts: expandEditToolParts,
-      notifyAgentSystemNotifications: notifyAgentSystemNotifications,
-      notifyPermissionSystemNotifications: notifyPermissionSystemNotifications,
-      notifyErrorSystemNotifications: notifyErrorSystemNotifications
+    settingsStore.saveSettings(
+      WorkspaceSettings(
+        selectedAgent: selectedAgentName,
+        selectedProviderID: selectedModel?.providerID,
+        selectedModelID: selectedModel?.modelID,
+        selectedModelVariant: selectedModelVariant?.trimmedNonEmpty,
+        hiddenModelKeys: hiddenModelKeys.sorted(),
+        pinnedSessionIDs: pinnedSessionIDs.sorted(),
+        projects: projects,
+        selectedProjectID: selectedProjectID,
+        showReasoningSummaries: showReasoningSummaries,
+        expandShellToolParts: expandShellToolParts,
+        expandEditToolParts: expandEditToolParts,
+        notifyAgentSystemNotifications: notifyAgentSystemNotifications,
+        notifyPermissionSystemNotifications: notifyPermissionSystemNotifications,
+        notifyErrorSystemNotifications: notifyErrorSystemNotifications
+      )
     )
   }
 
