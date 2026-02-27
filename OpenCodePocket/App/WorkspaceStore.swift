@@ -88,6 +88,7 @@ final class WorkspaceStore {
   var isRefreshingSessions = false
   var respondingPermissionRequestIDs: Set<String> = []
   var respondingQuestionRequestIDs: Set<String> = []
+  var workspaceError: String?
 
   let connection: ConnectionStore
   var eventsTask: Task<Void, Never>?
@@ -309,11 +310,12 @@ final class WorkspaceStore {
   }
 
   var latestConnectionError: String? {
-    connection.connectionError
+    workspaceError ?? connection.connectionError
   }
 
   func clearConnectionError() {
     connection.connectionError = nil
+    workspaceError = nil
   }
 
   var activeProject: SavedProject? {
@@ -615,7 +617,7 @@ final class WorkspaceStore {
         projectSessions.sort(by: isSessionNewer(_:than:))
         nextSessions.append(contentsOf: projectSessions)
       } catch {
-        connection.connectionError = error.localizedDescription
+        workspaceError = error.localizedDescription
       }
     }
 
@@ -670,7 +672,7 @@ final class WorkspaceStore {
       selectedSessionID = created.id
       await refreshSessions()
     } catch {
-      connection.connectionError = error.localizedDescription
+      workspaceError = error.localizedDescription
     }
   }
 
@@ -734,7 +736,7 @@ final class WorkspaceStore {
       )
       messagesBySession[sessionID] = messages
     } catch {
-      connection.connectionError = error.localizedDescription
+      workspaceError = error.localizedDescription
     }
   }
 
@@ -749,7 +751,7 @@ final class WorkspaceStore {
       let diffs = try await client.getSessionDiff(sessionID: sessionID, directory: connection.resolvedDirectory)
       diffsBySession[sessionID] = diffs
     } catch {
-      connection.connectionError = error.localizedDescription
+      workspaceError = error.localizedDescription
     }
   }
 
@@ -779,7 +781,7 @@ final class WorkspaceStore {
       await loadMessages(sessionID: sessionID)
       await loadDiffs(sessionID: sessionID)
     } catch {
-      connection.connectionError = error.localizedDescription
+      workspaceError = error.localizedDescription
       draftMessage = original
     }
   }
@@ -790,7 +792,7 @@ final class WorkspaceStore {
       _ = try await client.abortSession(sessionID: sessionID, directory: connection.resolvedDirectory)
       sessionStatuses[sessionID] = .idle
     } catch {
-      connection.connectionError = error.localizedDescription
+      workspaceError = error.localizedDescription
     }
   }
 
@@ -850,7 +852,7 @@ final class WorkspaceStore {
         }
       }
     } catch {
-      connection.connectionError = error.localizedDescription
+      workspaceError = error.localizedDescription
     }
 
     do {
@@ -885,7 +887,7 @@ final class WorkspaceStore {
       reconcileSelectedModelVariant()
       persistWorkspaceSettings()
     } catch {
-      connection.connectionError = error.localizedDescription
+      workspaceError = error.localizedDescription
     }
   }
 
@@ -975,14 +977,14 @@ final class WorkspaceStore {
       let permissions = try await client.listPermissions(directory: connection.resolvedDirectory)
       permissionsBySession = Dictionary(grouping: permissions, by: \.sessionID)
     } catch {
-      connection.connectionError = error.localizedDescription
+      workspaceError = error.localizedDescription
     }
 
     do {
       let questions = try await client.listQuestions(directory: connection.resolvedDirectory)
       questionsBySession = Dictionary(grouping: questions, by: \.sessionID)
     } catch {
-      connection.connectionError = error.localizedDescription
+      workspaceError = error.localizedDescription
     }
   }
 
@@ -1004,7 +1006,7 @@ final class WorkspaceStore {
       )
       permissionsBySession[sessionID]?.removeAll { $0.id == requestID }
     } catch {
-      connection.connectionError = error.localizedDescription
+      workspaceError = error.localizedDescription
     }
   }
 
@@ -1025,7 +1027,7 @@ final class WorkspaceStore {
       )
       questionsBySession[sessionID]?.removeAll { $0.id == requestID }
     } catch {
-      connection.connectionError = error.localizedDescription
+      workspaceError = error.localizedDescription
     }
   }
 
@@ -1042,7 +1044,7 @@ final class WorkspaceStore {
       _ = try await client.rejectQuestion(requestID: requestID, directory: connection.resolvedDirectory)
       questionsBySession[sessionID]?.removeAll { $0.id == requestID }
     } catch {
-      connection.connectionError = error.localizedDescription
+      workspaceError = error.localizedDescription
     }
   }
 
@@ -1059,7 +1061,7 @@ final class WorkspaceStore {
       )
       await refreshSessions()
     } catch {
-      connection.connectionError = error.localizedDescription
+      workspaceError = error.localizedDescription
     }
   }
 
@@ -1075,7 +1077,7 @@ final class WorkspaceStore {
       )
       await refreshSessions()
     } catch {
-      connection.connectionError = error.localizedDescription
+      workspaceError = error.localizedDescription
     }
   }
 
@@ -1090,9 +1092,9 @@ final class WorkspaceStore {
       )
       await refreshSessions()
     } catch let OpenCodeClientError.httpStatus(code, _) where code == 400 || code == 422 {
-      connection.connectionError = "This OpenCode server version does not support unarchiving yet. Update the server and try again."
+      workspaceError = "This OpenCode server version does not support unarchiving yet. Update the server and try again."
     } catch {
-      connection.connectionError = error.localizedDescription
+      workspaceError = error.localizedDescription
     }
   }
 
@@ -1108,7 +1110,7 @@ final class WorkspaceStore {
       todosBySession[sessionID] = nil
       await refreshSessions()
     } catch {
-      connection.connectionError = error.localizedDescription
+      workspaceError = error.localizedDescription
     }
   }
 

@@ -75,7 +75,7 @@ extension WorkspaceStore {
       var errorDescription: String?
       if let errorObject = properties.object(for: "error") {
         let compact = JSONValue.object(errorObject).compactDescription
-        connection.connectionError = compact
+        workspaceError = compact
         errorDescription = compact
       }
       notifyErrorIfEnabled(sessionID: properties.string(for: "sessionID"), errorDescription: errorDescription)

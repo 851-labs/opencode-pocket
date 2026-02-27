@@ -58,7 +58,7 @@
         seedArchivedThreads(on: graph.workspace)
       case .archivedThreadsError:
         seedArchivedThreads(on: graph.workspace)
-        graph.workspace.connection.connectionError = "This OpenCode server version does not support unarchiving yet. Update the server and try again."
+        graph.workspace.workspaceError = "This OpenCode server version does not support unarchiving yet. Update the server and try again."
       case .noArchivedThreads:
         break
       }
