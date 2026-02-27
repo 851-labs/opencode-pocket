@@ -281,7 +281,7 @@
             ProgressView()
               .controlSize(.small)
           } else if isPinnedRow {
-            Image(systemName: "pin.fill")
+            Image(systemName: "pin")
               .foregroundStyle(.secondary)
           } else {
             Image(systemName: "circle.fill")
