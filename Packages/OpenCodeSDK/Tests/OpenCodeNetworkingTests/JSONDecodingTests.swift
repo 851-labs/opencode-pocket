@@ -116,4 +116,12 @@ final class JSONDecodingTests: XCTestCase {
     XCTAssertEqual(status.next, 174_000)
     XCTAssertTrue(status.isRunning)
   }
+
+  func testServerEventTypeMappingSupportsKnownAndUnknownEvents() {
+    let known = ServerEvent(type: "message.part.updated", properties: .object([:]))
+    XCTAssertEqual(known.eventType, .messagePartUpdated)
+
+    let unknown = ServerEvent(type: "custom.event", properties: .object([:]))
+    XCTAssertEqual(unknown.eventType, .unknown("custom.event"))
+  }
 }

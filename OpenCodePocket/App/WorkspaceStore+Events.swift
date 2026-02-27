@@ -36,21 +36,21 @@ extension WorkspaceStore {
   }
 
   private func handle(event: ServerEvent) async {
-    switch event.type {
-    case "server.connected":
+    switch event.eventType {
+    case .serverConnected:
       connection.eventConnectionState = "Live updates connected"
 
-    case "session.created", "session.updated", "session.deleted":
+    case .sessionCreated, .sessionUpdated, .sessionDeleted:
       await refreshSessions()
 
-    case "session.idle":
+    case .sessionIdle:
       if let sessionID = event.properties.objectValue?.string(for: "sessionID") {
         sessionStatuses[sessionID] = .idle
         scheduleSessionRefresh(sessionID: sessionID)
         notifyAgentIfEnabled(sessionID: sessionID, reason: "complete")
       }
 
-    case "session.status":
+    case .sessionStatus:
       guard
         let properties = event.properties.objectValue,
         let sessionID = properties.string(for: "sessionID")
@@ -67,7 +67,7 @@ extension WorkspaceStore {
         sessionStatuses[sessionID] = SessionStatus(type: .unknown("unknown"))
       }
 
-    case "session.error":
+    case .sessionError:
       guard let properties = event.properties.objectValue else { return }
       if let sessionID = properties.string(for: "sessionID") {
         sessionStatuses[sessionID] = .idle
@@ -80,7 +80,7 @@ extension WorkspaceStore {
       }
       notifyErrorIfEnabled(sessionID: properties.string(for: "sessionID"), errorDescription: errorDescription)
 
-    case "session.diff":
+    case .sessionDiff:
       guard
         let properties = event.properties.objectValue,
         let sessionID = properties.string(for: "sessionID")
@@ -94,7 +94,7 @@ extension WorkspaceStore {
         scheduleSessionRefresh(sessionID: sessionID)
       }
 
-    case "todo.updated":
+    case .todoUpdated:
       guard
         let properties = event.properties.objectValue,
         let sessionID = properties.string(for: "sessionID")
@@ -106,14 +106,14 @@ extension WorkspaceStore {
         todosBySession[sessionID] = decoded
       }
 
-    case "permission.asked":
+    case .permissionAsked:
       guard let permission = event.decodeProperties(as: PermissionRequest.self) else {
         return
       }
       upsertPermission(permission)
       notifyPermissionIfEnabled(permission)
 
-    case "permission.replied":
+    case .permissionReplied:
       guard
         let properties = event.properties.objectValue,
         let sessionID = properties.string(for: "sessionID"),
@@ -123,14 +123,14 @@ extension WorkspaceStore {
       }
       permissionsBySession[sessionID]?.removeAll { $0.id == requestID }
 
-    case "question.asked":
+    case .questionAsked:
       guard let question = event.decodeProperties(as: QuestionRequest.self) else {
         return
       }
       upsertQuestion(question)
       notifyAgentIfEnabled(sessionID: question.sessionID, reason: "question")
 
-    case "question.replied", "question.rejected":
+    case .questionReplied, .questionRejected:
       guard
         let properties = event.properties.objectValue,
         let sessionID = properties.string(for: "sessionID"),
@@ -140,7 +140,7 @@ extension WorkspaceStore {
       }
       questionsBySession[sessionID]?.removeAll { $0.id == requestID }
 
-    case "message.part.delta":
+    case .messagePartDelta:
       guard
         let properties = event.properties.objectValue,
         let sessionID = properties.string(for: "sessionID")
@@ -148,60 +148,64 @@ extension WorkspaceStore {
         return
       }
 
-      if applyMessagePartDelta(properties: properties) {
+      if applyMessageMutation(properties: properties, using: MessageEnvelope.partDeltaMutation) != nil {
         scheduleSessionRefresh(sessionID: sessionID, includeDiffs: false)
       } else {
         scheduleSessionRefresh(sessionID: sessionID)
       }
 
-    case "message.part.updated":
+    case .messagePartUpdated:
       guard let properties = event.properties.objectValue else {
         return
       }
 
-      if applyMessagePartUpdated(properties: properties) {
-        scheduleSessionRefresh(sessionID: properties.object(for: "part")?.string(for: "sessionID"), includeDiffs: false)
+      if let sessionID = applyMessageMutation(properties: properties, using: MessageEnvelope.partUpdatedMutation) {
+        scheduleSessionRefresh(sessionID: sessionID, includeDiffs: false)
       } else {
         scheduleSessionRefresh(sessionID: properties.object(for: "part")?.string(for: "sessionID"))
       }
 
-    case "message.part.removed":
+    case .messagePartRemoved:
       guard let properties = event.properties.objectValue else {
         return
       }
 
-      if applyMessagePartRemoval(properties: properties) {
-        scheduleSessionRefresh(sessionID: properties.string(for: "sessionID"), includeDiffs: false)
+      if let sessionID = applyMessageMutation(properties: properties, using: MessageEnvelope.partRemovalMutation) {
+        scheduleSessionRefresh(sessionID: sessionID, includeDiffs: false)
       } else {
         scheduleSessionRefresh(sessionID: properties.string(for: "sessionID"))
       }
 
-    case "message.updated", "message.removed":
+    case .messageUpdated:
       guard let properties = event.properties.objectValue else {
         let sessionID = selectedSessionID
         scheduleSessionRefresh(sessionID: sessionID)
         return
       }
 
-      if event.type == "message.updated" {
-        if applyMessageUpdated(properties: properties) {
-          return
-        }
-        let sessionID =
-          properties.object(for: "info")?.string(for: "sessionID")
-            ?? properties.string(for: "sessionID")
-            ?? selectedSessionID
+      if applyMessageMutation(properties: properties, using: MessageEnvelope.messageUpdatedMutation) != nil {
+        return
+      }
+      let sessionID =
+        properties.object(for: "info")?.string(for: "sessionID")
+          ?? properties.string(for: "sessionID")
+          ?? selectedSessionID
+      scheduleSessionRefresh(sessionID: sessionID, includeDiffs: false)
+
+    case .messageRemoved:
+      guard let properties = event.properties.objectValue else {
+        let sessionID = selectedSessionID
         scheduleSessionRefresh(sessionID: sessionID, includeDiffs: false)
         return
       }
 
-      if applyMessageRemoval(properties: properties) {
+      if applyMessageMutation(properties: properties, using: MessageEnvelope.messageRemovalMutation) != nil {
         return
       }
       let sessionID = properties.string(for: "sessionID") ?? selectedSessionID
       scheduleSessionRefresh(sessionID: sessionID, includeDiffs: false)
 
-    default:
+    case .unknown:
       break
     }
   }
@@ -236,117 +240,18 @@ extension WorkspaceStore {
     }
   }
 
-  private func applyMessagePartDelta(properties: [String: JSONValue]) -> Bool {
-    guard
-      let sessionID = properties.string(for: "sessionID"),
-      let messageID = properties.string(for: "messageID"),
-      let partID = properties.string(for: "partID"),
-      let field = properties.string(for: "field"),
-      let delta = properties.string(for: "delta"),
-      !delta.isEmpty,
-      var messages = messagesBySession[sessionID],
-      let messageIndex = messages.firstIndex(where: { $0.info.id == messageID }),
-      let partIndex = messages[messageIndex].parts.firstIndex(where: { $0.id == partID }),
-      let updatedPart = messages[messageIndex].parts[partIndex].appendingDelta(field: field, delta: delta)
-    else {
-      return false
+  private func applyMessageMutation(
+    properties: [String: JSONValue],
+    using mutation: ([String: JSONValue], [String: [MessageEnvelope]]) -> (sessionID: String, messages: [MessageEnvelope])?
+  ) -> String? {
+    guard let update = mutation(properties, messagesBySession) else {
+      return nil
     }
 
-    var updatedParts = messages[messageIndex].parts
-    updatedParts[partIndex] = updatedPart
-    messages[messageIndex] = MessageEnvelope(info: messages[messageIndex].info, parts: updatedParts)
-    messagesBySession[sessionID] = messages
-    return true
-  }
-
-  private func applyMessagePartUpdated(properties: [String: JSONValue]) -> Bool {
-    guard
-      let partValue = properties["part"],
-      let part = partValue.decoded(as: MessagePart.self),
-      var messages = messagesBySession[part.sessionID],
-      let messageIndex = messages.firstIndex(where: { $0.info.id == part.messageID })
-    else {
-      return false
-    }
-
-    var updatedParts = messages[messageIndex].parts
-    if let partIndex = updatedParts.firstIndex(where: { $0.id == part.id }) {
-      updatedParts[partIndex] = part
-    } else {
-      let insertIndex = updatedParts.firstIndex(where: { $0.id > part.id }) ?? updatedParts.count
-      updatedParts.insert(part, at: insertIndex)
-    }
-
-    messages[messageIndex] = MessageEnvelope(info: messages[messageIndex].info, parts: updatedParts)
-    messagesBySession[part.sessionID] = messages
-    return true
-  }
-
-  private func applyMessageUpdated(properties: [String: JSONValue]) -> Bool {
-    let info: MessageInfo?
-    if let infoValue = properties["info"] {
-      info = infoValue.decoded(as: MessageInfo.self)
-    } else {
-      info = JSONValue.object(properties).decoded(as: MessageInfo.self)
-    }
-
-    guard let info else {
-      return false
-    }
-
-    var messages = messagesBySession[info.sessionID] ?? []
-    if let index = messages.firstIndex(where: { $0.info.id == info.id }) {
-      let existingParts = messages[index].parts
-      messages[index] = MessageEnvelope(info: info, parts: existingParts)
-    } else {
-      let insertIndex = messages.firstIndex(where: { $0.info.id > info.id }) ?? messages.count
-      messages.insert(MessageEnvelope(info: info, parts: []), at: insertIndex)
-    }
-
-    messagesBySession[info.sessionID] = messages
-    return true
-  }
-
-  private func applyMessageRemoval(properties: [String: JSONValue]) -> Bool {
-    guard
-      let sessionID = properties.string(for: "sessionID"),
-      let messageID = properties.string(for: "messageID"),
-      var messages = messagesBySession[sessionID]
-    else {
-      return false
-    }
-
-    let originalCount = messages.count
-    messages.removeAll { $0.info.id == messageID }
-    guard messages.count != originalCount else {
-      return false
-    }
-
-    messagesBySession[sessionID] = messages
-    return true
-  }
-
-  private func applyMessagePartRemoval(properties: [String: JSONValue]) -> Bool {
-    guard
-      let sessionID = properties.string(for: "sessionID"),
-      let messageID = properties.string(for: "messageID"),
-      let partID = properties.string(for: "partID"),
-      var messages = messagesBySession[sessionID],
-      let messageIndex = messages.firstIndex(where: { $0.info.id == messageID })
-    else {
-      return false
-    }
-
-    var updatedParts = messages[messageIndex].parts
-    let originalCount = updatedParts.count
-    updatedParts.removeAll { $0.id == partID }
-    guard updatedParts.count != originalCount else {
-      return false
-    }
-
-    messages[messageIndex] = MessageEnvelope(info: messages[messageIndex].info, parts: updatedParts)
-    messagesBySession[sessionID] = messages
-    return true
+    var messages = messagesBySession
+    messages[update.sessionID] = update.messages
+    messagesBySession = messages
+    return update.sessionID
   }
 
   private func upsertPermission(_ permission: PermissionRequest) {
