@@ -221,6 +221,13 @@
       return Self.elapsedFormatter.string(from: interval) ?? "now"
     }
 
+    private var isPinnedRow: Bool {
+      if case .pinned = row.selection {
+        return true
+      }
+      return false
+    }
+
     var body: some View {
       sessionRowContent
         .tag(row.selection as MacWorkspaceSidebarSelection?)
@@ -273,6 +280,9 @@
           if store.status(for: row.session.id).isRunning {
             ProgressView()
               .controlSize(.small)
+          } else if isPinnedRow {
+            Image(systemName: "pin.fill")
+              .foregroundStyle(.secondary)
           } else {
             Image(systemName: "circle.fill")
               .hidden()
