@@ -129,30 +129,18 @@
         allowsMultipleSelection: false,
         onCompletion: handleProjectDirectoryPick
       )
-      .confirmationDialog("Archive Session?", isPresented: isArchiveConfirmationDialogPresented) {
-        Button("Archive") {
-          archivePendingSession()
-        }
-        Button("Cancel", role: .cancel) {}
-      } message: {
-        Text("You can unarchive this session later from Settings > Archived.")
-      }
-      .confirmationDialog("Delete Session?", isPresented: isDeleteConfirmationDialogPresented) {
-        Button("Delete", role: .destructive) {
-          deletePendingSession()
-        }
-        Button("Cancel", role: .cancel) {}
-      } message: {
-        Text("This permanently removes the selected chat session.")
-      }
-      .confirmationDialog("Remove Project?", isPresented: isRemoveProjectConfirmationDialogPresented) {
-        Button("Remove", role: .destructive) {
-          removePendingProject()
-        }
-        Button("Cancel", role: .cancel) {}
-      } message: {
-        Text("This removes the project from the sidebar only. Files and sessions on disk are not deleted.")
-      }
+      .archiveSessionConfirmationDialog(
+        isPresented: isArchiveConfirmationDialogPresented,
+        onArchive: archivePendingSession
+      )
+      .deleteSessionConfirmationDialog(
+        isPresented: isDeleteConfirmationDialogPresented,
+        onDelete: deletePendingSession
+      )
+      .removeProjectConfirmationDialog(
+        isPresented: isRemoveProjectConfirmationDialogPresented,
+        onRemove: removePendingProject
+      )
       .toolbar {
         MacWorkspaceToolbar(
           selectedPanel: $selectedPanel,

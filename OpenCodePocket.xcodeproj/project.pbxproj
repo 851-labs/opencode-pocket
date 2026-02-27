@@ -12,6 +12,7 @@
 		06C4BC829CCC1FB46B79708F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 8E5D2399CD06F9BB20324AC1 /* Assets.xcassets */; };
 		07DBA528548F6EBC0D4B58C4 /* OpenCodeNetworking in Frameworks */ = {isa = PBXBuildFile; productRef = 3812E39D97AD2EB76D3F11BB /* OpenCodeNetworking */; };
 		090049CB1F8AC1F6A722C68F /* MacWorkspaceTranscriptPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28B2F3932AA1CACC175E281B /* MacWorkspaceTranscriptPane.swift */; };
+		092264648B46CFA696E08050 /* DeleteSessionConfirmationDialog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 662BF7E329B6224DF5CE4861 /* DeleteSessionConfirmationDialog.swift */; };
 		09D6A584B0209852D35B95F4 /* WorkspaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D83BD8354E87398437EA542 /* WorkspaceView.swift */; };
 		0E9E6AA9FEFC0FBE898B75A5 /* SessionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C7BFCD6254DAE5C93352594 /* SessionsView.swift */; };
 		12861D728E3D7DCF540D82B3 /* WorkspaceDiffSummary.swift in Sources */ = {isa = PBXBuildFile; fileRef = D48D12E88841D5CCED831467 /* WorkspaceDiffSummary.swift */; };
@@ -36,6 +37,7 @@
 		67F17F31CE15083C9A4F8868 /* WorkspaceStore+Mock.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB8F0277F3C7C35009845EF3 /* WorkspaceStore+Mock.swift */; };
 		6BE62DC7E16F54EA9459F9B0 /* MacWorkspaceSidebar.swift in Sources */ = {isa = PBXBuildFile; fileRef = C945C4AA0C120BC25D5F917C /* MacWorkspaceSidebar.swift */; };
 		7E72B2618F42B089C70E19EE /* MacCustomizeProjectSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CD941B8A59FF0169FE55E58 /* MacCustomizeProjectSheet.swift */; };
+		8AFB94F0B60EEA5CB3EE948E /* ArchiveSessionConfirmationDialog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D869BE7C20FEA6601BA1DCF /* ArchiveSessionConfirmationDialog.swift */; };
 		8B06F4CD56748969A2052037 /* ConnectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C69CD8CF636DA57803128B44 /* ConnectView.swift */; };
 		8D01B95B1E0BF1DECE496903 /* MacWorkspaceShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87482039779D818117783BD6 /* MacWorkspaceShared.swift */; };
 		91C54ADD00283AA51DD77ED4 /* RenameSessionAlert.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53DEC90BBADF3A1348716DC2 /* RenameSessionAlert.swift */; };
@@ -45,6 +47,7 @@
 		AA39E10E6519899E19810501 /* MacSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF097B10BD4C8619083E5E60 /* MacSettingsView.swift */; };
 		B0FE2DC5C98800A31E60B5CC /* MacWorkspaceNavigationShell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51741FF22DBE8F121F1E4949 /* MacWorkspaceNavigationShell.swift */; };
 		B3A3A23009C1F0669127A68F /* MacWorkspaceComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D85A4F664FEF2F8C968010BA /* MacWorkspaceComposer.swift */; };
+		BCEEB4ECBEE8A9D5432AAECF /* RemoveProjectConfirmationDialog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BA9D6B67CDEF0BDA83E3701 /* RemoveProjectConfirmationDialog.swift */; };
 		C079C36C986C5C291A4157D5 /* ConnectionStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01A4FE78F261B36005A4B76F /* ConnectionStorage.swift */; };
 		CC1195C8BA32D26F64B5EB2A /* MacWorkspaceMessageCards.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD924DD05BC984676CEE1D16 /* MacWorkspaceMessageCards.swift */; };
 		D169D096DE719AB775335047 /* MacSettingsPreviewSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0D65D5276A4E6F10215A7BA /* MacSettingsPreviewSupport.swift */; };
@@ -77,12 +80,15 @@
 		52BE2A37FFD51B0A08B5FC5C /* MacWorkspaceDetail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacWorkspaceDetail.swift; sourceTree = "<group>"; };
 		53DEC90BBADF3A1348716DC2 /* RenameSessionAlert.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RenameSessionAlert.swift; sourceTree = "<group>"; };
 		5A728FB3B761B021F17CF6C5 /* WorkspaceMessageCards.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceMessageCards.swift; sourceTree = "<group>"; };
+		5BA9D6B67CDEF0BDA83E3701 /* RemoveProjectConfirmationDialog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoveProjectConfirmationDialog.swift; sourceTree = "<group>"; };
 		5CD941B8A59FF0169FE55E58 /* MacCustomizeProjectSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacCustomizeProjectSheet.swift; sourceTree = "<group>"; };
 		5F2AB2259CAD47AEF8C1F3AA /* OpenCodePocketApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenCodePocketApp.swift; sourceTree = "<group>"; };
+		662BF7E329B6224DF5CE4861 /* DeleteSessionConfirmationDialog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeleteSessionConfirmationDialog.swift; sourceTree = "<group>"; };
 		681188C7D0FE47069D7F445B /* MacWorkspaceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacWorkspaceView.swift; sourceTree = "<group>"; };
 		6C7BFCD6254DAE5C93352594 /* SessionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionsView.swift; sourceTree = "<group>"; };
 		6E0B7D1C84E1310D9D09080B /* OpenCodePocket.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = OpenCodePocket.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		77054C883C43469DFD38B5A5 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		7D869BE7C20FEA6601BA1DCF /* ArchiveSessionConfirmationDialog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArchiveSessionConfirmationDialog.swift; sourceTree = "<group>"; };
 		87482039779D818117783BD6 /* MacWorkspaceShared.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacWorkspaceShared.swift; sourceTree = "<group>"; };
 		884A89386B4723F75CA0EC2F /* MacSettingsArchivedTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacSettingsArchivedTab.swift; sourceTree = "<group>"; };
 		8E5D2399CD06F9BB20324AC1 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -239,9 +245,20 @@
 			isa = PBXGroup;
 			children = (
 				3A3258C59CA307DB894AA0BD /* Alerts */,
+				A91BCEE4FF5DC869077000FD /* ConfirmationDialogs */,
 				FC7D9854C598AE7DC54E70E1 /* MacWorkspace */,
 			);
 			path = Workspace;
+			sourceTree = "<group>";
+		};
+		A91BCEE4FF5DC869077000FD /* ConfirmationDialogs */ = {
+			isa = PBXGroup;
+			children = (
+				7D869BE7C20FEA6601BA1DCF /* ArchiveSessionConfirmationDialog.swift */,
+				662BF7E329B6224DF5CE4861 /* DeleteSessionConfirmationDialog.swift */,
+				5BA9D6B67CDEF0BDA83E3701 /* RemoveProjectConfirmationDialog.swift */,
+			);
+			path = ConfirmationDialogs;
 			sourceTree = "<group>";
 		};
 		D263504A0FD771E5EB851059 /* Support */ = {
@@ -392,11 +409,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				E02690E3B04E399CB1646C14 /* AppStore.swift in Sources */,
+				8AFB94F0B60EEA5CB3EE948E /* ArchiveSessionConfirmationDialog.swift in Sources */,
 				43998436472CA16316129DD7 /* ChatView.swift in Sources */,
 				8B06F4CD56748969A2052037 /* ConnectView.swift in Sources */,
 				955B2DF6208D7E3C286B7BE5 /* ConnectionFormComponents.swift in Sources */,
 				C079C36C986C5C291A4157D5 /* ConnectionStorage.swift in Sources */,
 				158D1954B8686764906A8497 /* ConnectionStore.swift in Sources */,
+				092264648B46CFA696E08050 /* DeleteSessionConfirmationDialog.swift in Sources */,
 				381731C83DA3795EDF3A1CE7 /* MacConnectView.swift in Sources */,
 				7E72B2618F42B089C70E19EE /* MacCustomizeProjectSheet.swift in Sources */,
 				1DCBBFA0C07E81C129AADE4B /* MacSettingsArchivedTab.swift in Sources */,
@@ -421,6 +440,7 @@
 				0336F6CF4A6DAE07B166B8C9 /* MacWorkspaceView.swift in Sources */,
 				46B1125B38ACDEF41428152A /* OpenCodePocketApp+Dependencies.swift in Sources */,
 				93ACD98DA97BB5B919296FF6 /* OpenCodePocketApp.swift in Sources */,
+				BCEEB4ECBEE8A9D5432AAECF /* RemoveProjectConfirmationDialog.swift in Sources */,
 				231D1301A906C85F8C04E4CD /* RenameProjectAlert.swift in Sources */,
 				91C54ADD00283AA51DD77ED4 /* RenameSessionAlert.swift in Sources */,
 				1355DEB3AE787C31F3505B08 /* RootView.swift in Sources */,
