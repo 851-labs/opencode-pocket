@@ -137,6 +137,10 @@
       }
     }
 
+    private var projectSymbol: String {
+      project.symbol?.trimmedNonEmpty ?? "folder"
+    }
+
     var body: some View {
       DisclosureGroup(isExpanded: $isExpanded) {
         if sessions.isEmpty {
@@ -153,7 +157,7 @@
         }
       } label: {
         Button(action: onSelectProject) {
-          Label(project.name, systemImage: "folder")
+          Label(project.name, systemImage: projectSymbol)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .buttonStyle(.plain)
@@ -168,6 +172,16 @@
             routerPath.presentedSheet = .renameProject(projectID: project.id, currentName: project.name)
           } label: {
             Label("Rename", systemImage: "pencil")
+          }
+
+          Button {
+            routerPath.presentedSheet = .customizeProject(
+              projectID: project.id,
+              currentName: project.name,
+              currentSymbol: project.symbol
+            )
+          } label: {
+            Label("Customize", systemImage: "paintbrush")
           }
 
           Button(role: .destructive) {

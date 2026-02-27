@@ -5,6 +5,7 @@ struct SavedProject: Codable, Equatable, Identifiable {
   var id: String
   var name: String
   var directory: String
+  var symbol: String? = nil
 }
 
 struct ConnectionSettings: Codable, Equatable {

@@ -13,6 +13,7 @@
   enum MacWorkspaceSheetDestination: Identifiable {
     case renameSession(sessionID: String, currentTitle: String)
     case renameProject(projectID: String, currentName: String)
+    case customizeProject(projectID: String, currentName: String, currentSymbol: String?)
 
     var id: String {
       switch self {
@@ -20,6 +21,8 @@
         return "rename-\(sessionID)"
       case let .renameProject(projectID, _):
         return "rename-project-\(projectID)"
+      case let .customizeProject(projectID, _, _):
+        return "customize-project-\(projectID)"
       }
     }
   }
@@ -103,6 +106,8 @@
           MacRenameSessionSheet(sessionID: sessionID, currentTitle: currentTitle)
         case let .renameProject(projectID, currentName):
           MacRenameProjectSheet(projectID: projectID, currentName: currentName)
+        case let .customizeProject(projectID, currentName, currentSymbol):
+          MacCustomizeProjectSheet(projectID: projectID, currentName: currentName, currentSymbol: currentSymbol)
         }
       }
       .fileImporter(

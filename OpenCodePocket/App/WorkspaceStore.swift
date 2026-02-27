@@ -338,6 +338,20 @@ final class WorkspaceStore {
     persistWorkspaceSettings()
   }
 
+  func setProjectSymbol(projectID: String, symbol: String?) {
+    guard let projectIndex = projects.firstIndex(where: { $0.id == projectID }) else {
+      return
+    }
+
+    let normalizedSymbol = symbol?.trimmedNonEmpty
+    guard projects[projectIndex].symbol != normalizedSymbol else {
+      return
+    }
+
+    projects[projectIndex].symbol = normalizedSymbol
+    persistWorkspaceSettings()
+  }
+
   @discardableResult
   func removeProject(projectID: String) -> Bool {
     guard let removedProject = projects.first(where: { $0.id == projectID }) else {
