@@ -18,6 +18,7 @@
 		1345C5ACCFD460DD7BDADA7D /* MacWorkspacePromptCards.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E6555165FCF4AB7C9339FCA /* MacWorkspacePromptCards.swift */; };
 		1355DEB3AE787C31F3505B08 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77054C883C43469DFD38B5A5 /* RootView.swift */; };
 		158D1954B8686764906A8497 /* ConnectionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2EAE689015B7EAED4AFD7A08 /* ConnectionStore.swift */; };
+		176DC7B5DF018F4A0A6A594C /* MacRenameSessionAlert.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58197A2D4D38F47E3999B1D6 /* MacRenameSessionAlert.swift */; };
 		1C41181F4F63BF1375D0887D /* WorkspaceTranscriptPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC2CC938232EF5A9B2B732C2 /* WorkspaceTranscriptPane.swift */; };
 		1DCBBFA0C07E81C129AADE4B /* MacSettingsArchivedTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 884A89386B4723F75CA0EC2F /* MacSettingsArchivedTab.swift */; };
 		26B0E2FF8B8C2E1C415E7E44 /* String+Trimmed.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20A9AA4D4D775F7883475871 /* String+Trimmed.swift */; };
@@ -36,7 +37,6 @@
 		67F17F31CE15083C9A4F8868 /* WorkspaceStore+Mock.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB8F0277F3C7C35009845EF3 /* WorkspaceStore+Mock.swift */; };
 		6BE62DC7E16F54EA9459F9B0 /* MacWorkspaceSidebar.swift in Sources */ = {isa = PBXBuildFile; fileRef = C945C4AA0C120BC25D5F917C /* MacWorkspaceSidebar.swift */; };
 		7E72B2618F42B089C70E19EE /* MacCustomizeProjectSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CD941B8A59FF0169FE55E58 /* MacCustomizeProjectSheet.swift */; };
-		8239BAF437341DCA48F921B5 /* MacRenameSessionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD5C4A6F380E53553E2EC702 /* MacRenameSessionSheet.swift */; };
 		8B06F4CD56748969A2052037 /* ConnectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C69CD8CF636DA57803128B44 /* ConnectView.swift */; };
 		8D01B95B1E0BF1DECE496903 /* MacWorkspaceShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87482039779D818117783BD6 /* MacWorkspaceShared.swift */; };
 		93ACD98DA97BB5B919296FF6 /* OpenCodePocketApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F2AB2259CAD47AEF8C1F3AA /* OpenCodePocketApp.swift */; };
@@ -75,6 +75,7 @@
 		46F3D80D429B9CF2772DA087 /* OpenCodePocketApp+Dependencies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "OpenCodePocketApp+Dependencies.swift"; sourceTree = "<group>"; };
 		51741FF22DBE8F121F1E4949 /* MacWorkspaceNavigationShell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacWorkspaceNavigationShell.swift; sourceTree = "<group>"; };
 		52BE2A37FFD51B0A08B5FC5C /* MacWorkspaceDetail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacWorkspaceDetail.swift; sourceTree = "<group>"; };
+		58197A2D4D38F47E3999B1D6 /* MacRenameSessionAlert.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacRenameSessionAlert.swift; sourceTree = "<group>"; };
 		5A728FB3B761B021F17CF6C5 /* WorkspaceMessageCards.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceMessageCards.swift; sourceTree = "<group>"; };
 		5CD941B8A59FF0169FE55E58 /* MacCustomizeProjectSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacCustomizeProjectSheet.swift; sourceTree = "<group>"; };
 		5F2AB2259CAD47AEF8C1F3AA /* OpenCodePocketApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenCodePocketApp.swift; sourceTree = "<group>"; };
@@ -106,7 +107,6 @@
 		D525B8CA3040B4A99022C401 /* WorkspaceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceStore.swift; sourceTree = "<group>"; };
 		D85A4F664FEF2F8C968010BA /* MacWorkspaceComposer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacWorkspaceComposer.swift; sourceTree = "<group>"; };
 		D971DC2A29DECA6D00A5D81E /* ConnectionFormComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionFormComponents.swift; sourceTree = "<group>"; };
-		DD5C4A6F380E53553E2EC702 /* MacRenameSessionSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacRenameSessionSheet.swift; sourceTree = "<group>"; };
 		DE7855C2F0CCB40A3658122A /* MacWorkspaceSidebarToolbar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacWorkspaceSidebarToolbar.swift; sourceTree = "<group>"; };
 		E1203AEA599143C5C6B9FAE4 /* WorkspaceShared.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceShared.swift; sourceTree = "<group>"; };
 		E8E410DE47EC2B77914A2902 /* MacConnectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacConnectView.swift; sourceTree = "<group>"; };
@@ -214,7 +214,6 @@
 			isa = PBXGroup;
 			children = (
 				5CD941B8A59FF0169FE55E58 /* MacCustomizeProjectSheet.swift */,
-				DD5C4A6F380E53553E2EC702 /* MacRenameSessionSheet.swift */,
 			);
 			path = Sheets;
 			sourceTree = "<group>";
@@ -239,6 +238,7 @@
 			isa = PBXGroup;
 			children = (
 				78D02275C1E963672C4F9ABD /* MacRenameProjectAlert.swift */,
+				58197A2D4D38F47E3999B1D6 /* MacRenameSessionAlert.swift */,
 			);
 			path = Alerts;
 			sourceTree = "<group>";
@@ -400,7 +400,7 @@
 				381731C83DA3795EDF3A1CE7 /* MacConnectView.swift in Sources */,
 				7E72B2618F42B089C70E19EE /* MacCustomizeProjectSheet.swift in Sources */,
 				56EB24FC1E0D2831139E63DD /* MacRenameProjectAlert.swift in Sources */,
-				8239BAF437341DCA48F921B5 /* MacRenameSessionSheet.swift in Sources */,
+				176DC7B5DF018F4A0A6A594C /* MacRenameSessionAlert.swift in Sources */,
 				1DCBBFA0C07E81C129AADE4B /* MacSettingsArchivedTab.swift in Sources */,
 				D9BCBD998BC4D92A2BE2F817 /* MacSettingsGeneralTab.swift in Sources */,
 				324471C103BDBD0D43301500 /* MacSettingsModelsTab.swift in Sources */,

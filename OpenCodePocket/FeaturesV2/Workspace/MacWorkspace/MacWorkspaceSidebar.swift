@@ -23,6 +23,7 @@
     let onSelectProject: (String) -> Void
     let onTogglePinSession: (String) -> Void
     let onCreateSessionInProject: (String) -> Void
+    let onRequestSessionRename: (String, String) -> Void
     let onRequestProjectRename: (String, String) -> Void
 
     private var pinnedRows: [MacSidebarSessionListRow] {
@@ -41,7 +42,8 @@
             ForEach(pinnedRows) { row in
               MacSidebarSessionRow(
                 row: row,
-                onTogglePinSession: onTogglePinSession
+                onTogglePinSession: onTogglePinSession,
+                onRequestSessionRename: onRequestSessionRename
               )
             }
           }
@@ -57,6 +59,7 @@
               },
               onTogglePinSession: onTogglePinSession,
               onCreateSessionInProject: onCreateSessionInProject,
+              onRequestSessionRename: onRequestSessionRename,
               onRequestProjectRename: onRequestProjectRename
             )
           }
@@ -111,6 +114,7 @@
     let onSelectProject: () -> Void
     let onTogglePinSession: (String) -> Void
     let onCreateSessionInProject: (String) -> Void
+    let onRequestSessionRename: (String, String) -> Void
     let onRequestProjectRename: (String, String) -> Void
 
     private var sessions: [Session] {
@@ -141,7 +145,8 @@
           ForEach(rows) { row in
             MacSidebarSessionRow(
               row: row,
-              onTogglePinSession: onTogglePinSession
+              onTogglePinSession: onTogglePinSession,
+              onRequestSessionRename: onRequestSessionRename
             )
           }
         }
@@ -200,6 +205,7 @@
 
     let row: MacSidebarSessionListRow
     let onTogglePinSession: (String) -> Void
+    let onRequestSessionRename: (String, String) -> Void
 
     private static let elapsedFormatter: DateComponentsFormatter = {
       let formatter = DateComponentsFormatter()
@@ -250,10 +256,7 @@
           }
 
           Button {
-            routerPath.presentedSheet = .renameSession(
-              sessionID: row.session.id,
-              currentTitle: store.sessionTitle(for: row.session.id)
-            )
+            onRequestSessionRename(row.session.id, store.sessionTitle(for: row.session.id))
           } label: {
             Label("Rename", systemImage: "pencil")
           }
@@ -324,6 +327,7 @@
         onSelectProject: { _ in },
         onTogglePinSession: { _ in },
         onCreateSessionInProject: { _ in },
+        onRequestSessionRename: { _, _ in },
         onRequestProjectRename: { _, _ in }
       )
       .environment(MacWorkspaceRouterPath())

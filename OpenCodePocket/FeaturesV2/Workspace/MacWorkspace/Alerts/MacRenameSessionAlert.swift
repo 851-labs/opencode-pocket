@@ -2,19 +2,19 @@
   import Foundation
   import SwiftUI
 
-  struct MacRenameProjectAlert: ViewModifier {
+  struct MacRenameSessionAlert: ViewModifier {
     let isPresented: Binding<Bool>
-    let name: Binding<String>
+    let title: Binding<String>
     let textFieldID: UUID
     let onSave: () -> Void
 
     private var isSaveDisabled: Bool {
-      name.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+      title.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     func body(content: Content) -> some View {
-      content.alert("Rename Project", isPresented: isPresented) {
-        TextField("Project name", text: name)
+      content.alert("Rename Session", isPresented: isPresented) {
+        TextField("Session title", text: title)
           .id(textFieldID)
         Button("Cancel", role: .cancel) {}
         Button("Save") {
@@ -27,16 +27,16 @@
   }
 
   extension View {
-    func macRenameProjectAlert(
+    func macRenameSessionAlert(
       isPresented: Binding<Bool>,
-      name: Binding<String>,
+      title: Binding<String>,
       textFieldID: UUID,
       onSave: @escaping () -> Void
     ) -> some View {
       modifier(
-        MacRenameProjectAlert(
+        MacRenameSessionAlert(
           isPresented: isPresented,
-          name: name,
+          title: title,
           textFieldID: textFieldID,
           onSave: onSave
         )
@@ -44,26 +44,26 @@
     }
   }
 
-  #Preview("Rename Project Alert") {
-    MacRenameProjectAlertPreviewHost()
+  #Preview("Rename Session Alert") {
+    MacRenameSessionAlertPreviewHost()
       .frame(width: 460, height: 300)
   }
 
-  private struct MacRenameProjectAlertPreviewHost: View {
+  private struct MacRenameSessionAlertPreviewHost: View {
     @State private var isPresented = false
-    @State private var name = "Project name"
+    @State private var title = "Session title"
     @State private var textFieldID = UUID()
 
     var body: some View {
       Button("Show Rename Alert") {
-        name = "Project name"
+        title = "Session title"
         textFieldID = UUID()
         isPresented = true
       }
       .buttonStyle(.borderedProminent)
-      .macRenameProjectAlert(
+      .macRenameSessionAlert(
         isPresented: $isPresented,
-        name: $name,
+        title: $title,
         textFieldID: textFieldID
       ) {}
     }
