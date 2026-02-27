@@ -268,7 +268,7 @@
       await store.refreshAgentAndModelOptions()
       await store.refreshSessions()
 
-      if let error = store.latestConnectionError, !error.isEmpty, store.sessions.isEmpty {
+      if let error = store.latestError, !error.isEmpty, store.sessions.isEmpty {
         bootstrapState = .failed(error)
         return
       }

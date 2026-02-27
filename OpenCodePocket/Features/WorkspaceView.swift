@@ -170,12 +170,12 @@ private extension WorkspaceView {
 private extension WorkspaceView {
   func loadWorkspaceBootstrap() async {
     bootstrapState = .loading
-    store.clearConnectionError()
+    store.clearError()
 
     await store.refreshAgentAndModelOptions()
     await store.refreshSessions()
 
-    if let error = store.latestConnectionError, !error.isEmpty, store.sessions.isEmpty {
+    if let error = store.latestError, !error.isEmpty, store.sessions.isEmpty {
       bootstrapState = .failed(error)
       return
     }

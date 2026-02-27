@@ -39,7 +39,7 @@
                   .accessibilityIdentifier("settings.archived.row.\(session.id)")
                 }
               } header: {
-                if let error = store.latestConnectionError, !error.isEmpty {
+                if let error = store.latestError, !error.isEmpty {
                   HStack(alignment: .top, spacing: 8) {
                     Image(systemName: "exclamationmark.triangle.fill")
                       .foregroundStyle(.orange)
@@ -51,7 +51,7 @@
                     Spacer(minLength: 0)
 
                     Button("Dismiss") {
-                      store.clearConnectionError()
+                      store.clearError()
                     }
                     .buttonStyle(.borderless)
                   }
@@ -96,7 +96,7 @@
 
       unarchivingSessionIDs.insert(sessionID)
       Task { @MainActor in
-        store.clearConnectionError()
+        store.clearError()
         await store.unarchiveSession(sessionID: sessionID)
         unarchivingSessionIDs.remove(sessionID)
       }

@@ -309,11 +309,11 @@ final class WorkspaceStore {
     !respondingQuestionRequestIDs.isEmpty
   }
 
-  var latestConnectionError: String? {
+  var latestError: String? {
     workspaceError ?? connection.connectionError
   }
 
-  func clearConnectionError() {
+  func clearError() {
     connection.connectionError = nil
     workspaceError = nil
   }
