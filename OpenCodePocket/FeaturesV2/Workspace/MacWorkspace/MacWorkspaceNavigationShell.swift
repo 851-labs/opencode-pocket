@@ -74,6 +74,9 @@
           onTogglePinSession: togglePinSession,
           onCreateSessionInProject: createSessionInProject
         )
+        .toolbar {
+          MacWorkspaceSidebarToolbar(presentProjectPicker: presentProjectPicker)
+        }
       } detail: {
         MacWorkspaceDetail(
           bootstrapState: bootstrapState,
@@ -146,7 +149,6 @@
           isPanelSelectionEnabled: selectedSessionID != nil,
           isRefreshingSessions: store.isRefreshingSessions,
           isCreatingSession: store.isCreatingSession,
-          addProject: addProject,
           refreshSessions: refreshSessions,
           createSession: createSession
         )
@@ -272,7 +274,7 @@
       }
     }
 
-    private func addProject() {
+    private func presentProjectPicker() {
       routerPath.isProjectPickerPresented = true
     }
 
