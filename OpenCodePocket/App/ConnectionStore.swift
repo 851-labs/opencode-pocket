@@ -22,7 +22,7 @@ final class ConnectionStore {
   var eventConnectionState = "Disconnected"
 
   private(set) var client: OpenCodeClient?
-  weak var workspace: WorkspaceStore?
+  weak var lifecycleCoordinator: ConnectionLifecycleCoordinating?
 
   private let settingsStore: ConnectionSettingsStore
 
@@ -64,6 +64,10 @@ final class ConnectionStore {
       #else
         try await connectUsingRemoteServer()
       #endif
+
+      if isConnected {
+        await lifecycleCoordinator?.connectionDidConnect()
+      }
     } catch {
       isConnected = false
       eventConnectionState = "Disconnected"
@@ -76,12 +80,7 @@ final class ConnectionStore {
   }
 
   func disconnect() {
-    workspace?.stopEventSubscriptionLoop()
-    workspace?.clearSessionRefreshState()
-    workspace?.sessionStatuses.removeAll()
-    workspace?.permissionsBySession.removeAll()
-    workspace?.questionsBySession.removeAll()
-    workspace?.todosBySession.removeAll()
+    lifecycleCoordinator?.connectionDidDisconnect()
     client = nil
     isConnected = false
     eventConnectionState = "Disconnected"
@@ -176,9 +175,6 @@ final class ConnectionStore {
       using: normalizedURL.absoluteString
     )
 
-    await workspace?.refreshAgentAndModelOptions()
-    await workspace?.refreshSessions()
-    workspace?.startEventSubscriptionLoop()
   }
 
   #if os(macOS)
@@ -210,9 +206,6 @@ final class ConnectionStore {
         )
       }
 
-      await workspace?.refreshAgentAndModelOptions()
-      await workspace?.refreshSessions()
-      workspace?.startEventSubscriptionLoop()
     }
   #endif
 

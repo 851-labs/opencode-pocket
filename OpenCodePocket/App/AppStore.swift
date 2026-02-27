@@ -12,6 +12,36 @@ struct StoreGraph {
 }
 
 @MainActor
+protocol ConnectionLifecycleCoordinating: AnyObject {
+  func connectionDidConnect() async
+  func connectionDidDisconnect()
+}
+
+@MainActor
+final class StoreCoordinator: ConnectionLifecycleCoordinating {
+  private let workspace: WorkspaceStore
+
+  init(workspace: WorkspaceStore) {
+    self.workspace = workspace
+  }
+
+  func connectionDidConnect() async {
+    await workspace.refreshAgentAndModelOptions()
+    await workspace.refreshSessions()
+    workspace.startEventSubscriptionLoop()
+  }
+
+  func connectionDidDisconnect() {
+    workspace.stopEventSubscriptionLoop()
+    workspace.clearSessionRefreshState()
+    workspace.sessionStatuses.removeAll()
+    workspace.permissionsBySession.removeAll()
+    workspace.questionsBySession.removeAll()
+    workspace.todosBySession.removeAll()
+  }
+}
+
+@MainActor
 enum StoreGraphFactory {
   static func make(
     settingsStore: ConnectionSettingsStore = ConnectionSettingsStore(),
@@ -25,7 +55,6 @@ enum StoreGraphFactory {
       settingsStore: workspaceSettingsStore,
       allowsPersistence: allowsPersistence
     )
-    connection.workspace = workspace
     configureWorkspace?(workspace)
     return StoreGraph(connection: connection, workspace: workspace)
   }
@@ -35,6 +64,7 @@ enum StoreGraphFactory {
 final class AppStore {
   let connection: ConnectionStore
   let workspace: WorkspaceStore
+  private let coordinator: StoreCoordinator
 
   #if os(macOS)
     private var terminationObserver: NSObjectProtocol?
@@ -47,6 +77,8 @@ final class AppStore {
 
     self.connection = connection
     self.workspace = workspace
+    coordinator = StoreCoordinator(workspace: workspace)
+    connection.lifecycleCoordinator = coordinator
 
     #if os(macOS)
       terminationObserver = NotificationCenter.default.addObserver(
