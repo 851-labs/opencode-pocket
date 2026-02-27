@@ -111,13 +111,13 @@
           MacCustomizeProjectSheet(projectID: projectID, currentName: currentName, currentSymbol: currentSymbol)
         }
       }
-      .macRenameSessionAlert(
+      .renameSessionAlert(
         isPresented: isRenameSessionAlertPresented,
         title: $renameSessionTitleDraft,
         textFieldID: renameSessionTextFieldID,
         onSave: savePendingSessionRename
       )
-      .macRenameProjectAlert(
+      .renameProjectAlert(
         isPresented: isRenameProjectAlertPresented,
         name: $renameProjectNameDraft,
         textFieldID: renameProjectTextFieldID,
