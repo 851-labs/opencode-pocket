@@ -3,6 +3,26 @@ import Observation
 import OpenCodeModels
 import OpenCodeNetworking
 
+struct WorkspaceSessionRuntimeState {
+  var messages: [MessageEnvelope]?
+  var messageLoadCount = 0
+  var diffs: [FileDiff]?
+  var status: SessionStatus?
+  var permissions: [PermissionRequest] = []
+  var questions: [QuestionRequest] = []
+  var todos: [TodoItem] = []
+
+  var isEmpty: Bool {
+    messages == nil
+      && messageLoadCount == 0
+      && diffs == nil
+      && status == nil
+      && permissions.isEmpty
+      && questions.isEmpty
+      && todos.isEmpty
+  }
+}
+
 @MainActor
 @Observable
 final class WorkspaceStore {
@@ -12,13 +32,7 @@ final class WorkspaceStore {
   var sessions: [Session] = []
   var pinnedSessionIDs: Set<String> = []
   var selectedSessionID: String?
-  var messagesBySession: [String: [MessageEnvelope]] = [:]
-  var messageLoadCountsBySession: [String: Int] = [:]
-  var diffsBySession: [String: [FileDiff]] = [:]
-  var sessionStatuses: [String: SessionStatus] = [:]
-  var permissionsBySession: [String: [PermissionRequest]] = [:]
-  var questionsBySession: [String: [QuestionRequest]] = [:]
-  var todosBySession: [String: [TodoItem]] = [:]
+  var sessionStateByID: [String: WorkspaceSessionRuntimeState] = [:]
 
   var availableAgents: [AgentDescriptor] = []
   var availableModels: [ModelOption] = []
@@ -109,6 +123,111 @@ final class WorkspaceStore {
 
     if let selectedProjectID, let selectedProject = projects.first(where: { $0.id == selectedProjectID }) {
       connection.directory = selectedProject.directory
+    }
+  }
+
+  var messagesBySession: [String: [MessageEnvelope]] {
+    get {
+      sessionStateByID.reduce(into: [:]) { result, entry in
+        if let messages = entry.value.messages {
+          result[entry.key] = messages
+        }
+      }
+    }
+    set {
+      updateSessionStateField(with: newValue) { state, messages in
+        state.messages = messages
+      }
+    }
+  }
+
+  var messageLoadCountsBySession: [String: Int] {
+    get {
+      sessionStateByID.reduce(into: [:]) { result, entry in
+        if entry.value.messageLoadCount > 0 {
+          result[entry.key] = entry.value.messageLoadCount
+        }
+      }
+    }
+    set {
+      updateSessionStateField(with: newValue) { state, count in
+        state.messageLoadCount = count ?? 0
+      }
+    }
+  }
+
+  var diffsBySession: [String: [FileDiff]] {
+    get {
+      sessionStateByID.reduce(into: [:]) { result, entry in
+        if let diffs = entry.value.diffs {
+          result[entry.key] = diffs
+        }
+      }
+    }
+    set {
+      updateSessionStateField(with: newValue) { state, diffs in
+        state.diffs = diffs
+      }
+    }
+  }
+
+  var sessionStatuses: [String: SessionStatus] {
+    get {
+      sessionStateByID.reduce(into: [:]) { result, entry in
+        if let status = entry.value.status {
+          result[entry.key] = status
+        }
+      }
+    }
+    set {
+      updateSessionStateField(with: newValue) { state, status in
+        state.status = status
+      }
+    }
+  }
+
+  var permissionsBySession: [String: [PermissionRequest]] {
+    get {
+      sessionStateByID.reduce(into: [:]) { result, entry in
+        if !entry.value.permissions.isEmpty {
+          result[entry.key] = entry.value.permissions
+        }
+      }
+    }
+    set {
+      updateSessionStateField(with: newValue) { state, permissions in
+        state.permissions = permissions ?? []
+      }
+    }
+  }
+
+  var questionsBySession: [String: [QuestionRequest]] {
+    get {
+      sessionStateByID.reduce(into: [:]) { result, entry in
+        if !entry.value.questions.isEmpty {
+          result[entry.key] = entry.value.questions
+        }
+      }
+    }
+    set {
+      updateSessionStateField(with: newValue) { state, questions in
+        state.questions = questions ?? []
+      }
+    }
+  }
+
+  var todosBySession: [String: [TodoItem]] {
+    get {
+      sessionStateByID.reduce(into: [:]) { result, entry in
+        if !entry.value.todos.isEmpty {
+          result[entry.key] = entry.value.todos
+        }
+      }
+    }
+    set {
+      updateSessionStateField(with: newValue) { state, todos in
+        state.todos = todos ?? []
+      }
     }
   }
 
@@ -1007,6 +1126,24 @@ final class WorkspaceStore {
     guard selectedModelVariants.contains(selectedModelVariant) else {
       self.selectedModelVariant = nil
       return
+    }
+  }
+
+  private func updateSessionStateField<Value>(
+    with valuesBySession: [String: Value],
+    apply: (inout WorkspaceSessionRuntimeState, Value?) -> Void
+  ) {
+    let sessionIDs = Set(sessionStateByID.keys).union(valuesBySession.keys)
+
+    for sessionID in sessionIDs {
+      var state = sessionStateByID[sessionID] ?? WorkspaceSessionRuntimeState()
+      apply(&state, valuesBySession[sessionID])
+
+      if state.isEmpty {
+        sessionStateByID.removeValue(forKey: sessionID)
+      } else {
+        sessionStateByID[sessionID] = state
+      }
     }
   }
 
