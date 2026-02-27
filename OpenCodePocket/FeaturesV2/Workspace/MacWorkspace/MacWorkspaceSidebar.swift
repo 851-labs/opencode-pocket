@@ -166,7 +166,7 @@
           Button {
             onRequestProjectRename(project.id, project.name)
           } label: {
-            Label("Rename", systemImage: "pencil")
+            Label("Rename Project", systemImage: "pencil")
           }
 
           Button {
@@ -176,13 +176,13 @@
               currentSymbol: project.symbol
             )
           } label: {
-            Label("Customize", systemImage: "paintbrush")
+            Label("Customize Project", systemImage: "paintbrush")
           }
 
           Button(role: .destructive) {
             routerPath.pendingRemoveProjectID = project.id
           } label: {
-            Label("Remove", systemImage: "trash")
+            Label("Remove Project", systemImage: "trash")
           }
         }
       }
@@ -245,32 +245,32 @@
             Button {
               onTogglePinSession(row.session.id)
             } label: {
-              Label("Unpin", systemImage: "pin.slash")
+              Label("Unpin Session", systemImage: "pin.slash")
             }
           } else {
             Button {
               onTogglePinSession(row.session.id)
             } label: {
-              Label("Pin", systemImage: "pin")
+              Label("Pin Session", systemImage: "pin")
             }
           }
 
           Button {
             onRequestSessionRename(row.session.id, store.sessionTitle(for: row.session.id))
           } label: {
-            Label("Rename", systemImage: "pencil")
+            Label("Rename Session", systemImage: "pencil")
           }
 
           Button {
             routerPath.pendingArchiveSessionID = row.session.id
           } label: {
-            Label("Archive", systemImage: "archivebox")
+            Label("Archive Session", systemImage: "archivebox")
           }
 
           Button(role: .destructive) {
             routerPath.pendingDeleteSessionID = row.session.id
           } label: {
-            Label("Delete", systemImage: "trash")
+            Label("Delete Session", systemImage: "trash")
           }
         }
         .accessibilityIdentifier("sidebar.session.\(row.session.id)")
