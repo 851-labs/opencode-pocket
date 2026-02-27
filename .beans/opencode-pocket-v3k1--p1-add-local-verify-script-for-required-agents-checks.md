@@ -1,7 +1,7 @@
 ---
 # opencode-pocket-v3k1
 title: P1 add local verify script for required AGENTS checks
-status: cancelled
+status: scrapped
 type: task
 priority: normal
 tags:
@@ -10,7 +10,7 @@ tags:
     - ci
     - tooling
 created_at: 2026-02-22T02:17:54Z
-updated_at: 2026-02-22T02:34:17Z
+updated_at: 2026-02-27T05:23:03Z
 ---
 
 AGENTS requires consistent validation (macOS build, iOS tests, and SDK tests when SDK changes), but the repo has no single local command that codifies this contract.

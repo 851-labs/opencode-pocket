@@ -1,7 +1,7 @@
 ---
 # opencode-pocket-c3xf
 title: P2 add XcodeGen drift check to enforce project file rules
-status: cancelled
+status: scrapped
 type: task
 priority: normal
 tags:
@@ -10,7 +10,7 @@ tags:
     - ci
     - workflow
 created_at: 2026-02-22T02:17:54Z
-updated_at: 2026-02-22T02:34:17Z
+updated_at: 2026-02-27T05:23:14Z
 ---
 
 AGENTS asks contributors to prefer `project.yml` edits over manual `.pbxproj` changes; this is not currently enforced.

@@ -1,7 +1,7 @@
 ---
 # opencode-pocket-n2mv
 title: P2 add OpenCode parity checklist and regression coverage for core UI
-status: cancelled
+status: scrapped
 type: task
 priority: normal
 tags:
@@ -10,7 +10,7 @@ tags:
     - testing
     - swiftui
 created_at: 2026-02-22T02:17:54Z
-updated_at: 2026-02-22T02:34:17Z
+updated_at: 2026-02-27T05:23:11Z
 ---
 
 AGENTS expects desktop parity for transcript/composer/tool rendering, but parity checks are currently implicit and easy to miss during future refactors.

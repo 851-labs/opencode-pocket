@@ -1,7 +1,7 @@
 ---
 # opencode-pocket-d8m4
 title: P1 add CI workflow for AGENTS definition-of-done checks
-status: cancelled
+status: scrapped
 type: task
 priority: normal
 tags:
@@ -10,7 +10,7 @@ tags:
     - testing
     - automation
 created_at: 2026-02-22T02:17:54Z
-updated_at: 2026-02-22T02:34:17Z
+updated_at: 2026-02-27T05:22:58Z
 ---
 
 AGENTS defines required validation, but the repository currently has no GitHub Actions workflow to enforce those checks on pull requests.
