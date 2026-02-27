@@ -160,8 +160,8 @@ final class WorkspaceStore {
   var pinnedSessions: [Session] {
     sessions
       .filter { pinnedSessionIDs.contains($0.id) }
-      .filter { ($0.time.archived ?? 0) <= 0 }
-      .sorted { $0.sortTimestamp > $1.sortTimestamp }
+      .filter(isVisibleRootSession(_:))
+      .sorted(by: isSessionNewer(_:than:))
   }
 
   func visibleSessions(for projectID: String) -> [Session] {
@@ -171,8 +171,8 @@ final class WorkspaceStore {
 
     return sessions
       .filter { $0.directory == project.directory }
-      .filter { ($0.time.archived ?? 0) <= 0 }
-      .sorted { $0.sortTimestamp > $1.sortTimestamp }
+      .filter(isVisibleRootSession(_:))
+      .sorted(by: isSessionNewer(_:than:))
   }
 
   func projectLabel(for directory: String) -> String {
@@ -411,14 +411,14 @@ final class WorkspaceStore {
     for project in projects {
       do {
         var projectSessions = try await client.listSessions(directory: project.directory)
-        projectSessions.sort { $0.sortTimestamp > $1.sortTimestamp }
+        projectSessions.sort(by: isSessionNewer(_:than:))
         nextSessions.append(contentsOf: projectSessions)
       } catch {
         connection.connectionError = error.localizedDescription
       }
     }
 
-    nextSessions.sort { $0.sortTimestamp > $1.sortTimestamp }
+    nextSessions.sort(by: isSessionNewer(_:than:))
 
     sessions = nextSessions
     let activeSessionIDs = Set(nextSessions.filter { ($0.time.archived ?? 0) <= 0 }.map(\.id))
@@ -958,6 +958,21 @@ final class WorkspaceStore {
     }
 
     return connection.resolvedDirectory
+  }
+
+  private func isVisibleRootSession(_ session: Session) -> Bool {
+    session.parentID == nil && (session.time.archived ?? 0) <= 0
+  }
+
+  private func isSessionNewer(_ lhs: Session, than rhs: Session) -> Bool {
+    let lhsUpdated = lhs.time.updated ?? lhs.time.created ?? 0
+    let rhsUpdated = rhs.time.updated ?? rhs.time.created ?? 0
+
+    if lhsUpdated != rhsUpdated {
+      return lhsUpdated > rhsUpdated
+    }
+
+    return lhs.id > rhs.id
   }
 
   private func beginLoadingMessages(for sessionID: String) {
