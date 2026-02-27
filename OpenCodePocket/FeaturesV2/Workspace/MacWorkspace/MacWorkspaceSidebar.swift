@@ -22,6 +22,7 @@
     @Binding var expandedProjectIDs: Set<String>
     let onSelectProject: (String) -> Void
     let onTogglePinSession: (String) -> Void
+    let onCreateSessionInProject: (String) -> Void
 
     private var pinnedRows: [MacSidebarSessionListRow] {
       store.pinnedSessions.map {
@@ -53,7 +54,8 @@
               onSelectProject: {
                 onSelectProject(project.id)
               },
-              onTogglePinSession: onTogglePinSession
+              onTogglePinSession: onTogglePinSession,
+              onCreateSessionInProject: onCreateSessionInProject
             )
           }
         } header: {
@@ -112,12 +114,14 @@
   }
 
   private struct MacSidebarProjectSection: View {
+    @Environment(MacWorkspaceRouterPath.self) private var routerPath
     @Environment(WorkspaceStore.self) private var store
 
     let project: SavedProject
     @Binding var isExpanded: Bool
     let onSelectProject: () -> Void
     let onTogglePinSession: (String) -> Void
+    let onCreateSessionInProject: (String) -> Void
 
     private var sessions: [Session] {
       store.visibleSessions(for: project.id)
@@ -153,6 +157,25 @@
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .buttonStyle(.plain)
+        .contextMenu {
+          Button {
+            onCreateSessionInProject(project.id)
+          } label: {
+            Label("New Session", systemImage: "plus")
+          }
+
+          Button {
+            routerPath.presentedSheet = .renameProject(projectID: project.id, currentName: project.name)
+          } label: {
+            Label("Rename", systemImage: "pencil")
+          }
+
+          Button(role: .destructive) {
+            routerPath.pendingRemoveProjectID = project.id
+          } label: {
+            Label("Remove", systemImage: "trash")
+          }
+        }
       }
       .accessibilityIdentifier("sidebar.project.\(project.id)")
     }
@@ -285,7 +308,8 @@
         selectedSession: $selectedSession,
         expandedProjectIDs: $expandedProjectIDs,
         onSelectProject: { _ in },
-        onTogglePinSession: { _ in }
+        onTogglePinSession: { _ in },
+        onCreateSessionInProject: { _ in }
       )
       .environment(MacWorkspaceRouterPath())
     }

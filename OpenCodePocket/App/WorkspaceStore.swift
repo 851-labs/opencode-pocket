@@ -13,6 +13,7 @@ final class WorkspaceStore {
   var pinnedSessionIDs: Set<String> = []
   var selectedSessionID: String?
   var messagesBySession: [String: [MessageEnvelope]] = [:]
+  var messageLoadCountsBySession: [String: Int] = [:]
   var diffsBySession: [String: [FileDiff]] = [:]
   var sessionStatuses: [String: SessionStatus] = [:]
   var permissionsBySession: [String: [PermissionRequest]] = [:]
@@ -317,6 +318,81 @@ final class WorkspaceStore {
     return true
   }
 
+  func renameProject(projectID: String, name: String) {
+    guard let normalizedName = name.trimmedNonEmpty else {
+      return
+    }
+
+    guard let projectIndex = projects.firstIndex(where: { $0.id == projectID }) else {
+      return
+    }
+
+    guard projects[projectIndex].name != normalizedName else {
+      return
+    }
+
+    projects[projectIndex].name = normalizedName
+    projects.sort { lhs, rhs in
+      lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+    }
+    persistWorkspaceSettings()
+  }
+
+  @discardableResult
+  func removeProject(projectID: String) -> Bool {
+    guard let removedProject = projects.first(where: { $0.id == projectID }) else {
+      return false
+    }
+
+    let removedDirectory = removedProject.directory
+    projects.removeAll { $0.id == projectID }
+
+    let removedSessionIDs = Set(sessions.filter { $0.directory == removedDirectory }.map(\.id))
+    if !removedSessionIDs.isEmpty {
+      sessions.removeAll { removedSessionIDs.contains($0.id) }
+      pinnedSessionIDs.subtract(removedSessionIDs)
+      messagesBySession = messagesBySession.filter { !removedSessionIDs.contains($0.key) }
+      messageLoadCountsBySession = messageLoadCountsBySession.filter { !removedSessionIDs.contains($0.key) }
+      diffsBySession = diffsBySession.filter { !removedSessionIDs.contains($0.key) }
+      sessionStatuses = sessionStatuses.filter { !removedSessionIDs.contains($0.key) }
+      permissionsBySession = permissionsBySession.filter { !removedSessionIDs.contains($0.key) }
+      questionsBySession = questionsBySession.filter { !removedSessionIDs.contains($0.key) }
+      todosBySession = todosBySession.filter { !removedSessionIDs.contains($0.key) }
+      sessionRefreshNeedsDiff.subtract(removedSessionIDs)
+
+      for sessionID in removedSessionIDs {
+        sessionRefreshTasks[sessionID]?.cancel()
+        sessionRefreshTasks.removeValue(forKey: sessionID)
+      }
+    }
+
+    if selectedProjectID == projectID {
+      selectedProjectID = nil
+
+      if let fallbackProjectID = projects.first?.id {
+        selectProject(fallbackProjectID)
+      } else {
+        selectedSessionID = nil
+        connection.directory = ""
+        persistWorkspaceSettings()
+      }
+
+      return true
+    }
+
+    if let selectedSessionID, removedSessionIDs.contains(selectedSessionID) {
+      self.selectedSessionID = visibleSessions.first?.id
+      if let selectedSessionID = self.selectedSessionID {
+        Task {
+          await selectSession(selectedSessionID)
+        }
+      }
+    }
+
+    persistWorkspaceSettings()
+    return true
+  }
+
   func disconnect() {
     connection.disconnect()
   }
@@ -354,6 +430,7 @@ final class WorkspaceStore {
 
     let validSessionIDs = Set(nextSessions.map(\.id))
     messagesBySession = messagesBySession.filter { validSessionIDs.contains($0.key) }
+    messageLoadCountsBySession = messageLoadCountsBySession.filter { validSessionIDs.contains($0.key) }
     diffsBySession = diffsBySession.filter { validSessionIDs.contains($0.key) }
     sessionStatuses = sessionStatuses.filter { validSessionIDs.contains($0.key) }
     permissionsBySession = permissionsBySession.filter { validSessionIDs.contains($0.key) }
@@ -396,6 +473,18 @@ final class WorkspaceStore {
     }
   }
 
+  func createSession(inProjectID projectID: String, title: String? = nil) async {
+    guard projects.contains(where: { $0.id == projectID }) else {
+      return
+    }
+
+    if selectedProjectID != projectID {
+      selectProject(projectID)
+    }
+
+    await createSession(title: title)
+  }
+
   func selectSession(_ sessionID: String?) async {
     guard let sessionID else {
       selectedSessionID = nil
@@ -431,6 +520,11 @@ final class WorkspaceStore {
   func loadMessages(sessionID: String, limit: Int? = nil) async {
     guard let client = connection.client else { return }
 
+    beginLoadingMessages(for: sessionID)
+    defer {
+      endLoadingMessages(for: sessionID)
+    }
+
     do {
       let messages = try await client.listMessages(
         sessionID: sessionID,
@@ -441,6 +535,10 @@ final class WorkspaceStore {
     } catch {
       connection.connectionError = error.localizedDescription
     }
+  }
+
+  func isLoadingMessages(for sessionID: String) -> Bool {
+    (messageLoadCountsBySession[sessionID] ?? 0) > 0
   }
 
   func loadDiffs(sessionID: String) async {
@@ -860,6 +958,22 @@ final class WorkspaceStore {
     }
 
     return connection.resolvedDirectory
+  }
+
+  private func beginLoadingMessages(for sessionID: String) {
+    messageLoadCountsBySession[sessionID, default: 0] += 1
+  }
+
+  private func endLoadingMessages(for sessionID: String) {
+    guard let currentCount = messageLoadCountsBySession[sessionID] else {
+      return
+    }
+
+    if currentCount <= 1 {
+      messageLoadCountsBySession.removeValue(forKey: sessionID)
+    } else {
+      messageLoadCountsBySession[sessionID] = currentCount - 1
+    }
   }
 
   private func normalizedProjectDirectory(_ raw: String) -> String? {

@@ -12,11 +12,14 @@
 
   enum MacWorkspaceSheetDestination: Identifiable {
     case renameSession(sessionID: String, currentTitle: String)
+    case renameProject(projectID: String, currentName: String)
 
     var id: String {
       switch self {
       case let .renameSession(sessionID, _):
         return "rename-\(sessionID)"
+      case let .renameProject(projectID, _):
+        return "rename-project-\(projectID)"
       }
     }
   }
@@ -28,6 +31,7 @@
     var isProjectPickerPresented = false
     var pendingArchiveSessionID: String?
     var pendingDeleteSessionID: String?
+    var pendingRemoveProjectID: String?
   }
 
   enum MacWorkspaceBootstrapState {
@@ -64,7 +68,8 @@
           selectedSession: selectedSessionBinding,
           expandedProjectIDs: $expandedProjectIDs,
           onSelectProject: selectProjectFromSidebar,
-          onTogglePinSession: togglePinSession
+          onTogglePinSession: togglePinSession,
+          onCreateSessionInProject: createSessionInProject
         )
       } detail: {
         MacWorkspaceDetail(
@@ -96,6 +101,8 @@
         switch sheet {
         case let .renameSession(sessionID, currentTitle):
           MacRenameSessionSheet(sessionID: sessionID, currentTitle: currentTitle)
+        case let .renameProject(projectID, currentName):
+          MacRenameProjectSheet(projectID: projectID, currentName: currentName)
         }
       }
       .fileImporter(
@@ -119,6 +126,14 @@
         Button("Cancel", role: .cancel) {}
       } message: {
         Text("This permanently removes the selected chat session.")
+      }
+      .confirmationDialog("Remove Project?", isPresented: isRemoveProjectConfirmationDialogPresented) {
+        Button("Remove", role: .destructive) {
+          removePendingProject()
+        }
+        Button("Cancel", role: .cancel) {}
+      } message: {
+        Text("This removes the project from the sidebar only. Files and sessions on disk are not deleted.")
       }
       .toolbar {
         MacWorkspaceToolbar(
@@ -190,6 +205,17 @@
       )
     }
 
+    private var isRemoveProjectConfirmationDialogPresented: Binding<Bool> {
+      Binding(
+        get: { routerPath.pendingRemoveProjectID != nil },
+        set: { isPresented in
+          if !isPresented {
+            routerPath.pendingRemoveProjectID = nil
+          }
+        }
+      )
+    }
+
     private func selectProjectFromSidebar(_ projectID: String) {
       store.selectProject(projectID)
       expandedProjectIDs.insert(projectID)
@@ -234,6 +260,12 @@
       }
     }
 
+    private func createSessionInProject(_ projectID: String) {
+      Task {
+        await store.createSession(inProjectID: projectID)
+      }
+    }
+
     private func retryBootstrap() {
       Task {
         await loadWorkspaceBootstrap()
@@ -275,6 +307,12 @@
       Task {
         await store.deleteSession(sessionID: sessionID)
       }
+    }
+
+    private func removePendingProject() {
+      guard let projectID = routerPath.pendingRemoveProjectID else { return }
+      routerPath.pendingRemoveProjectID = nil
+      _ = store.removeProject(projectID: projectID)
     }
   }
 

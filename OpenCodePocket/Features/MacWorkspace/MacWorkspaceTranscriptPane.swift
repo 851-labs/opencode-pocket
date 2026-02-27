@@ -4,6 +4,7 @@
 
   struct MacTranscriptPane: View {
     let messages: [MessageEnvelope]
+    let isInitialLoadInProgress: Bool
     let sessionStatus: SessionStatus
     let showReasoningSummaries: Bool
     let expandShellToolParts: Bool
@@ -30,7 +31,14 @@
     }
 
     var body: some View {
-      if turns.isEmpty {
+      if isInitialLoadInProgress {
+        ContentUnavailableView {
+          ProgressView()
+        } description: {
+          Text("Loading messages...")
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+      } else if turns.isEmpty {
         ContentUnavailableView(
           "No Messages Yet",
           systemImage: "text.bubble",

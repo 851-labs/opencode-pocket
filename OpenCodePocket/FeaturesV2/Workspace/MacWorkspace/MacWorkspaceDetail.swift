@@ -45,13 +45,22 @@
       max(0, composerHeight + 8)
     }
 
+    private var selectedMessages: [MessageEnvelope]? {
+      store.messagesBySession[selectedSessionID]
+    }
+
+    private var isInitialTranscriptLoadInProgress: Bool {
+      selectedMessages == nil && store.isLoadingMessages(for: selectedSessionID)
+    }
+
     var body: some View {
       ZStack(alignment: .bottom) {
         Group {
           switch selectedPanel {
           case .transcript:
             MacTranscriptPane(
-              messages: store.messagesBySession[selectedSessionID] ?? [],
+              messages: selectedMessages ?? [],
+              isInitialLoadInProgress: isInitialTranscriptLoadInProgress,
               sessionStatus: store.status(for: selectedSessionID),
               showReasoningSummaries: store.showReasoningSummaries,
               expandShellToolParts: store.expandShellToolParts,
