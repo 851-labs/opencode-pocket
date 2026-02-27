@@ -80,21 +80,8 @@
     }
 
     private var threadsHeader: some View {
-      HStack(spacing: 8) {
-        Text("Threads")
-
-        Spacer(minLength: 0)
-
-        Button {
-          routerPath.isProjectPickerPresented = true
-        } label: {
-          Image(systemName: "folder.badge.plus")
-        }
-        .buttonStyle(.borderless)
-        .help("Add Project")
-        .accessibilityIdentifier("projects.add")
-      }
-      .textCase(nil)
+      Text("Threads")
+        .textCase(nil)
     }
 
     private func projectExpansionBinding(for projectID: String) -> Binding<Bool> {

@@ -6,6 +6,7 @@
     let isPanelSelectionEnabled: Bool
     let isRefreshingSessions: Bool
     let isCreatingSession: Bool
+    let addProject: () -> Void
     let refreshSessions: () -> Void
     let createSession: () -> Void
 
@@ -43,6 +44,11 @@
         }
         .disabled(isCreatingSession)
         .accessibilityIdentifier("sessions.create")
+
+        Button(action: addProject) {
+          Image(systemName: "folder.badge.plus")
+        }
+        .accessibilityIdentifier("projects.add")
       }
     }
   }

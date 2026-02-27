@@ -146,6 +146,7 @@
           isPanelSelectionEnabled: selectedSessionID != nil,
           isRefreshingSessions: store.isRefreshingSessions,
           isCreatingSession: store.isCreatingSession,
+          addProject: addProject,
           refreshSessions: refreshSessions,
           createSession: createSession
         )
@@ -269,6 +270,10 @@
       Task {
         await store.createSession(inProjectID: projectID)
       }
+    }
+
+    private func addProject() {
+      routerPath.isProjectPickerPresented = true
     }
 
     private func retryBootstrap() {
