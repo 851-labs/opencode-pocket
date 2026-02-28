@@ -44,26 +44,20 @@ extension View {
 }
 
 #Preview("Rename Session Alert") {
-  RenameSessionAlertPreviewHost()
-    .frame(width: 460, height: 300)
-}
+  @Previewable @State var isPresented = false
+  @Previewable @State var title = "Session title"
+  @Previewable @State var textFieldID = UUID()
 
-private struct RenameSessionAlertPreviewHost: View {
-  @State private var isPresented = false
-  @State private var title = "Session title"
-  @State private var textFieldID = UUID()
-
-  var body: some View {
-    Button("Show Rename Alert") {
-      title = "Session title"
-      textFieldID = UUID()
-      isPresented = true
-    }
-    .buttonStyle(.borderedProminent)
-    .renameSessionAlert(
-      isPresented: $isPresented,
-      title: $title,
-      textFieldID: textFieldID
-    ) {}
+  Button("Show Rename Alert") {
+    title = "Session title"
+    textFieldID = UUID()
+    isPresented = true
   }
+  .buttonStyle(.borderedProminent)
+  .renameSessionAlert(
+    isPresented: $isPresented,
+    title: $title,
+    textFieldID: textFieldID
+  ) {}
+  .frame(width: 460, height: 300)
 }

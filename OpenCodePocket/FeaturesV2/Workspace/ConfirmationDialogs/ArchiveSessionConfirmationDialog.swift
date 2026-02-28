@@ -31,18 +31,12 @@ extension View {
 }
 
 #Preview("Archive Session Dialog") {
-  ArchiveSessionConfirmationDialogPreviewHost()
-    .frame(width: 460, height: 300)
-}
+  @Previewable @State var isPresented = false
 
-private struct ArchiveSessionConfirmationDialogPreviewHost: View {
-  @State private var isPresented = false
-
-  var body: some View {
-    Button("Show Archive Dialog") {
-      isPresented = true
-    }
-    .buttonStyle(.borderedProminent)
-    .archiveSessionConfirmationDialog(isPresented: $isPresented) {}
+  Button("Show Archive Dialog") {
+    isPresented = true
   }
+  .buttonStyle(.borderedProminent)
+  .archiveSessionConfirmationDialog(isPresented: $isPresented) {}
+  .frame(width: 460, height: 300)
 }

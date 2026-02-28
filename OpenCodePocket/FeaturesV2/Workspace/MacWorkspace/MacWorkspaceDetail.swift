@@ -149,20 +149,24 @@
   }
 
   #Preview("Detail - Loading") {
+    @Previewable @State var selectedPanel: MacWorkspacePanel = .transcript
+
     MacWorkspaceDetail(
       bootstrapState: .loading,
       selectedSessionID: nil,
-      selectedPanel: .constant(.transcript),
+      selectedPanel: $selectedPanel,
       retry: {}
     )
     .frame(minWidth: 900, minHeight: 700)
   }
 
   #Preview("Detail - Error") {
+    @Previewable @State var selectedPanel: MacWorkspacePanel = .transcript
+
     MacWorkspaceDetail(
       bootstrapState: .failed("Connection timed out"),
       selectedSessionID: nil,
-      selectedPanel: .constant(.transcript),
+      selectedPanel: $selectedPanel,
       retry: {}
     )
     .frame(minWidth: 900, minHeight: 700)

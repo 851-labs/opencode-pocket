@@ -31,18 +31,12 @@ extension View {
 }
 
 #Preview("Remove Project Dialog") {
-  RemoveProjectConfirmationDialogPreviewHost()
-    .frame(width: 460, height: 300)
-}
+  @Previewable @State var isPresented = false
 
-private struct RemoveProjectConfirmationDialogPreviewHost: View {
-  @State private var isPresented = false
-
-  var body: some View {
-    Button("Show Remove Dialog") {
-      isPresented = true
-    }
-    .buttonStyle(.borderedProminent)
-    .removeProjectConfirmationDialog(isPresented: $isPresented) {}
+  Button("Show Remove Dialog") {
+    isPresented = true
   }
+  .buttonStyle(.borderedProminent)
+  .removeProjectConfirmationDialog(isPresented: $isPresented) {}
+  .frame(width: 460, height: 300)
 }

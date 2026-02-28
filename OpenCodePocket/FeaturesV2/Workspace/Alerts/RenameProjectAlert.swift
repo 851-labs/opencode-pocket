@@ -44,26 +44,20 @@ extension View {
 }
 
 #Preview("Rename Project Alert") {
-  RenameProjectAlertPreviewHost()
-    .frame(width: 460, height: 300)
-}
+  @Previewable @State var isPresented = false
+  @Previewable @State var name = "Project name"
+  @Previewable @State var textFieldID = UUID()
 
-private struct RenameProjectAlertPreviewHost: View {
-  @State private var isPresented = false
-  @State private var name = "Project name"
-  @State private var textFieldID = UUID()
-
-  var body: some View {
-    Button("Show Rename Alert") {
-      name = "Project name"
-      textFieldID = UUID()
-      isPresented = true
-    }
-    .buttonStyle(.borderedProminent)
-    .renameProjectAlert(
-      isPresented: $isPresented,
-      name: $name,
-      textFieldID: textFieldID
-    ) {}
+  Button("Show Rename Alert") {
+    name = "Project name"
+    textFieldID = UUID()
+    isPresented = true
   }
+  .buttonStyle(.borderedProminent)
+  .renameProjectAlert(
+    isPresented: $isPresented,
+    name: $name,
+    textFieldID: textFieldID
+  ) {}
+  .frame(width: 460, height: 300)
 }

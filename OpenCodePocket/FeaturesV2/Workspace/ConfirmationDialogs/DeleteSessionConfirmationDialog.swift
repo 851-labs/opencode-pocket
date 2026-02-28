@@ -31,18 +31,12 @@ extension View {
 }
 
 #Preview("Delete Session Dialog") {
-  DeleteSessionConfirmationDialogPreviewHost()
-    .frame(width: 460, height: 300)
-}
+  @Previewable @State var isPresented = false
 
-private struct DeleteSessionConfirmationDialogPreviewHost: View {
-  @State private var isPresented = false
-
-  var body: some View {
-    Button("Show Delete Dialog") {
-      isPresented = true
-    }
-    .buttonStyle(.borderedProminent)
-    .deleteSessionConfirmationDialog(isPresented: $isPresented) {}
+  Button("Show Delete Dialog") {
+    isPresented = true
   }
+  .buttonStyle(.borderedProminent)
+  .deleteSessionConfirmationDialog(isPresented: $isPresented) {}
+  .frame(width: 460, height: 300)
 }
