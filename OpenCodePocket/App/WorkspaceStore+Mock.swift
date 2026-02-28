@@ -20,7 +20,7 @@ extension WorkspaceStore {
       parentID: nil,
       title: "Preview Workspace Session",
       version: "1",
-      time: SessionTime(created: now - 50000, updated: now - 5000, archived: nil),
+      time: SessionTimestamps(created: now - 50000, updated: now - 5000, archived: nil),
       summary: nil,
       share: nil,
       revert: nil
@@ -34,7 +34,7 @@ extension WorkspaceStore {
       parentID: nil,
       title: "Preview Planning Session",
       version: "1",
-      time: SessionTime(created: now - 140_000, updated: now - 40000, archived: nil),
+      time: SessionTimestamps(created: now - 140_000, updated: now - 40000, archived: nil),
       summary: nil,
       share: nil,
       revert: nil

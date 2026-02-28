@@ -128,7 +128,7 @@ public struct MessageFailure: Codable, Hashable, Sendable {
 }
 
 public struct MessageEnvelope: Codable, Hashable, Identifiable, Sendable {
-  public let info: MessageInfo
+  public let info: MessageMetadata
   public let parts: [MessagePart]
 
   public var id: String { info.id }
@@ -144,7 +144,7 @@ public struct MessageEnvelope: Codable, Hashable, Identifiable, Sendable {
     return info.role == .assistant ? "(Assistant response has no text parts yet)" : "(No text content)"
   }
 
-  public init(info: MessageInfo, parts: [MessagePart]) {
+  public init(info: MessageMetadata, parts: [MessagePart]) {
     self.info = info
     self.parts = parts
   }
@@ -156,7 +156,7 @@ public enum MessageRole: String, Codable, Hashable, Sendable {
   case unknown
 }
 
-public struct MessageInfo: Codable, Hashable, Identifiable, Sendable {
+public struct MessageMetadata: Codable, Hashable, Identifiable, Sendable {
   public let id: String
   public let sessionID: String
   public let role: MessageRole
@@ -314,11 +314,11 @@ public extension MessageEnvelope {
     from properties: [String: JSONValue],
     messagesBySession: [String: [MessageEnvelope]]
   ) -> (sessionID: String, messages: [MessageEnvelope])? {
-    let info: MessageInfo?
+    let info: MessageMetadata?
     if let infoValue = properties["info"] {
-      info = infoValue.decoded(as: MessageInfo.self)
+      info = infoValue.decoded(as: MessageMetadata.self)
     } else {
-      info = JSONValue.object(properties).decoded(as: MessageInfo.self)
+      info = JSONValue.object(properties).decoded(as: MessageMetadata.self)
     }
 
     guard let info else {

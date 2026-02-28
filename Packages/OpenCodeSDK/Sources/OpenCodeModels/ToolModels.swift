@@ -203,7 +203,7 @@ public struct ToolExecutionTime: Codable, Hashable, Sendable {
   }
 }
 
-public struct ToolState: Codable, Hashable, Sendable {
+public struct ToolExecutionState: Codable, Hashable, Sendable {
   public let status: ToolExecutionStatus
   public let input: [String: JSONValue]
   public let output: String?

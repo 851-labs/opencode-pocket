@@ -92,8 +92,8 @@ final class MessageEventNormalizationTests: XCTestCase {
     )
   }
 
-  private func makeInfo(sessionID: String, messageID: String, role: MessageRole) -> MessageInfo {
-    MessageInfo(
+  private func makeInfo(sessionID: String, messageID: String, role: MessageRole) -> MessageMetadata {
+    MessageMetadata(
       id: messageID,
       sessionID: sessionID,
       role: role,

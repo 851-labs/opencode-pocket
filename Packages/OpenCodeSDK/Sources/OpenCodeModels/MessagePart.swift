@@ -8,7 +8,7 @@ public struct MessagePart: Codable, Hashable, Identifiable, Sendable {
   public let text: String?
   public let tool: String?
   public let callID: String?
-  public let toolState: ToolState?
+  public let toolState: ToolExecutionState?
   public let metadata: [String: JSONValue]?
   public let hash: String?
   public let files: [String]
@@ -82,7 +82,7 @@ public struct MessagePart: Codable, Hashable, Identifiable, Sendable {
     metadata = object.object(for: "metadata")
 
     if let stateValue = object["state"] {
-      toolState = stateValue.decoded(as: ToolState.self)
+      toolState = stateValue.decoded(as: ToolExecutionState.self)
     } else {
       toolState = nil
     }
@@ -124,7 +124,7 @@ public struct MessagePart: Codable, Hashable, Identifiable, Sendable {
     text: String?,
     tool: String?,
     callID: String? = nil,
-    toolState: ToolState? = nil,
+    toolState: ToolExecutionState? = nil,
     metadata: [String: JSONValue]? = nil,
     hash: String? = nil,
     files: [String] = [],

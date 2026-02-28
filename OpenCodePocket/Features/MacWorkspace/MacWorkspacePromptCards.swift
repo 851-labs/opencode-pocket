@@ -260,7 +260,7 @@
       request.questions.count
     }
 
-    private var question: QuestionInfo? {
+    private var question: QuestionDefinition? {
       guard request.questions.indices.contains(tab) else {
         return nil
       }

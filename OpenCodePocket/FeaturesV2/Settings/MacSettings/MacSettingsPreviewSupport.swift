@@ -75,7 +75,7 @@
         parentID: session.parentID,
         title: session.title,
         version: session.version,
-        time: SessionTime(created: session.time.created, updated: session.time.updated, archived: archivedTime),
+        time: SessionTimestamps(created: session.time.created, updated: session.time.updated, archived: archivedTime),
         summary: session.summary,
         share: session.share,
         revert: session.revert

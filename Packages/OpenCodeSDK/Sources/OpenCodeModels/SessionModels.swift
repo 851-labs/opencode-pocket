@@ -1,6 +1,6 @@
 import Foundation
 
-public struct SessionTime: Codable, Hashable, Sendable {
+public struct SessionTimestamps: Codable, Hashable, Sendable {
   public let created: Double?
   public let updated: Double?
   public let archived: Double?
@@ -20,7 +20,7 @@ public struct Session: Codable, Hashable, Identifiable, Sendable {
   public let parentID: String?
   public let title: String
   public let version: String
-  public let time: SessionTime
+  public let time: SessionTimestamps
   public let summary: JSONValue?
   public let share: JSONValue?
   public let revert: JSONValue?
@@ -37,7 +37,7 @@ public struct Session: Codable, Hashable, Identifiable, Sendable {
     parentID: String?,
     title: String,
     version: String,
-    time: SessionTime,
+    time: SessionTimestamps,
     summary: JSONValue? = nil,
     share: JSONValue? = nil,
     revert: JSONValue? = nil

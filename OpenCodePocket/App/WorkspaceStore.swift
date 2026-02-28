@@ -1005,7 +1005,7 @@ final class WorkspaceStore {
     questionsBySession[sessionID]?.first
   }
 
-  func linkedToolPart(for sessionID: String, reference: PermissionToolReference?) -> MessagePart? {
+  func linkedToolPart(for sessionID: String, reference: ToolCallReference?) -> MessagePart? {
     guard let reference else {
       return nil
     }
@@ -1215,7 +1215,7 @@ final class WorkspaceStore {
     }
   }
 
-  private func modelContextWindow(for message: MessageInfo) -> Int? {
+  private func modelContextWindow(for message: MessageMetadata) -> Int? {
     guard let providerID = message.providerID, let modelID = message.modelID else {
       return nil
     }

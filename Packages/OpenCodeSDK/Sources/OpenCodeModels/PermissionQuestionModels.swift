@@ -6,7 +6,7 @@ public enum PermissionReply: String, Codable, Hashable, Sendable {
   case reject
 }
 
-public struct PermissionToolReference: Codable, Hashable, Sendable {
+public struct ToolCallReference: Codable, Hashable, Sendable {
   public let messageID: String
   public let callID: String
 
@@ -23,7 +23,7 @@ public struct PermissionRequest: Codable, Hashable, Identifiable, Sendable {
   public let patterns: [String]
   public let metadata: [String: JSONValue]
   public let always: [String]
-  public let tool: PermissionToolReference?
+  public let tool: ToolCallReference?
 
   public init(
     id: String,
@@ -32,7 +32,7 @@ public struct PermissionRequest: Codable, Hashable, Identifiable, Sendable {
     patterns: [String],
     metadata: [String: JSONValue],
     always: [String],
-    tool: PermissionToolReference?
+    tool: ToolCallReference?
   ) {
     self.id = id
     self.sessionID = sessionID
@@ -54,7 +54,7 @@ public struct QuestionOption: Codable, Hashable, Sendable {
   }
 }
 
-public struct QuestionInfo: Codable, Hashable, Sendable {
+public struct QuestionDefinition: Codable, Hashable, Sendable {
   public let question: String
   public let header: String
   public let options: [QuestionOption]
@@ -73,10 +73,10 @@ public struct QuestionInfo: Codable, Hashable, Sendable {
 public struct QuestionRequest: Codable, Hashable, Identifiable, Sendable {
   public let id: String
   public let sessionID: String
-  public let questions: [QuestionInfo]
-  public let tool: PermissionToolReference?
+  public let questions: [QuestionDefinition]
+  public let tool: ToolCallReference?
 
-  public init(id: String, sessionID: String, questions: [QuestionInfo], tool: PermissionToolReference?) {
+  public init(id: String, sessionID: String, questions: [QuestionDefinition], tool: ToolCallReference?) {
     self.id = id
     self.sessionID = sessionID
     self.questions = questions
