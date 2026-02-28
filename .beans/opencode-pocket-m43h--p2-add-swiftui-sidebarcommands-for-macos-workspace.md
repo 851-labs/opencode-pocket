@@ -1,7 +1,7 @@
 ---
 # opencode-pocket-m43h
 title: P2 add SwiftUI SidebarCommands for macOS workspace
-status: todo
+status: completed
 type: feature
 priority: normal
 tags:
@@ -11,7 +11,7 @@ tags:
     - commands
     - keyboard-shortcuts
 created_at: 2026-02-28T01:53:12Z
-updated_at: 2026-02-28T01:53:12Z
+updated_at: 2026-02-28T04:00:20Z
 ---
 
 Add standard SwiftUI SidebarCommands on macOS so users can toggle the workspace sidebar from the menu and keyboard shortcut.
