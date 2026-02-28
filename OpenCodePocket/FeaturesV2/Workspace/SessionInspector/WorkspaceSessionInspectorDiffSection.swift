@@ -37,6 +37,7 @@ struct WorkspaceSessionInspectorDiffSection: View {
           Label {
             Text(diff.file)
               .lineLimit(1)
+              .truncationMode(.middle)
           } icon: {
             fileIcon(for: diff.file)
           }
