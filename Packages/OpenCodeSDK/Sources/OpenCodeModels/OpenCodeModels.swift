@@ -192,17 +192,37 @@ public struct ProviderDescriptor: Decodable, Hashable, Sendable {
   }
 }
 
+public struct ProviderModelLimitDescriptor: Decodable, Hashable, Sendable {
+  public let context: Int?
+  public let input: Int?
+  public let output: Int?
+
+  public init(context: Int?, input: Int?, output: Int?) {
+    self.context = context
+    self.input = input
+    self.output = output
+  }
+}
+
 public struct ProviderModelDescriptor: Decodable, Hashable, Sendable {
   public let id: String
   public let providerID: String
   public let name: String
   public let variants: [String: JSONValue]?
+  public let limit: ProviderModelLimitDescriptor?
 
-  public init(id: String, providerID: String, name: String, variants: [String: JSONValue]?) {
+  public init(
+    id: String,
+    providerID: String,
+    name: String,
+    variants: [String: JSONValue]?,
+    limit: ProviderModelLimitDescriptor? = nil
+  ) {
     self.id = id
     self.providerID = providerID
     self.name = name
     self.variants = variants
+    self.limit = limit
   }
 }
 
@@ -212,6 +232,7 @@ public struct ModelOption: Hashable, Identifiable, Sendable {
   public let modelID: String
   public let modelName: String
   public let variants: [String]
+  public let contextWindow: Int?
 
   public var id: String {
     "\(providerID)::\(modelID)"
@@ -228,12 +249,20 @@ public struct ModelOption: Hashable, Identifiable, Sendable {
     return "\(modelName) (\(variants.count) variants)"
   }
 
-  public init(providerID: String, providerName: String, modelID: String, modelName: String, variants: [String]) {
+  public init(
+    providerID: String,
+    providerName: String,
+    modelID: String,
+    modelName: String,
+    variants: [String],
+    contextWindow: Int? = nil
+  ) {
     self.providerID = providerID
     self.providerName = providerName
     self.modelID = modelID
     self.modelName = modelName
     self.variants = variants
+    self.contextWindow = contextWindow
   }
 }
 
@@ -430,6 +459,211 @@ public struct SessionStatus: Codable, Hashable, Sendable {
 
   public func encode(to encoder: Encoder) throws {
     try raw.encode(to: encoder)
+  }
+}
+
+public struct MessageTokenUsage: Codable, Hashable, Sendable {
+  public struct CacheUsage: Codable, Hashable, Sendable {
+    public let read: Int
+    public let write: Int
+
+    public init(read: Int = 0, write: Int = 0) {
+      self.read = read
+      self.write = write
+    }
+
+    public init(from decoder: Decoder) throws {
+      let raw = try JSONValue(from: decoder)
+      guard let object = raw.objectValue else {
+        throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "Token cache usage is not an object"))
+      }
+
+      read = object.int(for: "read") ?? 0
+      write = object.int(for: "write") ?? 0
+    }
+
+    public func encode(to encoder: Encoder) throws {
+      var container = encoder.container(keyedBy: CodingKeys.self)
+      try container.encode(read, forKey: .read)
+      try container.encode(write, forKey: .write)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+      case read
+      case write
+    }
+  }
+
+  public let total: Int?
+  public let input: Int
+  public let output: Int
+  public let reasoning: Int
+  public let cache: CacheUsage
+
+  public var contextUsageTotal: Int {
+    input + output + reasoning + cache.read + cache.write
+  }
+
+  public init(total: Int? = nil, input: Int = 0, output: Int = 0, reasoning: Int = 0, cache: CacheUsage = CacheUsage()) {
+    self.total = total
+    self.input = input
+    self.output = output
+    self.reasoning = reasoning
+    self.cache = cache
+  }
+
+  public init(from decoder: Decoder) throws {
+    let raw = try JSONValue(from: decoder)
+    guard let object = raw.objectValue else {
+      throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "Token usage is not an object"))
+    }
+
+    total = object.int(for: "total")
+    input = object.int(for: "input") ?? 0
+    output = object.int(for: "output") ?? 0
+    reasoning = object.int(for: "reasoning") ?? 0
+
+    if let cacheObject = object.object(for: "cache") {
+      cache = CacheUsage(read: cacheObject.int(for: "read") ?? 0, write: cacheObject.int(for: "write") ?? 0)
+    } else {
+      cache = CacheUsage()
+    }
+  }
+
+  public func encode(to encoder: Encoder) throws {
+    var container = encoder.container(keyedBy: CodingKeys.self)
+    try container.encodeIfPresent(total, forKey: .total)
+    try container.encode(input, forKey: .input)
+    try container.encode(output, forKey: .output)
+    try container.encode(reasoning, forKey: .reasoning)
+    try container.encode(cache, forKey: .cache)
+  }
+
+  private enum CodingKeys: String, CodingKey {
+    case total
+    case input
+    case output
+    case reasoning
+    case cache
+  }
+}
+
+public enum LSPServerConnectionState: Hashable, Sendable {
+  case connected
+  case error
+  case unknown(String)
+
+  public init(rawValue: String) {
+    switch rawValue {
+    case "connected":
+      self = .connected
+    case "error":
+      self = .error
+    default:
+      self = .unknown(rawValue)
+    }
+  }
+
+  public var rawValue: String {
+    switch self {
+    case .connected:
+      return "connected"
+    case .error:
+      return "error"
+    case let .unknown(value):
+      return value
+    }
+  }
+}
+
+extension LSPServerConnectionState: Codable {
+  public init(from decoder: Decoder) throws {
+    let container = try decoder.singleValueContainer()
+    self = LSPServerConnectionState(rawValue: try container.decode(String.self))
+  }
+
+  public func encode(to encoder: Encoder) throws {
+    var container = encoder.singleValueContainer()
+    try container.encode(rawValue)
+  }
+}
+
+public struct LSPServerStatus: Codable, Hashable, Identifiable, Sendable {
+  public let id: String
+  public let name: String
+  public let root: String
+  public let status: LSPServerConnectionState
+
+  public init(id: String, name: String, root: String, status: LSPServerConnectionState) {
+    self.id = id
+    self.name = name
+    self.root = root
+    self.status = status
+  }
+}
+
+public enum MCPServerConnectionState: Hashable, Sendable {
+  case connected
+  case disabled
+  case failed
+  case needsAuth
+  case needsClientRegistration
+  case unknown(String)
+
+  public init(rawValue: String) {
+    switch rawValue {
+    case "connected":
+      self = .connected
+    case "disabled":
+      self = .disabled
+    case "failed":
+      self = .failed
+    case "needs_auth":
+      self = .needsAuth
+    case "needs_client_registration":
+      self = .needsClientRegistration
+    default:
+      self = .unknown(rawValue)
+    }
+  }
+
+  public var rawValue: String {
+    switch self {
+    case .connected:
+      return "connected"
+    case .disabled:
+      return "disabled"
+    case .failed:
+      return "failed"
+    case .needsAuth:
+      return "needs_auth"
+    case .needsClientRegistration:
+      return "needs_client_registration"
+    case let .unknown(value):
+      return value
+    }
+  }
+}
+
+extension MCPServerConnectionState: Codable {
+  public init(from decoder: Decoder) throws {
+    let container = try decoder.singleValueContainer()
+    self = MCPServerConnectionState(rawValue: try container.decode(String.self))
+  }
+
+  public func encode(to encoder: Encoder) throws {
+    var container = encoder.singleValueContainer()
+    try container.encode(rawValue)
+  }
+}
+
+public struct MCPServerStatus: Codable, Hashable, Sendable {
+  public let status: MCPServerConnectionState
+  public let error: String?
+
+  public init(status: MCPServerConnectionState, error: String? = nil) {
+    self.status = status
+    self.error = error
   }
 }
 
@@ -688,6 +922,8 @@ public struct MessageInfo: Codable, Hashable, Identifiable, Sendable {
   public let createdAt: Double?
   public let completedAt: Double?
   public let error: MessageFailure?
+  public let cost: Double?
+  public let tokenUsage: MessageTokenUsage?
   public let summaryDiffs: [FileDiff]
   public let raw: JSONValue
 
@@ -725,6 +961,9 @@ public struct MessageInfo: Codable, Hashable, Identifiable, Sendable {
       error = nil
     }
 
+    cost = object.double(for: "cost")
+    tokenUsage = object["tokens"]?.decoded(as: MessageTokenUsage.self)
+
     if
       let summary = object.object(for: "summary"),
       let diffsValue = summary["diffs"],
@@ -749,6 +988,8 @@ public struct MessageInfo: Codable, Hashable, Identifiable, Sendable {
     createdAt: Double? = nil,
     completedAt: Double? = nil,
     error: MessageFailure? = nil,
+    cost: Double? = nil,
+    tokenUsage: MessageTokenUsage? = nil,
     summaryDiffs: [FileDiff] = [],
     raw: JSONValue
   ) {
@@ -762,6 +1003,8 @@ public struct MessageInfo: Codable, Hashable, Identifiable, Sendable {
     self.createdAt = createdAt
     self.completedAt = completedAt
     self.error = error
+    self.cost = cost
+    self.tokenUsage = tokenUsage
     self.summaryDiffs = summaryDiffs
     self.raw = raw
   }
@@ -1402,6 +1645,8 @@ public enum ServerEventType: Hashable, Sendable {
   case messagePartRemoved
   case messageUpdated
   case messageRemoved
+  case lspUpdated
+  case mcpToolsChanged
   case unknown(String)
 
   public init(rawValue: String) {
@@ -1444,6 +1689,10 @@ public enum ServerEventType: Hashable, Sendable {
       self = .messageUpdated
     case "message.removed":
       self = .messageRemoved
+    case "lsp.updated":
+      self = .lspUpdated
+    case "mcp.tools.changed":
+      self = .mcpToolsChanged
     default:
       self = .unknown(rawValue)
     }
@@ -1489,6 +1738,10 @@ public enum ServerEventType: Hashable, Sendable {
       return "message.updated"
     case .messageRemoved:
       return "message.removed"
+    case .lspUpdated:
+      return "lsp.updated"
+    case .mcpToolsChanged:
+      return "mcp.tools.changed"
     case let .unknown(value):
       return value
     }

@@ -51,6 +51,7 @@
     @State private var renameSessionTextFieldID = UUID()
     @State private var renameProjectNameDraft = ""
     @State private var renameProjectTextFieldID = UUID()
+    @State private var isInspectorVisible = true
 
     private var selectedSessionID: String? {
       store.selectedSessionID
@@ -80,12 +81,25 @@
           MacWorkspaceSidebarToolbar(presentProjectPicker: presentProjectPicker)
         }
       } detail: {
-        MacWorkspaceDetail(
-          bootstrapState: bootstrapState,
-          selectedSessionID: selectedSessionID,
-          selectedPanel: $selectedPanel,
-          retry: retryBootstrap
-        )
+        HStack(spacing: 0) {
+          MacWorkspaceDetail(
+            bootstrapState: bootstrapState,
+            selectedSessionID: selectedSessionID,
+            selectedPanel: $selectedPanel,
+            retry: retryBootstrap
+          )
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+          if isInspectorVisible {
+            Divider()
+
+            MacWorkspaceInspector(
+              bootstrapState: bootstrapState,
+              selectedSessionID: selectedSessionID
+            )
+            .frame(minWidth: 280, idealWidth: 320, maxWidth: 380)
+          }
+        }
       }
       .navigationSplitViewStyle(.balanced)
       .navigationTitle(navigationTitle)
@@ -144,6 +158,7 @@
       .toolbar {
         MacWorkspaceToolbar(
           selectedPanel: $selectedPanel,
+          isInspectorVisible: $isInspectorVisible,
           isPanelSelectionEnabled: selectedSessionID != nil,
           isRefreshingSessions: store.isRefreshingSessions,
           isCreatingSession: store.isCreatingSession,
@@ -267,6 +282,7 @@
 
       await store.refreshAgentAndModelOptions()
       await store.refreshSessions()
+      await store.refreshInspectorServices()
 
       if let error = store.latestError, !error.isEmpty, store.sessions.isEmpty {
         bootstrapState = .failed(error)
@@ -279,6 +295,7 @@
     private func refreshSessions() {
       Task {
         await store.refreshSessions()
+        await store.refreshInspectorServices()
       }
     }
 
@@ -328,6 +345,7 @@
       Task {
         await store.refreshAgentAndModelOptions()
         await store.refreshSessions()
+        await store.refreshInspectorServices()
       }
     }
 

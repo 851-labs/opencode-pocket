@@ -205,6 +205,12 @@ extension WorkspaceStore {
       let sessionID = properties.string(for: "sessionID") ?? selectedSessionID
       scheduleSessionRefresh(sessionID: sessionID, includeDiffs: false)
 
+    case .lspUpdated:
+      await refreshLSPStatuses()
+
+    case .mcpToolsChanged:
+      await refreshMCPStatuses()
+
     case .unknown:
       break
     }

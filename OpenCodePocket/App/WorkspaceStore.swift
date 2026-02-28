@@ -23,6 +23,12 @@ struct WorkspaceSessionRuntimeState {
   }
 }
 
+struct SessionInspectorContextMetrics: Hashable, Sendable {
+  let tokenCount: Int
+  let percentageUsed: Int?
+  let cost: Double
+}
+
 @MainActor
 @Observable
 final class WorkspaceStore {
@@ -36,6 +42,8 @@ final class WorkspaceStore {
 
   var availableAgents: [AgentDescriptor] = []
   var availableModels: [ModelOption] = []
+  var lspStatuses: [LSPServerStatus] = []
+  var mcpStatuses: [String: MCPServerStatus] = [:]
   var hiddenModelKeys: Set<String>
   var selectedAgentName: String
   var selectedModel: ModelSelector?
@@ -301,6 +309,31 @@ final class WorkspaceStore {
     return todos(for: selectedSessionID)
   }
 
+  func inspectorContextMetrics(for sessionID: String) -> SessionInspectorContextMetrics {
+    let assistantMessages = messages(for: sessionID)
+      .map(\.info)
+      .filter { $0.role == .assistant }
+
+    let cost = assistantMessages.reduce(0) { $0 + ($1.cost ?? 0) }
+
+    guard
+      let latestMessage = assistantMessages.last(where: { ($0.tokenUsage?.output ?? 0) > 0 }),
+      let usage = latestMessage.tokenUsage
+    else {
+      return SessionInspectorContextMetrics(tokenCount: 0, percentageUsed: nil, cost: cost)
+    }
+
+    let tokenCount = usage.contextUsageTotal
+    let percentageUsed: Int?
+    if let contextWindow = modelContextWindow(for: latestMessage), contextWindow > 0 {
+      percentageUsed = Int((Double(tokenCount) / Double(contextWindow) * 100).rounded())
+    } else {
+      percentageUsed = nil
+    }
+
+    return SessionInspectorContextMetrics(tokenCount: tokenCount, percentageUsed: percentageUsed, cost: cost)
+  }
+
   var isRespondingToPermission: Bool {
     !respondingPermissionRequestIDs.isEmpty
   }
@@ -463,6 +496,7 @@ final class WorkspaceStore {
     Task {
       await refreshAgentAndModelOptions()
       await refreshPendingPrompts()
+      await refreshInspectorServices()
     }
 
     if let selectedSessionID, visibleSessions.contains(where: { $0.id == selectedSessionID }) {
@@ -867,7 +901,8 @@ final class WorkspaceStore {
               providerName: provider.name,
               modelID: model.id,
               modelName: model.name,
-              variants: model.variants?.keys.sorted() ?? []
+              variants: model.variants?.keys.sorted() ?? [],
+              contextWindow: model.limit?.context
             )
           )
         }
@@ -888,6 +923,39 @@ final class WorkspaceStore {
       persistWorkspaceSettings()
     } catch {
       workspaceError = error.localizedDescription
+    }
+  }
+
+  func refreshInspectorServices() async {
+    await refreshLSPStatuses()
+    await refreshMCPStatuses()
+  }
+
+  func refreshLSPStatuses() async {
+    guard let client = connection.client else { return }
+
+    do {
+      lspStatuses = try await client.listLSPStatus(directory: connection.resolvedDirectory)
+    } catch {
+      guard isOptionalInspectorStatusError(error) else {
+        workspaceError = error.localizedDescription
+        return
+      }
+      lspStatuses = []
+    }
+  }
+
+  func refreshMCPStatuses() async {
+    guard let client = connection.client else { return }
+
+    do {
+      mcpStatuses = try await client.listMCPStatus(directory: connection.resolvedDirectory)
+    } catch {
+      guard isOptionalInspectorStatusError(error) else {
+        workspaceError = error.localizedDescription
+        return
+      }
+      mcpStatuses = [:]
     }
   }
 
@@ -1145,6 +1213,23 @@ final class WorkspaceStore {
       self.selectedModelVariant = nil
       return
     }
+  }
+
+  private func modelContextWindow(for message: MessageInfo) -> Int? {
+    guard let providerID = message.providerID, let modelID = message.modelID else {
+      return nil
+    }
+
+    return availableModels.first(where: {
+      $0.providerID == providerID && $0.modelID == modelID
+    })?.contextWindow
+  }
+
+  private func isOptionalInspectorStatusError(_ error: Error) -> Bool {
+    guard case let OpenCodeClientError.httpStatus(code, _) = error else {
+      return false
+    }
+    return code == 404 || code == 405 || code == 501
   }
 
   private func updateSessionStateField<Value>(

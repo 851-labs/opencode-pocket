@@ -45,6 +45,14 @@ final class OpenCodeClientTests: XCTestCase {
         return try makeJSONResponse(request: request, json: """
         {"providers":[{"id":"openai","name":"OpenAI","models":{"gpt-5":{"id":"gpt-5","providerID":"openai","name":"GPT-5","variants":{"high":{}}}}}],"default":{"openai":"gpt-5"}}
         """)
+      case ("GET", "/lsp"):
+        return try makeJSONResponse(request: request, json: """
+        [{"id":"sourcekit-lsp","name":"sourcekit-lsp","root":"Packages/OpenCodeSDK","status":"connected"}]
+        """)
+      case ("GET", "/mcp"):
+        return try makeJSONResponse(request: request, json: """
+        {"github":{"status":"connected"},"linear":{"status":"needs_auth"}}
+        """)
       case ("POST", "/session"):
         return try makeJSONResponse(request: request, json: """
         {"id":"ses_new","slug":"slug","projectID":"prj_1","directory":"/tmp/project","parentID":null,"title":"Created","version":"1","time":{"created":1,"updated":1,"archived":null},"summary":null,"share":null,"revert":null}
@@ -108,6 +116,14 @@ final class OpenCodeClientTests: XCTestCase {
     let providers = try await client.listConfigProviders()
     XCTAssertEqual(providers.providers.first?.id, "openai")
 
+    let lspStatus = try await client.listLSPStatus()
+    XCTAssertEqual(lspStatus.first?.id, "sourcekit-lsp")
+    XCTAssertEqual(lspStatus.first?.status, .connected)
+
+    let mcpStatus = try await client.listMCPStatus()
+    XCTAssertEqual(mcpStatus["github"]?.status, .connected)
+    XCTAssertEqual(mcpStatus["linear"]?.status, .needsAuth)
+
     let created = try await client.createSession(SessionCreateRequest(title: "Hi"))
     XCTAssertEqual(created.id, "ses_new")
 
@@ -145,6 +161,8 @@ final class OpenCodeClientTests: XCTestCase {
     XCTAssertTrue(requests.contains { $0.url?.path == "/find/file" && $0.url?.query?.contains("type=directory") == true })
     XCTAssertTrue(requests.contains { $0.url?.path == "/find/file" && $0.url?.query?.contains("dirs=true") == true })
     XCTAssertTrue(requests.contains { $0.url?.path == "/find/file" && $0.url?.query?.contains("limit=10") == true })
+    XCTAssertTrue(requests.contains { $0.url?.path == "/lsp" && $0.httpMethod == "GET" })
+    XCTAssertTrue(requests.contains { $0.url?.path == "/mcp" && $0.httpMethod == "GET" })
     XCTAssertTrue(requests.contains { $0.url?.path.contains("/session/ses") == true && $0.httpMethod == "GET" })
     XCTAssertTrue(requests.contains { $0.url?.absoluteString.contains("limit=5") == true })
     XCTAssertTrue(requests.contains { $0.url?.absoluteString.contains("messageID=msg_1") == true })

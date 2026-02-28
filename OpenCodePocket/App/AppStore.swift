@@ -28,6 +28,7 @@ final class StoreCoordinator: ConnectionLifecycleCoordinating {
   func connectionDidConnect() async {
     await workspace.refreshAgentAndModelOptions()
     await workspace.refreshSessions()
+    await workspace.refreshInspectorServices()
     workspace.startEventSubscriptionLoop()
   }
 
@@ -38,6 +39,8 @@ final class StoreCoordinator: ConnectionLifecycleCoordinating {
     workspace.permissionsBySession.removeAll()
     workspace.questionsBySession.removeAll()
     workspace.todosBySession.removeAll()
+    workspace.lspStatuses.removeAll()
+    workspace.mcpStatuses.removeAll()
   }
 }
 

@@ -3,6 +3,7 @@
 
   struct MacWorkspaceToolbar: ToolbarContent {
     @Binding var selectedPanel: MacWorkspacePanel
+    @Binding var isInspectorVisible: Bool
     let isPanelSelectionEnabled: Bool
     let isRefreshingSessions: Bool
     let isCreatingSession: Bool
@@ -22,6 +23,14 @@
       }
 
       ToolbarItemGroup {
+        Button {
+          isInspectorVisible.toggle()
+        } label: {
+          Image(systemName: "sidebar.right")
+        }
+        .accessibilityIdentifier("workspace.inspector.toggle")
+        .accessibilityLabel(isInspectorVisible ? "Hide Inspector" : "Show Inspector")
+
         Button(action: refreshSessions) {
           if isRefreshingSessions {
             ProgressView()

@@ -49,13 +49,18 @@ extension WorkspaceStore {
       FileDiff(file: "OpenCodePocket/Features/WorkspaceView.swift", before: "", after: "", additions: 108, deletions: 0, status: "added"),
     ]
     diffsBySession[secondary.id] = []
+    todosBySession[primary.id] = [
+      TodoItem(content: "Review status output for failing checks", status: "completed", priority: "high"),
+      TodoItem(content: "Wire inspector sections into workspace shell", status: "in_progress", priority: "high"),
+      TodoItem(content: "Run macOS and iOS validation builds", status: "pending", priority: "medium"),
+    ]
     availableAgents = [
       AgentDescriptor(name: "build", description: "Executes tools based on configured permissions.", mode: "primary", hidden: false),
       AgentDescriptor(name: "plan", description: "Planning mode with edit restrictions.", mode: "primary", hidden: false),
     ]
     availableModels = [
-      ModelOption(providerID: "openai", providerName: "OpenAI", modelID: "gpt-5.3-codex", modelName: "GPT-5.3 Codex", variants: ["low", "medium", "high"]),
-      ModelOption(providerID: "anthropic", providerName: "Anthropic", modelID: "claude-sonnet-4-5", modelName: "Claude Sonnet 4.5", variants: ["high", "max"]),
+      ModelOption(providerID: "openai", providerName: "OpenAI", modelID: "gpt-5.3-codex", modelName: "GPT-5.3 Codex", variants: ["low", "medium", "high"], contextWindow: 272_000),
+      ModelOption(providerID: "anthropic", providerName: "Anthropic", modelID: "claude-sonnet-4-5", modelName: "Claude Sonnet 4.5", variants: ["high", "max"], contextWindow: 200_000),
     ]
     let knownKeys = Set(availableModels.map { modelVisibilityKey($0.selector) })
     hiddenModelKeys = hiddenModelKeys.intersection(knownKeys)
@@ -70,12 +75,32 @@ extension WorkspaceStore {
     if let greeting = makePreviewMessage(sessionID: primary.id, role: .assistant, text: "Welcome to the preview workspace.") {
       seededMessages.append(greeting)
     }
-    if let markdownFixture = makePreviewMessage(sessionID: primary.id, role: .assistant, text: previewMarkdownTranscriptFixture) {
+    if
+      let markdownFixture = makePreviewMessage(
+        sessionID: primary.id,
+        role: .assistant,
+        text: previewMarkdownTranscriptFixture,
+        providerID: "openai",
+        modelID: "gpt-5.3-codex",
+        cost: 0.12,
+        tokenUsage: MessageTokenUsage(total: 4_321, input: 1_950, output: 1_020, reasoning: 900, cache: .init(read: 300, write: 151))
+      )
+    {
       seededMessages.append(markdownFixture)
     }
     if !seededMessages.isEmpty {
       messagesBySession[primary.id] = seededMessages
     }
+
+    lspStatuses = [
+      LSPServerStatus(id: "sourcekit-lsp", name: "sourcekit-lsp", root: "Packages/OpenCodeSDK", status: .connected),
+      LSPServerStatus(id: "yaml-ls", name: "yaml-ls", root: "", status: .error),
+    ]
+    mcpStatuses = [
+      "github": MCPServerStatus(status: .connected),
+      "linear": MCPServerStatus(status: .needsAuth),
+      "postgres": MCPServerStatus(status: .disabled),
+    ]
 
     connection.isConnected = true
     connection.eventConnectionState = "Preview workspace"
@@ -83,16 +108,56 @@ extension WorkspaceStore {
     connection.connectionError = nil
   }
 
-  func makePreviewMessage(sessionID: String, role: MessageRole, text: String) -> MessageEnvelope? {
+  func makePreviewMessage(
+    sessionID: String,
+    role: MessageRole,
+    text: String,
+    providerID: String? = nil,
+    modelID: String? = nil,
+    cost: Double? = nil,
+    tokenUsage: MessageTokenUsage? = nil
+  ) -> MessageEnvelope? {
     let messageID = "msg_preview_\(UUID().uuidString.prefix(10))"
 
+    var infoPayload: [String: Any] = [
+      "id": messageID,
+      "sessionID": sessionID,
+      "role": role.rawValue,
+      "agent": selectedAgentName,
+    ]
+
+    if let providerID {
+      infoPayload["providerID"] = providerID
+    }
+
+    if let modelID {
+      infoPayload["modelID"] = modelID
+    }
+
+    if let cost {
+      infoPayload["cost"] = cost
+    }
+
+    if let tokenUsage {
+      var tokensPayload: [String: Any] = [
+        "input": tokenUsage.input,
+        "output": tokenUsage.output,
+        "reasoning": tokenUsage.reasoning,
+        "cache": [
+          "read": tokenUsage.cache.read,
+          "write": tokenUsage.cache.write,
+        ],
+      ]
+
+      if let total = tokenUsage.total {
+        tokensPayload["total"] = total
+      }
+
+      infoPayload["tokens"] = tokensPayload
+    }
+
     let payload: [String: Any] = [
-      "info": [
-        "id": messageID,
-        "sessionID": sessionID,
-        "role": role.rawValue,
-        "agent": selectedAgentName,
-      ],
+      "info": infoPayload,
       "parts": [
         [
           "id": "prt_preview_\(UUID().uuidString.prefix(10))",

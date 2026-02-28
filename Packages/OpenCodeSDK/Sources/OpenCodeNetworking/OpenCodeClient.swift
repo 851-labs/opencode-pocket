@@ -78,6 +78,14 @@ public final class OpenCodeClient {
     try await request(.get, path: "/config/providers", query: mergedDirectoryQuery(directory), response: ProviderCatalogResponse.self)
   }
 
+  public func listLSPStatus(directory: String? = nil) async throws -> [LSPServerStatus] {
+    try await request(.get, path: "/lsp", query: mergedDirectoryQuery(directory), response: [LSPServerStatus].self)
+  }
+
+  public func listMCPStatus(directory: String? = nil) async throws -> [String: MCPServerStatus] {
+    try await request(.get, path: "/mcp", query: mergedDirectoryQuery(directory), response: [String: MCPServerStatus].self)
+  }
+
   public func createSession(_ body: SessionCreateRequest, directory: String? = nil) async throws -> Session {
     try await request(
       .post,
