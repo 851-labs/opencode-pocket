@@ -33,12 +33,14 @@ struct WorkspaceSessionInspectorCollapsibleSection<Content: View>: View {
 }
 
 #Preview("Collapsible Section Expanded") {
+  @Previewable @State var isExpanded = true
+
   Form {
     WorkspaceSessionInspectorCollapsibleSection(
       title: "Sample",
       collapsedSummary: "2 active",
       accessibilityID: "workspace.inspector.sample",
-      isExpanded: .constant(true)
+      isExpanded: $isExpanded
     ) {
       Text("First row")
       Text("Second row")
@@ -50,12 +52,14 @@ struct WorkspaceSessionInspectorCollapsibleSection<Content: View>: View {
 }
 
 #Preview("Collapsible Section Collapsed") {
+  @Previewable @State var isExpanded = false
+
   Form {
     WorkspaceSessionInspectorCollapsibleSection(
       title: "Sample",
       collapsedSummary: "2 active",
       accessibilityID: "workspace.inspector.sample",
-      isExpanded: .constant(false)
+      isExpanded: $isExpanded
     ) {
       Text("First row")
       Text("Second row")

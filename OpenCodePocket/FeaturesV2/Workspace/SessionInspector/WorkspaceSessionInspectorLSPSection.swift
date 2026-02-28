@@ -48,10 +48,12 @@ struct WorkspaceSessionInspectorLSPSection: View {
 }
 
 #Preview("LSP Section Empty") {
+  @Previewable @State var isExpanded = true
+
   Form {
     WorkspaceSessionInspectorLSPSection(
       entries: [],
-      isExpanded: .constant(true)
+      isExpanded: $isExpanded
     )
   }
   .formStyle(.grouped)
@@ -59,13 +61,15 @@ struct WorkspaceSessionInspectorLSPSection: View {
 }
 
 #Preview("LSP Section Active") {
+  @Previewable @State var isExpanded = true
+
   Form {
     WorkspaceSessionInspectorLSPSection(
       entries: [
         LSPServerStatus(id: "typescript", name: "TypeScript", root: "apps/emojis", status: .connected),
         LSPServerStatus(id: "ruby", name: "Ruby", root: "apps/api", status: .error),
       ],
-      isExpanded: .constant(true)
+      isExpanded: $isExpanded
     )
   }
   .formStyle(.grouped)

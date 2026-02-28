@@ -54,6 +54,8 @@ struct WorkspaceSessionInspectorTodoSection: View {
 }
 
 #Preview("Todo Section") {
+  @Previewable @State var isExpanded = true
+
   Form {
     WorkspaceSessionInspectorTodoSection(
       items: [
@@ -61,7 +63,7 @@ struct WorkspaceSessionInspectorTodoSection: View {
         TodoItem(content: "Write changelog note", status: "pending", priority: "medium"),
         TodoItem(content: "Archive stale branch", status: "completed", priority: "low"),
       ],
-      isExpanded: .constant(true)
+      isExpanded: $isExpanded
     )
   }
   .formStyle(.grouped)

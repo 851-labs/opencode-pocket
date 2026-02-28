@@ -42,6 +42,8 @@ struct WorkspaceSessionInspectorContextSection: View {
 }
 
 #Preview("Context Section") {
+  @Previewable @State var isExpanded = true
+
   Form {
     WorkspaceSessionInspectorContextSection(
       metrics: SessionInspectorContextMetrics(
@@ -49,7 +51,7 @@ struct WorkspaceSessionInspectorContextSection: View {
         percentageUsed: 14,
         cost: 0
       ),
-      isExpanded: .constant(true)
+      isExpanded: $isExpanded
     )
   }
   .formStyle(.grouped)

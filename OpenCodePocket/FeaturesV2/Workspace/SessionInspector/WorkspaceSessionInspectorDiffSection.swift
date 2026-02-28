@@ -91,6 +91,8 @@ struct WorkspaceSessionInspectorDiffSection: View {
 }
 
 #Preview("Diff Section") {
+  @Previewable @State var isExpanded = true
+
   Form {
     WorkspaceSessionInspectorDiffSection(
       items: [
@@ -120,7 +122,7 @@ struct WorkspaceSessionInspectorDiffSection: View {
         ),
       ],
       rootDirectory: nil,
-      isExpanded: .constant(true)
+      isExpanded: $isExpanded
     )
   }
   .formStyle(.grouped)

@@ -64,6 +64,8 @@ struct WorkspaceSessionInspectorMCPSection: View {
 }
 
 #Preview("MCP Section") {
+  @Previewable @State var isExpanded = true
+
   Form {
     WorkspaceSessionInspectorMCPSection(
       entries: [
@@ -72,7 +74,7 @@ struct WorkspaceSessionInspectorMCPSection: View {
         WorkspaceSessionInspectorMCPEntry(name: "replicate", status: MCPServerStatus(status: .failed, error: "Handshake failed")),
       ],
       collapsedSummary: "2 active, 1 error",
-      isExpanded: .constant(true)
+      isExpanded: $isExpanded
     )
   }
   .formStyle(.grouped)
