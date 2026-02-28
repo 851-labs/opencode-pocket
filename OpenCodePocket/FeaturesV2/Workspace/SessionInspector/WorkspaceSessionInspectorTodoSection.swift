@@ -3,17 +3,14 @@ import SwiftUI
 
 struct WorkspaceSessionInspectorTodoSection: View {
   let items: [TodoItem]
-  let isExpanded: Bool
-  let onToggleExpanded: () -> Void
+  @Binding var isExpanded: Bool
 
   var body: some View {
     WorkspaceSessionInspectorCollapsibleSection(
       title: "Todo",
-      rowCount: items.count,
       collapsedSummary: nil,
       accessibilityID: "workspace.inspector.todo",
-      isExpanded: isExpanded,
-      onToggle: onToggleExpanded
+      isExpanded: $isExpanded
     ) {
       ForEach(items) { todo in
         HStack(alignment: .top, spacing: 8) {
@@ -67,8 +64,7 @@ struct WorkspaceSessionInspectorTodoSection: View {
         TodoItem(content: "Write changelog note", status: "pending", priority: "medium"),
         TodoItem(content: "Archive stale branch", status: "completed", priority: "low"),
       ],
-      isExpanded: true,
-      onToggleExpanded: {}
+      isExpanded: .constant(true)
     )
   }
   .formStyle(.grouped)

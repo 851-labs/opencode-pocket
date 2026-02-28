@@ -2,6 +2,7 @@ import OpenCodeModels
 import SwiftUI
 
 enum WorkspaceSessionInspectorSectionID: Hashable {
+  case context
   case mcp
   case lsp
   case todo
@@ -29,7 +30,7 @@ struct WorkspaceSessionInspector: View {
   let bootstrapState: WorkspaceSessionInspectorBootstrapState
   let selectedSessionID: String?
 
-  @State private var expandedSections: Set<WorkspaceSessionInspectorSectionID> = [.mcp, .lsp, .todo, .diff]
+  @State private var expandedSections: Set<WorkspaceSessionInspectorSectionID> = [.context, .mcp, .lsp, .todo, .diff]
 
   private var contextMetrics: SessionInspectorContextMetrics {
     guard let selectedSessionID else {
@@ -122,44 +123,35 @@ struct WorkspaceSessionInspector: View {
     case .ready:
       if selectedSessionID != nil {
         Form {
-          WorkspaceSessionInspectorContextSection(metrics: contextMetrics)
+          WorkspaceSessionInspectorContextSection(
+            metrics: contextMetrics,
+            isExpanded: sectionExpansionBinding(for: .context)
+          )
 
           if !mcpEntries.isEmpty {
             WorkspaceSessionInspectorMCPSection(
               entries: mcpEntries,
               collapsedSummary: mcpCollapsedSummary,
-              isExpanded: isSectionExpanded(.mcp),
-              onToggleExpanded: {
-                toggleSection(.mcp)
-              }
+              isExpanded: sectionExpansionBinding(for: .mcp)
             )
           }
 
           WorkspaceSessionInspectorLSPSection(
             entries: lspEntries,
-            isExpanded: isSectionExpanded(.lsp),
-            onToggleExpanded: {
-              toggleSection(.lsp)
-            }
+            isExpanded: sectionExpansionBinding(for: .lsp)
           )
 
           if shouldShowTodoSection {
             WorkspaceSessionInspectorTodoSection(
               items: todoItems,
-              isExpanded: isSectionExpanded(.todo),
-              onToggleExpanded: {
-                toggleSection(.todo)
-              }
+              isExpanded: sectionExpansionBinding(for: .todo)
             )
           }
 
           if !diffItems.isEmpty {
             WorkspaceSessionInspectorDiffSection(
               items: diffItems,
-              isExpanded: isSectionExpanded(.diff),
-              onToggleExpanded: {
-                toggleSection(.diff)
-              }
+              isExpanded: sectionExpansionBinding(for: .diff)
             )
           }
         }
@@ -175,16 +167,17 @@ struct WorkspaceSessionInspector: View {
     }
   }
 
-  private func isSectionExpanded(_ section: WorkspaceSessionInspectorSectionID) -> Bool {
-    expandedSections.contains(section)
-  }
-
-  private func toggleSection(_ section: WorkspaceSessionInspectorSectionID) {
-    if expandedSections.contains(section) {
-      expandedSections.remove(section)
-    } else {
-      expandedSections.insert(section)
-    }
+  private func sectionExpansionBinding(for section: WorkspaceSessionInspectorSectionID) -> Binding<Bool> {
+    Binding(
+      get: { expandedSections.contains(section) },
+      set: { isExpanded in
+        if isExpanded {
+          expandedSections.insert(section)
+        } else {
+          expandedSections.remove(section)
+        }
+      }
+    )
   }
 }
 

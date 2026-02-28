@@ -2,56 +2,30 @@ import SwiftUI
 
 struct WorkspaceSessionInspectorCollapsibleSection<Content: View>: View {
   let title: String
-  let rowCount: Int
   let collapsedSummary: String?
   let accessibilityID: String
-  let isExpanded: Bool
-  let onToggle: () -> Void
+  @Binding var isExpanded: Bool
   @ViewBuilder let content: () -> Content
 
-  private var isCollapsible: Bool {
-    rowCount > 2
-  }
-
-  private var expanded: Bool {
-    isCollapsible ? isExpanded : true
-  }
-
   var body: some View {
-    Section {
-      if expanded {
-        content()
-      }
+    Section(isExpanded: $isExpanded) {
+      content()
     } header: {
-      Button {
-        guard isCollapsible else {
-          return
-        }
-        onToggle()
-      } label: {
-        HStack(spacing: 6) {
-          if isCollapsible {
-            Image(systemName: expanded ? "chevron.down" : "chevron.right")
-              .font(.caption2.weight(.semibold))
-              .foregroundStyle(.secondary)
-          }
+      HStack(spacing: 6) {
+        Text(title)
+          .font(.caption.weight(.semibold))
+          .textCase(nil)
 
-          Text(title)
-            .font(.caption.weight(.semibold))
+        if !isExpanded, let collapsedSummary, !collapsedSummary.isEmpty {
+          Text("(\(collapsedSummary))")
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
             .textCase(nil)
-
-          if isCollapsible, !expanded, let collapsedSummary, !collapsedSummary.isEmpty {
-            Text("(\(collapsedSummary))")
-              .font(.caption)
-              .foregroundStyle(.secondary)
-              .lineLimit(1)
-              .textCase(nil)
-          }
-
-          Spacer(minLength: 0)
         }
+
+        Spacer(minLength: 0)
       }
-      .buttonStyle(.plain)
       .accessibilityIdentifier("\(accessibilityID).toggle")
     }
     .accessibilityIdentifier(accessibilityID)
@@ -62,11 +36,9 @@ struct WorkspaceSessionInspectorCollapsibleSection<Content: View>: View {
   Form {
     WorkspaceSessionInspectorCollapsibleSection(
       title: "Sample",
-      rowCount: 3,
       collapsedSummary: "2 active",
       accessibilityID: "workspace.inspector.sample",
-      isExpanded: true,
-      onToggle: {}
+      isExpanded: .constant(true)
     ) {
       Text("First row")
       Text("Second row")
@@ -81,11 +53,9 @@ struct WorkspaceSessionInspectorCollapsibleSection<Content: View>: View {
   Form {
     WorkspaceSessionInspectorCollapsibleSection(
       title: "Sample",
-      rowCount: 3,
       collapsedSummary: "2 active",
       accessibilityID: "workspace.inspector.sample",
-      isExpanded: false,
-      onToggle: {}
+      isExpanded: .constant(false)
     ) {
       Text("First row")
       Text("Second row")

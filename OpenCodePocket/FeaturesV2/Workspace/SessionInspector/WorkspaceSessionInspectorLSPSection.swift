@@ -3,17 +3,14 @@ import SwiftUI
 
 struct WorkspaceSessionInspectorLSPSection: View {
   let entries: [LSPServerStatus]
-  let isExpanded: Bool
-  let onToggleExpanded: () -> Void
+  @Binding var isExpanded: Bool
 
   var body: some View {
     WorkspaceSessionInspectorCollapsibleSection(
       title: "LSP",
-      rowCount: entries.count,
       collapsedSummary: nil,
       accessibilityID: "workspace.inspector.lsp",
-      isExpanded: isExpanded,
-      onToggle: onToggleExpanded
+      isExpanded: $isExpanded
     ) {
       if entries.isEmpty {
         Text("LSPs will activate as files are read")
@@ -53,8 +50,7 @@ struct WorkspaceSessionInspectorLSPSection: View {
   Form {
     WorkspaceSessionInspectorLSPSection(
       entries: [],
-      isExpanded: true,
-      onToggleExpanded: {}
+      isExpanded: .constant(true)
     )
   }
   .formStyle(.grouped)
@@ -68,8 +64,7 @@ struct WorkspaceSessionInspectorLSPSection: View {
         LSPServerStatus(id: "typescript", name: "TypeScript", root: "apps/emoji", status: .connected),
         LSPServerStatus(id: "ruby", name: "Ruby", root: "apps/api", status: .error),
       ],
-      isExpanded: true,
-      onToggleExpanded: {}
+      isExpanded: .constant(true)
     )
   }
   .formStyle(.grouped)

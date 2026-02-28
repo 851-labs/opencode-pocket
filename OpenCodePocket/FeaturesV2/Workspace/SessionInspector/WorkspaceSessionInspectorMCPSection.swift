@@ -4,17 +4,14 @@ import SwiftUI
 struct WorkspaceSessionInspectorMCPSection: View {
   let entries: [WorkspaceSessionInspectorMCPEntry]
   let collapsedSummary: String
-  let isExpanded: Bool
-  let onToggleExpanded: () -> Void
+  @Binding var isExpanded: Bool
 
   var body: some View {
     WorkspaceSessionInspectorCollapsibleSection(
       title: "MCP",
-      rowCount: entries.count,
       collapsedSummary: collapsedSummary,
       accessibilityID: "workspace.inspector.mcp",
-      isExpanded: isExpanded,
-      onToggle: onToggleExpanded
+      isExpanded: $isExpanded
     ) {
       ForEach(entries) { item in
         HStack(alignment: .top, spacing: 8) {
@@ -77,8 +74,7 @@ struct WorkspaceSessionInspectorMCPSection: View {
         WorkspaceSessionInspectorMCPEntry(name: "replicate", status: MCPServerStatus(status: .failed, error: "Handshake failed")),
       ],
       collapsedSummary: "2 active, 1 error",
-      isExpanded: true,
-      onToggleExpanded: {}
+      isExpanded: .constant(true)
     )
   }
   .formStyle(.grouped)

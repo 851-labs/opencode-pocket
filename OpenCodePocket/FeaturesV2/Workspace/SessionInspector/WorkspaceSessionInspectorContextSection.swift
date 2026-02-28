@@ -3,9 +3,15 @@ import SwiftUI
 
 struct WorkspaceSessionInspectorContextSection: View {
   let metrics: SessionInspectorContextMetrics
+  @Binding var isExpanded: Bool
 
   var body: some View {
-    Section {
+    WorkspaceSessionInspectorCollapsibleSection(
+      title: "Context",
+      collapsedSummary: nil,
+      accessibilityID: "workspace.inspector.context",
+      isExpanded: $isExpanded
+    ) {
       Text("\(formattedTokenCount(metrics.tokenCount)) tokens")
         .font(.caption)
         .foregroundStyle(.secondary)
@@ -17,11 +23,7 @@ struct WorkspaceSessionInspectorContextSection: View {
       Text("\(formattedCost(metrics.cost)) spent")
         .font(.caption)
         .foregroundStyle(.secondary)
-    } header: {
-      Text("Context")
-        .textCase(nil)
     }
-    .accessibilityIdentifier("workspace.inspector.context")
   }
 
   private func formattedTokenCount(_ value: Int) -> String {
@@ -40,7 +42,8 @@ struct WorkspaceSessionInspectorContextSection: View {
         tokenCount: 54096,
         percentageUsed: 14,
         cost: 0
-      )
+      ),
+      isExpanded: .constant(true)
     )
   }
   .formStyle(.grouped)

@@ -3,17 +3,14 @@ import SwiftUI
 
 struct WorkspaceSessionInspectorDiffSection: View {
   let items: [FileDiff]
-  let isExpanded: Bool
-  let onToggleExpanded: () -> Void
+  @Binding var isExpanded: Bool
 
   var body: some View {
     WorkspaceSessionInspectorCollapsibleSection(
       title: "Modified Files",
-      rowCount: items.count,
       collapsedSummary: nil,
       accessibilityID: "workspace.inspector.diff",
-      isExpanded: isExpanded,
-      onToggle: onToggleExpanded
+      isExpanded: $isExpanded
     ) {
       ForEach(items) { diff in
         HStack(alignment: .top, spacing: 8) {
@@ -72,8 +69,7 @@ struct WorkspaceSessionInspectorDiffSection: View {
           status: "modified"
         ),
       ],
-      isExpanded: true,
-      onToggleExpanded: {}
+      isExpanded: .constant(true)
     )
   }
   .formStyle(.grouped)
