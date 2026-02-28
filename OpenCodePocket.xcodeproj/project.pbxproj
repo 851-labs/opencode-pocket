@@ -14,6 +14,7 @@
 		090049CB1F8AC1F6A722C68F /* MacWorkspaceTranscriptPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28B2F3932AA1CACC175E281B /* MacWorkspaceTranscriptPane.swift */; };
 		092264648B46CFA696E08050 /* DeleteSessionConfirmationDialog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 662BF7E329B6224DF5CE4861 /* DeleteSessionConfirmationDialog.swift */; };
 		09D6A584B0209852D35B95F4 /* WorkspaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D83BD8354E87398437EA542 /* WorkspaceView.swift */; };
+		0E3DED115DE1A7A9A5DB40B4 /* WorkspaceSessionInspectorMCPSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61ADD910029D9B0F5E661BE0 /* WorkspaceSessionInspectorMCPSection.swift */; };
 		0E9E6AA9FEFC0FBE898B75A5 /* SessionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C7BFCD6254DAE5C93352594 /* SessionsView.swift */; };
 		12861D728E3D7DCF540D82B3 /* WorkspaceDiffSummary.swift in Sources */ = {isa = PBXBuildFile; fileRef = D48D12E88841D5CCED831467 /* WorkspaceDiffSummary.swift */; };
 		1345C5ACCFD460DD7BDADA7D /* MacWorkspacePromptCards.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E6555165FCF4AB7C9339FCA /* MacWorkspacePromptCards.swift */; };
@@ -23,6 +24,7 @@
 		1DCBBFA0C07E81C129AADE4B /* MacSettingsArchivedTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 884A89386B4723F75CA0EC2F /* MacSettingsArchivedTab.swift */; };
 		231D1301A906C85F8C04E4CD /* RenameProjectAlert.swift in Sources */ = {isa = PBXBuildFile; fileRef = A29FFDC1A05562499BB58EE8 /* RenameProjectAlert.swift */; };
 		26B0E2FF8B8C2E1C415E7E44 /* String+Trimmed.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20A9AA4D4D775F7883475871 /* String+Trimmed.swift */; };
+		3098397EC0680E14FDF3133F /* WorkspaceSessionInspectorDiffSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0390BBBDFB76A6238874027 /* WorkspaceSessionInspectorDiffSection.swift */; };
 		324471C103BDBD0D43301500 /* MacSettingsModelsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA7091483A4769460FFB163F /* MacSettingsModelsTab.swift */; };
 		3457A341B95471F19DD82C6E /* WorkspaceShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1203AEA599143C5C6B9FAE4 /* WorkspaceShared.swift */; };
 		381731C83DA3795EDF3A1CE7 /* MacConnectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8E410DE47EC2B77914A2902 /* MacConnectView.swift */; };
@@ -35,7 +37,6 @@
 		6301BE15601999EA59979B15 /* MacWorkspacePreviewSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46446737CECF03499F951C1C /* MacWorkspacePreviewSupport.swift */; };
 		63026B59410D0B0ECD612B80 /* WorkspaceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D525B8CA3040B4A99022C401 /* WorkspaceStore.swift */; };
 		67F17F31CE15083C9A4F8868 /* WorkspaceStore+Mock.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB8F0277F3C7C35009845EF3 /* WorkspaceStore+Mock.swift */; };
-		6A9D5213996866C71D9AAACC /* MacWorkspaceInspector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 524AE21D0D9F0383479D9719 /* MacWorkspaceInspector.swift */; };
 		6BE62DC7E16F54EA9459F9B0 /* MacWorkspaceSidebar.swift in Sources */ = {isa = PBXBuildFile; fileRef = C945C4AA0C120BC25D5F917C /* MacWorkspaceSidebar.swift */; };
 		7E72B2618F42B089C70E19EE /* MacCustomizeProjectSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CD941B8A59FF0169FE55E58 /* MacCustomizeProjectSheet.swift */; };
 		8AFB94F0B60EEA5CB3EE948E /* ArchiveSessionConfirmationDialog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D869BE7C20FEA6601BA1DCF /* ArchiveSessionConfirmationDialog.swift */; };
@@ -48,7 +49,10 @@
 		AA39E10E6519899E19810501 /* MacSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF097B10BD4C8619083E5E60 /* MacSettingsView.swift */; };
 		B0FE2DC5C98800A31E60B5CC /* MacWorkspaceNavigationShell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51741FF22DBE8F121F1E4949 /* MacWorkspaceNavigationShell.swift */; };
 		B3A3A23009C1F0669127A68F /* MacWorkspaceComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D85A4F664FEF2F8C968010BA /* MacWorkspaceComposer.swift */; };
+		B5140C1D17E91B9EC8E43057 /* WorkspaceSessionInspector.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEAFADC2A9F07CB482298DC5 /* WorkspaceSessionInspector.swift */; };
+		B58C586E0D0B5B7A401549B1 /* WorkspaceSessionInspectorLSPSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D303FF043604CFA4CD01667 /* WorkspaceSessionInspectorLSPSection.swift */; };
 		BCEEB4ECBEE8A9D5432AAECF /* RemoveProjectConfirmationDialog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BA9D6B67CDEF0BDA83E3701 /* RemoveProjectConfirmationDialog.swift */; };
+		BE3D3921554404F54F0B2F0A /* WorkspaceSessionInspectorContextSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E5E14A0D1411B5E5FA43AB4 /* WorkspaceSessionInspectorContextSection.swift */; };
 		C079C36C986C5C291A4157D5 /* ConnectionStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01A4FE78F261B36005A4B76F /* ConnectionStorage.swift */; };
 		CC1195C8BA32D26F64B5EB2A /* MacWorkspaceMessageCards.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD924DD05BC984676CEE1D16 /* MacWorkspaceMessageCards.swift */; };
 		D169D096DE719AB775335047 /* MacSettingsPreviewSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0D65D5276A4E6F10215A7BA /* MacSettingsPreviewSupport.swift */; };
@@ -58,10 +62,12 @@
 		DCB7F275FF6B52F9A24A507D /* WorkspaceStore+Events.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA4E53111CBF7808F9A97E2F /* WorkspaceStore+Events.swift */; };
 		E02690E3B04E399CB1646C14 /* AppStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5A7FA305D3CB67FDCC55764 /* AppStore.swift */; };
 		E0AEFEB3424E775A1901DCBA /* MacWorkspaceSidebarToolbar.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE7855C2F0CCB40A3658122A /* MacWorkspaceSidebarToolbar.swift */; };
+		E2D8D83B872C0CCD91EC0258 /* WorkspaceSessionInspectorCollapsibleSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9514C8A711A59AA04ED0826 /* WorkspaceSessionInspectorCollapsibleSection.swift */; };
 		E36C44AF8B26BE1A45E83A93 /* MacWorkspaceDetail.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52BE2A37FFD51B0A08B5FC5C /* MacWorkspaceDetail.swift */; };
 		E5D170470C94B7A6A872F3A1 /* WorkspaceComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE441A71ED45FC10DDFFBB36 /* WorkspaceComposer.swift */; };
 		E62308C1947F3F506FBBC3B9 /* MacWorkspaceDiffSummary.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6D76D90C2BB54B4DC0919B1 /* MacWorkspaceDiffSummary.swift */; };
 		FBA94DCFE75A76E029FB6156 /* TranscriptUI in Frameworks */ = {isa = PBXBuildFile; productRef = 3D7D11C579C7189C0C2E1491 /* TranscriptUI */; };
+		FF7318683B4AC11F18AA77B3 /* WorkspaceSessionInspectorTodoSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 481A2B345060A0CE8FE8D12F /* WorkspaceSessionInspectorTodoSection.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -72,19 +78,22 @@
 		28B2F3932AA1CACC175E281B /* MacWorkspaceTranscriptPane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacWorkspaceTranscriptPane.swift; sourceTree = "<group>"; };
 		2930741C759CD6EACE1120C3 /* WorkspaceToolCards.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceToolCards.swift; sourceTree = "<group>"; };
 		2EAE689015B7EAED4AFD7A08 /* ConnectionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionStore.swift; sourceTree = "<group>"; };
+		3D303FF043604CFA4CD01667 /* WorkspaceSessionInspectorLSPSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceSessionInspectorLSPSection.swift; sourceTree = "<group>"; };
 		3E2236AE73B2BB09D504746E /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
 		3E6555165FCF4AB7C9339FCA /* MacWorkspacePromptCards.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacWorkspacePromptCards.swift; sourceTree = "<group>"; };
 		3FE51EF24FA1B1D888B3B17B /* MacSettingsGeneralTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacSettingsGeneralTab.swift; sourceTree = "<group>"; };
 		46446737CECF03499F951C1C /* MacWorkspacePreviewSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacWorkspacePreviewSupport.swift; sourceTree = "<group>"; };
 		46F3D80D429B9CF2772DA087 /* OpenCodePocketApp+Dependencies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "OpenCodePocketApp+Dependencies.swift"; sourceTree = "<group>"; };
+		481A2B345060A0CE8FE8D12F /* WorkspaceSessionInspectorTodoSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceSessionInspectorTodoSection.swift; sourceTree = "<group>"; };
 		51741FF22DBE8F121F1E4949 /* MacWorkspaceNavigationShell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacWorkspaceNavigationShell.swift; sourceTree = "<group>"; };
-		524AE21D0D9F0383479D9719 /* MacWorkspaceInspector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacWorkspaceInspector.swift; sourceTree = "<group>"; };
 		52BE2A37FFD51B0A08B5FC5C /* MacWorkspaceDetail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacWorkspaceDetail.swift; sourceTree = "<group>"; };
 		53DEC90BBADF3A1348716DC2 /* RenameSessionAlert.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RenameSessionAlert.swift; sourceTree = "<group>"; };
 		5A728FB3B761B021F17CF6C5 /* WorkspaceMessageCards.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceMessageCards.swift; sourceTree = "<group>"; };
 		5BA9D6B67CDEF0BDA83E3701 /* RemoveProjectConfirmationDialog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoveProjectConfirmationDialog.swift; sourceTree = "<group>"; };
 		5CD941B8A59FF0169FE55E58 /* MacCustomizeProjectSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacCustomizeProjectSheet.swift; sourceTree = "<group>"; };
+		5E5E14A0D1411B5E5FA43AB4 /* WorkspaceSessionInspectorContextSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceSessionInspectorContextSection.swift; sourceTree = "<group>"; };
 		5F2AB2259CAD47AEF8C1F3AA /* OpenCodePocketApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenCodePocketApp.swift; sourceTree = "<group>"; };
+		61ADD910029D9B0F5E661BE0 /* WorkspaceSessionInspectorMCPSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceSessionInspectorMCPSection.swift; sourceTree = "<group>"; };
 		662BF7E329B6224DF5CE4861 /* DeleteSessionConfirmationDialog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeleteSessionConfirmationDialog.swift; sourceTree = "<group>"; };
 		681188C7D0FE47069D7F445B /* MacWorkspaceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacWorkspaceView.swift; sourceTree = "<group>"; };
 		6C7BFCD6254DAE5C93352594 /* SessionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionsView.swift; sourceTree = "<group>"; };
@@ -97,6 +106,7 @@
 		9339474A4324C58343ACAC6A /* TranscriptUI */ = {isa = PBXFileReference; lastKnownFileType = folder; name = TranscriptUI; path = Packages/TranscriptUI; sourceTree = SOURCE_ROOT; };
 		9931F30547081E6D53C02DC3 /* WorkspacePromptCards.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspacePromptCards.swift; sourceTree = "<group>"; };
 		9D83BD8354E87398437EA542 /* WorkspaceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceView.swift; sourceTree = "<group>"; };
+		A0390BBBDFB76A6238874027 /* WorkspaceSessionInspectorDiffSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceSessionInspectorDiffSection.swift; sourceTree = "<group>"; };
 		A0D65D5276A4E6F10215A7BA /* MacSettingsPreviewSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacSettingsPreviewSupport.swift; sourceTree = "<group>"; };
 		A29FFDC1A05562499BB58EE8 /* RenameProjectAlert.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RenameProjectAlert.swift; sourceTree = "<group>"; };
 		AC116DDBE560C64A7EEB954D /* MacWorkspaceBootstrapViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacWorkspaceBootstrapViews.swift; sourceTree = "<group>"; };
@@ -114,8 +124,10 @@
 		D48D12E88841D5CCED831467 /* WorkspaceDiffSummary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceDiffSummary.swift; sourceTree = "<group>"; };
 		D525B8CA3040B4A99022C401 /* WorkspaceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceStore.swift; sourceTree = "<group>"; };
 		D85A4F664FEF2F8C968010BA /* MacWorkspaceComposer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacWorkspaceComposer.swift; sourceTree = "<group>"; };
+		D9514C8A711A59AA04ED0826 /* WorkspaceSessionInspectorCollapsibleSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceSessionInspectorCollapsibleSection.swift; sourceTree = "<group>"; };
 		D971DC2A29DECA6D00A5D81E /* ConnectionFormComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionFormComponents.swift; sourceTree = "<group>"; };
 		DE7855C2F0CCB40A3658122A /* MacWorkspaceSidebarToolbar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacWorkspaceSidebarToolbar.swift; sourceTree = "<group>"; };
+		DEAFADC2A9F07CB482298DC5 /* WorkspaceSessionInspector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceSessionInspector.swift; sourceTree = "<group>"; };
 		E1203AEA599143C5C6B9FAE4 /* WorkspaceShared.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceShared.swift; sourceTree = "<group>"; };
 		E8E410DE47EC2B77914A2902 /* MacConnectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacConnectView.swift; sourceTree = "<group>"; };
 		F6D76D90C2BB54B4DC0919B1 /* MacWorkspaceDiffSummary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacWorkspaceDiffSummary.swift; sourceTree = "<group>"; };
@@ -235,6 +247,20 @@
 			path = Sheets;
 			sourceTree = "<group>";
 		};
+		855B628791C5EE79F1A3AC3C /* SessionInspector */ = {
+			isa = PBXGroup;
+			children = (
+				DEAFADC2A9F07CB482298DC5 /* WorkspaceSessionInspector.swift */,
+				D9514C8A711A59AA04ED0826 /* WorkspaceSessionInspectorCollapsibleSection.swift */,
+				5E5E14A0D1411B5E5FA43AB4 /* WorkspaceSessionInspectorContextSection.swift */,
+				A0390BBBDFB76A6238874027 /* WorkspaceSessionInspectorDiffSection.swift */,
+				3D303FF043604CFA4CD01667 /* WorkspaceSessionInspectorLSPSection.swift */,
+				61ADD910029D9B0F5E661BE0 /* WorkspaceSessionInspectorMCPSection.swift */,
+				481A2B345060A0CE8FE8D12F /* WorkspaceSessionInspectorTodoSection.swift */,
+			);
+			path = SessionInspector;
+			sourceTree = "<group>";
+		};
 		A3DCBCE04CD9DBF11490FB37 /* Storage */ = {
 			isa = PBXGroup;
 			children = (
@@ -249,6 +275,7 @@
 				3A3258C59CA307DB894AA0BD /* Alerts */,
 				A91BCEE4FF5DC869077000FD /* ConfirmationDialogs */,
 				FC7D9854C598AE7DC54E70E1 /* MacWorkspace */,
+				855B628791C5EE79F1A3AC3C /* SessionInspector */,
 			);
 			path = Workspace;
 			sourceTree = "<group>";
@@ -314,7 +341,6 @@
 			children = (
 				AC116DDBE560C64A7EEB954D /* MacWorkspaceBootstrapViews.swift */,
 				52BE2A37FFD51B0A08B5FC5C /* MacWorkspaceDetail.swift */,
-				524AE21D0D9F0383479D9719 /* MacWorkspaceInspector.swift */,
 				51741FF22DBE8F121F1E4949 /* MacWorkspaceNavigationShell.swift */,
 				46446737CECF03499F951C1C /* MacWorkspacePreviewSupport.swift */,
 				C945C4AA0C120BC25D5F917C /* MacWorkspaceSidebar.swift */,
@@ -430,7 +456,6 @@
 				B3A3A23009C1F0669127A68F /* MacWorkspaceComposer.swift in Sources */,
 				E36C44AF8B26BE1A45E83A93 /* MacWorkspaceDetail.swift in Sources */,
 				E62308C1947F3F506FBBC3B9 /* MacWorkspaceDiffSummary.swift in Sources */,
-				6A9D5213996866C71D9AAACC /* MacWorkspaceInspector.swift in Sources */,
 				CC1195C8BA32D26F64B5EB2A /* MacWorkspaceMessageCards.swift in Sources */,
 				B0FE2DC5C98800A31E60B5CC /* MacWorkspaceNavigationShell.swift in Sources */,
 				6301BE15601999EA59979B15 /* MacWorkspacePreviewSupport.swift in Sources */,
@@ -454,6 +479,13 @@
 				12861D728E3D7DCF540D82B3 /* WorkspaceDiffSummary.swift in Sources */,
 				0452BEC068B08BFA3A2067E9 /* WorkspaceMessageCards.swift in Sources */,
 				960F4C45F1C7E91E43460069 /* WorkspacePromptCards.swift in Sources */,
+				B5140C1D17E91B9EC8E43057 /* WorkspaceSessionInspector.swift in Sources */,
+				E2D8D83B872C0CCD91EC0258 /* WorkspaceSessionInspectorCollapsibleSection.swift in Sources */,
+				BE3D3921554404F54F0B2F0A /* WorkspaceSessionInspectorContextSection.swift in Sources */,
+				3098397EC0680E14FDF3133F /* WorkspaceSessionInspectorDiffSection.swift in Sources */,
+				B58C586E0D0B5B7A401549B1 /* WorkspaceSessionInspectorLSPSection.swift in Sources */,
+				0E3DED115DE1A7A9A5DB40B4 /* WorkspaceSessionInspectorMCPSection.swift in Sources */,
+				FF7318683B4AC11F18AA77B3 /* WorkspaceSessionInspectorTodoSection.swift in Sources */,
 				5F3464B95811048FD9CC8AD2 /* WorkspaceSessionSheet.swift in Sources */,
 				3457A341B95471F19DD82C6E /* WorkspaceShared.swift in Sources */,
 				DCB7F275FF6B52F9A24A507D /* WorkspaceStore+Events.swift in Sources */,

@@ -1,0 +1,86 @@
+import OpenCodeModels
+import SwiftUI
+
+struct WorkspaceSessionInspectorMCPSection: View {
+  let entries: [WorkspaceSessionInspectorMCPEntry]
+  let collapsedSummary: String
+  let isExpanded: Bool
+  let onToggleExpanded: () -> Void
+
+  var body: some View {
+    WorkspaceSessionInspectorCollapsibleSection(
+      title: "MCP",
+      rowCount: entries.count,
+      collapsedSummary: collapsedSummary,
+      accessibilityID: "workspace.inspector.mcp",
+      isExpanded: isExpanded,
+      onToggle: onToggleExpanded
+    ) {
+      ForEach(entries) { item in
+        HStack(alignment: .top, spacing: 8) {
+          Circle()
+            .fill(mcpColor(for: item.status.status))
+            .frame(width: 7, height: 7)
+            .padding(.top, 4)
+
+          Text(item.name)
+            .font(.caption)
+
+          Spacer(minLength: 6)
+
+          Text(mcpStatusText(for: item.status))
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .multilineTextAlignment(.trailing)
+        }
+      }
+    }
+  }
+
+  private func mcpColor(for status: MCPServerConnectionState) -> Color {
+    switch status {
+    case .connected:
+      return .green
+    case .failed, .needsClientRegistration:
+      return .red
+    case .needsAuth:
+      return .orange
+    case .disabled, .unknown:
+      return .secondary
+    }
+  }
+
+  private func mcpStatusText(for status: MCPServerStatus) -> String {
+    switch status.status {
+    case .connected:
+      return "Connected"
+    case .disabled:
+      return "Disabled"
+    case .failed:
+      return status.error?.trimmedNonEmpty ?? "Failed"
+    case .needsAuth:
+      return "Needs auth"
+    case .needsClientRegistration:
+      return "Needs client ID"
+    case let .unknown(rawValue):
+      return rawValue
+    }
+  }
+}
+
+#Preview("MCP Section") {
+  Form {
+    WorkspaceSessionInspectorMCPSection(
+      entries: [
+        WorkspaceSessionInspectorMCPEntry(name: "grafana", status: MCPServerStatus(status: .connected)),
+        WorkspaceSessionInspectorMCPEntry(name: "posthog", status: MCPServerStatus(status: .connected)),
+        WorkspaceSessionInspectorMCPEntry(name: "replicate", status: MCPServerStatus(status: .failed, error: "Handshake failed")),
+      ],
+      collapsedSummary: "2 active, 1 error",
+      isExpanded: true,
+      onToggleExpanded: {}
+    )
+  }
+  .formStyle(.grouped)
+  .frame(width: 340, height: 280)
+}

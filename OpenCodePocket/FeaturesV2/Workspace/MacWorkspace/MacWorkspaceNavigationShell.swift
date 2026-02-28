@@ -39,6 +39,19 @@
     case failed(String)
   }
 
+  private extension MacWorkspaceBootstrapState {
+    var workspaceSessionInspectorState: WorkspaceSessionInspectorBootstrapState {
+      switch self {
+      case .loading:
+        return .loading
+      case .ready:
+        return .ready
+      case let .failed(message):
+        return .failed(message)
+      }
+    }
+  }
+
   struct MacWorkspaceNavigationShell: View {
     @Environment(WorkspaceStore.self) private var store
 
@@ -93,8 +106,8 @@
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .inspector(isPresented: $isInspectorVisible) {
-          MacWorkspaceInspector(
-            bootstrapState: bootstrapState,
+          WorkspaceSessionInspector(
+            bootstrapState: bootstrapState.workspaceSessionInspectorState,
             selectedSessionID: selectedSessionID
           )
           .inspectorColumnWidth(min: 280, ideal: 320, max: 380)
