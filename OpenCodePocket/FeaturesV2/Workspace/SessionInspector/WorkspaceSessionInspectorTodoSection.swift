@@ -13,28 +13,27 @@ struct WorkspaceSessionInspectorTodoSection: View {
       isExpanded: $isExpanded
     ) {
       ForEach(items) { todo in
-        HStack(alignment: .top, spacing: 8) {
-          Image(systemName: todoIconName(todo.status))
-            .font(.caption)
-            .foregroundStyle(todoIconColor(todo.status))
-            .padding(.top, 2)
-
+        Label {
           Text(todo.content)
-            .font(.caption)
             .foregroundStyle(todo.status == "completed" || todo.status == "cancelled" ? .secondary : .primary)
             .strikethrough(todo.status == "completed" || todo.status == "cancelled")
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .lineLimit(2)
+        } icon: {
+          todoIcon(todo.status)
         }
       }
     }
+  }
+
+  private func todoIcon(_ status: String) -> some View {
+    Image(systemName: status == "in_progress" ? "circle.righthalf.filled" : todoIconName(status))
+      .foregroundStyle(status == "in_progress" ? .yellow : todoIconColor(status))
   }
 
   private func todoIconName(_ status: String) -> String {
     switch status {
     case "completed":
       return "checkmark.circle.fill"
-    case "in_progress":
-      return "circle.fill"
     case "cancelled":
       return "xmark.circle"
     default:
@@ -46,8 +45,6 @@ struct WorkspaceSessionInspectorTodoSection: View {
     switch status {
     case "completed":
       return .green
-    case "in_progress":
-      return .blue
     case "cancelled":
       return .secondary
     default:
