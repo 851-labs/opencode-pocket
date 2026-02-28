@@ -6,9 +6,7 @@
     @Binding var isInspectorVisible: Bool
     let isPanelSelectionEnabled: Bool
     let isRefreshingSessions: Bool
-    let isCreatingSession: Bool
     let refreshSessions: () -> Void
-    let createSession: () -> Void
 
     @ToolbarContentBuilder
     var body: some ToolbarContent {
@@ -41,17 +39,6 @@
         }
         .disabled(isRefreshingSessions)
         .accessibilityIdentifier("sessions.refresh")
-
-        Button(action: createSession) {
-          if isCreatingSession {
-            ProgressView()
-              .controlSize(.small)
-          } else {
-            Image(systemName: "plus")
-          }
-        }
-        .disabled(isCreatingSession)
-        .accessibilityIdentifier("sessions.create")
       }
     }
   }

@@ -161,9 +161,7 @@
           isInspectorVisible: $isInspectorVisible,
           isPanelSelectionEnabled: selectedSessionID != nil,
           isRefreshingSessions: store.isRefreshingSessions,
-          isCreatingSession: store.isCreatingSession,
-          refreshSessions: refreshSessions,
-          createSession: createSession
+          refreshSessions: refreshSessions
         )
       }
       .environment(routerPath)
@@ -296,12 +294,6 @@
       Task {
         await store.refreshSessions()
         await store.refreshInspectorServices()
-      }
-    }
-
-    private func createSession() {
-      Task {
-        await store.createSession()
       }
     }
 
