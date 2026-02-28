@@ -85,24 +85,19 @@
           )
         }
       } detail: {
-        HStack(spacing: 0) {
-          MacWorkspaceDetail(
+        MacWorkspaceDetail(
+          bootstrapState: bootstrapState,
+          selectedSessionID: selectedSessionID,
+          selectedPanel: $selectedPanel,
+          retry: retryBootstrap
+        )
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .inspector(isPresented: $isInspectorVisible) {
+          MacWorkspaceInspector(
             bootstrapState: bootstrapState,
-            selectedSessionID: selectedSessionID,
-            selectedPanel: $selectedPanel,
-            retry: retryBootstrap
+            selectedSessionID: selectedSessionID
           )
-          .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-          if isInspectorVisible {
-            Divider()
-
-            MacWorkspaceInspector(
-              bootstrapState: bootstrapState,
-              selectedSessionID: selectedSessionID
-            )
-            .frame(minWidth: 280, idealWidth: 320, maxWidth: 380)
-          }
+          .inspectorColumnWidth(min: 280, ideal: 320, max: 380)
         }
       }
       .navigationSplitViewStyle(.balanced)
