@@ -78,7 +78,11 @@
           onRequestProjectRename: presentProjectRenameAlert
         )
         .toolbar {
-          MacWorkspaceSidebarToolbar(presentProjectPicker: presentProjectPicker)
+          MacWorkspaceSidebarToolbar(
+            isRefreshingSessions: store.isRefreshingSessions,
+            refreshSessions: refreshSessions,
+            presentProjectPicker: presentProjectPicker
+          )
         }
       } detail: {
         HStack(spacing: 0) {
@@ -159,9 +163,7 @@
         MacWorkspaceToolbar(
           selectedPanel: $selectedPanel,
           isInspectorVisible: $isInspectorVisible,
-          isPanelSelectionEnabled: selectedSessionID != nil,
-          isRefreshingSessions: store.isRefreshingSessions,
-          refreshSessions: refreshSessions
+          isPanelSelectionEnabled: selectedSessionID != nil
         )
       }
       .environment(routerPath)
