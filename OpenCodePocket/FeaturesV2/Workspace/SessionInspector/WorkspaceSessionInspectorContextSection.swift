@@ -12,17 +12,23 @@ struct WorkspaceSessionInspectorContextSection: View {
       accessibilityID: "workspace.inspector.context",
       isExpanded: $isExpanded
     ) {
-      Text("\(formattedTokenCount(metrics.tokenCount)) tokens")
-        .font(.caption)
-        .foregroundStyle(.secondary)
+      LabeledContent {
+        Text(formattedTokenCount(metrics.tokenCount))
+      } label: {
+        Label("Tokens", systemImage: "number")
+      }
 
-      Text("\(metrics.percentageUsed ?? 0)% used")
-        .font(.caption)
-        .foregroundStyle(.secondary)
+      LabeledContent {
+        Text("\(metrics.percentageUsed ?? 0)%")
+      } label: {
+        Label("Used", systemImage: "percent")
+      }
 
-      Text("\(formattedCost(metrics.cost)) spent")
-        .font(.caption)
-        .foregroundStyle(.secondary)
+      LabeledContent {
+        Text(formattedCost(metrics.cost))
+      } label: {
+        Label("Spent", systemImage: "dollarsign")
+      }
     }
   }
 
