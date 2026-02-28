@@ -214,13 +214,6 @@
 
     @State private var expandedSections: Set<MacWorkspaceInspectorSection> = [.mcp, .lsp, .todo, .diff]
 
-    private var sessionTitle: String? {
-      guard let selectedSessionID else {
-        return nil
-      }
-      return store.sessionTitle(for: selectedSessionID)
-    }
-
     private var contextMetrics: SessionInspectorContextMetrics {
       guard let selectedSessionID else {
         return SessionInspectorContextMetrics(tokenCount: 0, percentageUsed: nil, cost: 0)
@@ -283,33 +276,10 @@
     }
 
     var body: some View {
-      VStack(alignment: .leading, spacing: 0) {
-        header
-
-        Divider()
-
-        content
-      }
+      content
       .frame(maxHeight: .infinity)
       .background(Color.secondary.opacity(0.04))
       .accessibilityIdentifier("workspace.inspector")
-    }
-
-    private var header: some View {
-      VStack(alignment: .leading, spacing: 6) {
-        if let sessionTitle {
-          Text(sessionTitle)
-            .font(.headline)
-            .lineLimit(2)
-            .accessibilityIdentifier("workspace.inspector.title")
-        } else {
-          Text("Inspector")
-            .font(.headline)
-            .accessibilityIdentifier("workspace.inspector.title")
-        }
-      }
-      .padding(.horizontal, 12)
-      .padding(.vertical, 10)
     }
 
     @ViewBuilder
