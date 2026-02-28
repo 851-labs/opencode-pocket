@@ -7,7 +7,7 @@
     var body: some View {
       @Bindable var store = store
 
-      Group {
+      VStack {
         if store.modelSettingsProviderGroups.isEmpty {
           ContentUnavailableView(
             "No Models Found",
