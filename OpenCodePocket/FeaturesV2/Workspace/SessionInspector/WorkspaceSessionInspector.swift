@@ -70,6 +70,18 @@ struct WorkspaceSessionInspector: View {
     return store.diffs(for: selectedSessionID)
   }
 
+  private var inspectorRootDirectory: String? {
+    guard let selectedSessionID else {
+      return store.activeProjectDirectory
+    }
+
+    if let sessionDirectory = store.sessions.first(where: { $0.id == selectedSessionID })?.directory.trimmedNonEmpty {
+      return sessionDirectory
+    }
+
+    return store.activeProjectDirectory
+  }
+
   private var connectedMCPCount: Int {
     mcpEntries.filter { $0.status.status == .connected }.count
   }
@@ -151,6 +163,7 @@ struct WorkspaceSessionInspector: View {
           if !diffItems.isEmpty {
             WorkspaceSessionInspectorDiffSection(
               items: diffItems,
+              rootDirectory: inspectorRootDirectory,
               isExpanded: sectionExpansionBinding(for: .diff)
             )
           }

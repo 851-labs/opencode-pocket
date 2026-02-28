@@ -1,8 +1,14 @@
 import OpenCodeModels
 import SwiftUI
 
+#if os(macOS)
+  import AppKit
+  import UniformTypeIdentifiers
+#endif
+
 struct WorkspaceSessionInspectorDiffSection: View {
   let items: [FileDiff]
+  let rootDirectory: String?
   @Binding var isExpanded: Bool
 
   var body: some View {
@@ -13,31 +19,74 @@ struct WorkspaceSessionInspectorDiffSection: View {
       isExpanded: $isExpanded
     ) {
       ForEach(items) { diff in
-        HStack(alignment: .top, spacing: 8) {
-          Text(diff.file)
-            .font(.caption)
-            .foregroundStyle(.secondary)
-            .lineLimit(2)
-
-          Spacer(minLength: 6)
-
+        LabeledContent {
           HStack(spacing: 6) {
             if diff.additionsCount > 0 {
               Text("+\(diff.additionsCount)")
-                .font(.caption.weight(.semibold))
+                .fontWeight(.medium)
                 .foregroundStyle(.green)
             }
 
             if diff.deletionsCount > 0 {
               Text("-\(diff.deletionsCount)")
-                .font(.caption.weight(.semibold))
+                .fontWeight(.medium)
                 .foregroundStyle(.red)
             }
+          }
+        } label: {
+          Label {
+            Text(diff.file)
+              .lineLimit(1)
+          } icon: {
+            fileIcon(for: diff.file)
           }
         }
       }
     }
   }
+
+  @ViewBuilder
+  private func fileIcon(for path: String) -> some View {
+    #if os(macOS)
+      Image(nsImage: nsImageFileIcon(for: path))
+        .resizable()
+        .frame(width: 16, height: 16)
+    #else
+      Image(systemName: "doc")
+    #endif
+  }
+
+  #if os(macOS)
+    private func nsImageFileIcon(for path: String) -> NSImage {
+      let resolvedPath = resolvedFilePath(for: path)
+
+      if FileManager.default.fileExists(atPath: resolvedPath) {
+        let icon = NSWorkspace.shared.icon(forFile: resolvedPath)
+        icon.size = NSSize(width: 16, height: 16)
+        return icon
+      }
+
+      let pathExtension = URL(fileURLWithPath: path).pathExtension
+      let contentType = UTType(filenameExtension: pathExtension) ?? .data
+      let icon = NSWorkspace.shared.icon(for: contentType)
+      icon.size = NSSize(width: 16, height: 16)
+      return icon
+    }
+
+    private func resolvedFilePath(for path: String) -> String {
+      if (path as NSString).isAbsolutePath {
+        return path
+      }
+
+      guard let rootDirectory else {
+        return path
+      }
+
+      return URL(fileURLWithPath: rootDirectory)
+        .appendingPathComponent(path)
+        .path
+    }
+  #endif
 }
 
 #Preview("Diff Section") {
@@ -69,6 +118,7 @@ struct WorkspaceSessionInspectorDiffSection: View {
           status: "modified"
         ),
       ],
+      rootDirectory: nil,
       isExpanded: .constant(true)
     )
   }
