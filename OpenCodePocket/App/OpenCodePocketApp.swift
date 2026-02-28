@@ -12,6 +12,7 @@ struct OpenCodePocketApp: App {
       }
       .commands {
         SidebarCommands()
+        InspectorCommands()
       }
 
       Settings {
