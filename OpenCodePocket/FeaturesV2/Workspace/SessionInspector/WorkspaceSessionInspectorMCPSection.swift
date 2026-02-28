@@ -14,21 +14,19 @@ struct WorkspaceSessionInspectorMCPSection: View {
       isExpanded: $isExpanded
     ) {
       ForEach(entries) { item in
-        HStack(alignment: .top, spacing: 8) {
-          Circle()
-            .fill(mcpColor(for: item.status.status))
-            .frame(width: 7, height: 7)
-            .padding(.top, 4)
-
-          Text(item.name)
-            .font(.caption)
-
-          Spacer(minLength: 6)
-
+        LabeledContent {
           Text(mcpStatusText(for: item.status))
-            .font(.caption)
             .foregroundStyle(.secondary)
-            .multilineTextAlignment(.trailing)
+            .lineLimit(1)
+            .truncationMode(.tail)
+        } label: {
+          Label {
+            Text(item.name)
+          } icon: {
+            Circle()
+              .fill(mcpColor(for: item.status.status))
+              .frame(width: 8, height: 8)
+          }
         }
       }
     }
