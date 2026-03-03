@@ -123,10 +123,6 @@
       .onChange(of: store.projects.map(\.id)) { _, _ in
         syncExpandedProjects()
       }
-      .onChange(of: store.selectedProjectID) { _, newValue in
-        guard let newValue else { return }
-        expandedProjectIDs.insert(newValue)
-      }
       .onDisappear {
         selectionTask?.cancel()
       }
@@ -282,7 +278,6 @@
     }
 
     private func selectProjectFromSidebar(_ projectID: String) {
-      expandedProjectIDs.insert(projectID)
       selectedPanel = .transcript
       store.beginNewSession(inProjectID: projectID)
     }
