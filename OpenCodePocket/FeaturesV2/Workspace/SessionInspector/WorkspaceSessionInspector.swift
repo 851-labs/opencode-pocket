@@ -195,12 +195,11 @@ struct WorkspaceSessionInspector: View {
 }
 
 #if os(macOS)
-  #Preview("Inspector") {
+  #Preview("Inspector", traits: .macWorkspace) {
     WorkspaceSessionInspector(
       bootstrapState: .ready,
       selectedSessionID: "ses_preview_primary"
     )
-    .withMacWorkspacePreviewEnv()
     .frame(width: 340, height: 760)
   }
 
@@ -220,12 +219,11 @@ struct WorkspaceSessionInspector: View {
     .frame(width: 340, height: 320)
   }
 
-  #Preview("Inspector No Session") {
+  #Preview("Inspector No Session", traits: .macWorkspace) {
     WorkspaceSessionInspector(
       bootstrapState: .ready,
       selectedSessionID: nil
     )
     .frame(width: 340, height: 320)
-    .withMacWorkspacePreviewEnv()
   }
 #endif

@@ -41,9 +41,8 @@
     }
   }
 
-  #Preview("Models") {
+  #Preview("Models", traits: .macSettings()) {
     MacSettingsModelsTab()
-      .withMacSettingsPreviewEnv()
       .frame(width: 860, height: 560)
   }
 #endif

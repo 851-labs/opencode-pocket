@@ -3,22 +3,22 @@
   import SwiftUI
 
   enum MacWorkspacePreviewScenario {
-    case seededWorkspace
-    case pinnedThreads
+    case seeded
+    case pinned
     case emptyProjects
   }
 
   @MainActor
-  struct MacWorkspacePreviewGraph {
+  private struct MacWorkspacePreviewGraph {
     let connection: ConnectionStore
     let workspace: WorkspaceStore
   }
 
   @MainActor
-  enum MacWorkspacePreviewStore {
+  private enum MacWorkspacePreviewStore {
     private static let suiteName = "sh.851.opencode-pocket.previews.macworkspace"
 
-    static func makeGraph(for scenario: MacWorkspacePreviewScenario = .seededWorkspace) -> MacWorkspacePreviewGraph {
+    static func makeGraph(for scenario: MacWorkspacePreviewScenario = .seeded) -> MacWorkspacePreviewGraph {
       let defaults = UserDefaults(suiteName: suiteName) ?? .standard
       defaults.removePersistentDomain(forName: suiteName)
 
@@ -31,9 +31,9 @@
         allowsPersistence: false,
         configureWorkspace: { workspace in
           switch scenario {
-          case .seededWorkspace:
+          case .seeded:
             workspace.seedPreviewWorkspace()
-          case .pinnedThreads:
+          case .pinned:
             workspace.seedPreviewWorkspace()
             if let firstSessionID = workspace.sessions.first?.id {
               workspace.pinnedSessionIDs.insert(firstSessionID)
@@ -66,10 +66,25 @@
   }
 
   @MainActor
-  extension View {
-    func withMacWorkspacePreviewEnv(_ scenario: MacWorkspacePreviewScenario = .seededWorkspace) -> some View {
+  private struct MacWorkspacePreviewModifier: PreviewModifier {
+    let scenario: MacWorkspacePreviewScenario
+
+    func body(content: Content, context: Void) -> some View {
       let graph = MacWorkspacePreviewStore.makeGraph(for: scenario)
-      return withAppDependencyGraph(connection: graph.connection, workspace: graph.workspace)
+      return content
+        .environment(graph.connection)
+        .environment(graph.workspace)
+    }
+  }
+
+  @MainActor
+  extension PreviewTrait where T == Preview.ViewTraits {
+    static var macWorkspace: Self {
+      .macWorkspace(.seeded)
+    }
+
+    static func macWorkspace(_ scenario: MacWorkspacePreviewScenario = .seeded) -> Self {
+      .modifier(MacWorkspacePreviewModifier(scenario: scenario))
     }
   }
 #endif

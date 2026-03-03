@@ -298,21 +298,18 @@
     }
   }
 
-  #Preview("Sidebar - Projects") {
+  #Preview("Sidebar - Projects", traits: .macWorkspace) {
     MacWorkspaceSidebarPreviewHost()
-      .withMacWorkspacePreviewEnv()
       .frame(width: 340, height: 760)
   }
 
-  #Preview("Sidebar - Pinned") {
+  #Preview("Sidebar - Pinned", traits: .macWorkspace(.pinned)) {
     MacWorkspaceSidebarPreviewHost()
-      .withMacWorkspacePreviewEnv(.pinnedThreads)
       .frame(width: 340, height: 760)
   }
 
-  #Preview("Sidebar - Empty") {
+  #Preview("Sidebar - Empty", traits: .macWorkspace(.emptyProjects)) {
     MacWorkspaceSidebarPreviewHost()
-      .withMacWorkspacePreviewEnv(.emptyProjects)
       .frame(width: 340, height: 760)
   }
 

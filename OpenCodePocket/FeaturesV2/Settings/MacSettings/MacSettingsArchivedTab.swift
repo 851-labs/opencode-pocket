@@ -101,21 +101,18 @@ struct MacSettingsArchivedTab: View {
   }
 }
 
-#Preview("Archived") {
+#Preview("Archived", traits: .macSettings(.archived)) {
   MacSettingsArchivedTab()
-    .withMacSettingsArchivedPreviewEnv(.archivedThreads)
     .frame(width: 860, height: 560)
 }
 
-#Preview("Archived Empty") {
+#Preview("Archived Empty", traits: .macSettings(.archivedEmpty)) {
   MacSettingsArchivedTab()
-    .withMacSettingsArchivedPreviewEnv(.noArchivedThreads)
     .frame(width: 860, height: 560)
 }
 
-#Preview("Archived Error") {
+#Preview("Archived Error", traits: .macSettings(.archivedError)) {
   MacSettingsArchivedTab()
-    .withMacSettingsArchivedPreviewEnv(.archivedThreadsError)
     .frame(width: 860, height: 560)
 }
 #endif

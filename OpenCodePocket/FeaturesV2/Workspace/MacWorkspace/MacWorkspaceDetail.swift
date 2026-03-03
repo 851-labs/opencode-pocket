@@ -172,15 +172,13 @@
     .frame(minWidth: 900, minHeight: 700)
   }
 
-  #Preview("Detail - Transcript") {
+  #Preview("Detail - Transcript", traits: .macWorkspace) {
     MacWorkspaceDetailPreviewHost(initialPanel: .transcript)
-      .withMacWorkspacePreviewEnv()
       .frame(minWidth: 900, minHeight: 700)
   }
 
-  #Preview("Detail - Changes") {
+  #Preview("Detail - Changes", traits: .macWorkspace) {
     MacWorkspaceDetailPreviewHost(initialPanel: .changes)
-      .withMacWorkspacePreviewEnv()
       .frame(minWidth: 900, minHeight: 700)
   }
 

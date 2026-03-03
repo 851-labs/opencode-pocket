@@ -396,9 +396,8 @@
     }
   }
 
-  #Preview("Workspace Shell") {
+  #Preview("Workspace Shell", traits: .macWorkspace) {
     MacWorkspaceNavigationShell()
-      .withMacWorkspacePreviewEnv()
       .frame(minWidth: 1200, minHeight: 760)
   }
 #endif

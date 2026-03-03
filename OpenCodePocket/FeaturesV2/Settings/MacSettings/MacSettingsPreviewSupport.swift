@@ -3,23 +3,24 @@
   import OpenCodeModels
   import SwiftUI
 
-  enum MacSettingsArchivedPreviewScenario {
-    case archivedThreads
-    case archivedThreadsError
-    case noArchivedThreads
+  enum MacSettingsPreviewScenario {
+    case seeded
+    case archived
+    case archivedEmpty
+    case archivedError
   }
 
   @MainActor
-  struct MacSettingsPreviewGraph {
+  private struct MacSettingsPreviewGraph {
     let connection: ConnectionStore
     let workspace: WorkspaceStore
   }
 
   @MainActor
-  enum MacSettingsPreviewStore {
+  private enum MacSettingsPreviewStore {
     private static let suiteName = "sh.851.opencode-pocket.previews.macsettings"
 
-    static func makeGraph() -> MacSettingsPreviewGraph {
+    static func makeGraph(for scenario: MacSettingsPreviewScenario = .seeded) -> MacSettingsPreviewGraph {
       let defaults = UserDefaults(suiteName: suiteName) ?? .standard
       defaults.removePersistentDomain(forName: suiteName)
 
@@ -32,38 +33,22 @@
         allowsPersistence: false,
         configureWorkspace: { workspace in
           workspace.seedPreviewWorkspace()
+
+          switch scenario {
+          case .seeded:
+            break
+          case .archived:
+            seedArchivedThreads(on: workspace)
+          case .archivedEmpty:
+            break
+          case .archivedError:
+            seedArchivedThreads(on: workspace)
+            workspace.workspaceError = "This OpenCode server version does not support unarchiving yet. Update the server and try again."
+          }
         }
       )
 
       return MacSettingsPreviewGraph(connection: graph.connection, workspace: graph.workspace)
-    }
-
-    private static func makePreviewSettings() -> ConnectionSettings {
-      ConnectionSettings(
-        baseURL: "http://127.0.0.1:4096",
-        username: "",
-        useBasicAuth: false,
-        directory: "/tmp/opencode-pocket-preview"
-      )
-    }
-  }
-
-  @MainActor
-  enum MacSettingsArchivedPreviewStore {
-    static func makeGraph(for scenario: MacSettingsArchivedPreviewScenario) -> MacSettingsPreviewGraph {
-      let graph = MacSettingsPreviewStore.makeGraph()
-
-      switch scenario {
-      case .archivedThreads:
-        seedArchivedThreads(on: graph.workspace)
-      case .archivedThreadsError:
-        seedArchivedThreads(on: graph.workspace)
-        graph.workspace.workspaceError = "This OpenCode server version does not support unarchiving yet. Update the server and try again."
-      case .noArchivedThreads:
-        break
-      }
-
-      return graph
     }
 
     private static func withArchivedTime(_ session: Session, archivedTime: Double?) -> Session {
@@ -90,20 +75,38 @@
       }
       workspace.selectedSessionID = nil
     }
+
+    private static func makePreviewSettings() -> ConnectionSettings {
+      ConnectionSettings(
+        baseURL: "http://127.0.0.1:4096",
+        username: "",
+        useBasicAuth: false,
+        directory: "/tmp/opencode-pocket-preview"
+      )
+    }
   }
 
   @MainActor
-  extension View {
-    func withMacSettingsPreviewEnv() -> some View {
-      let graph = MacSettingsPreviewStore.makeGraph()
-      return withAppDependencyGraph(connection: graph.connection, workspace: graph.workspace)
+  private struct MacSettingsPreviewModifier: PreviewModifier {
+    let scenario: MacSettingsPreviewScenario
+
+    func body(content: Content, context: Void) -> some View {
+      let graph = MacSettingsPreviewStore.makeGraph(for: scenario)
+
+      return content
+        .environment(graph.connection)
+        .environment(graph.workspace)
+    }
+  }
+
+  @MainActor
+  extension PreviewTrait where T == Preview.ViewTraits {
+    static var macSettings: Self {
+      .macSettings(.seeded)
     }
 
-    func withMacSettingsArchivedPreviewEnv(
-      _ scenario: MacSettingsArchivedPreviewScenario = .archivedThreads
-    ) -> some View {
-      let graph = MacSettingsArchivedPreviewStore.makeGraph(for: scenario)
-      return withAppDependencyGraph(connection: graph.connection, workspace: graph.workspace)
+    static func macSettings(_ scenario: MacSettingsPreviewScenario = .seeded) -> Self {
+      .modifier(MacSettingsPreviewModifier(scenario: scenario))
     }
   }
 #endif

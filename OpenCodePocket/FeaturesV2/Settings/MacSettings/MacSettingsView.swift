@@ -58,8 +58,7 @@
     }
   }
 
-  #Preview("Settings") {
+  #Preview("Settings", traits: .macSettings()) {
     MacSettingsView()
-      .withMacSettingsPreviewEnv()
   }
 #endif

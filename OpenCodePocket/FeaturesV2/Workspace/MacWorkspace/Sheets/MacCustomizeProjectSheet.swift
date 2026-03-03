@@ -89,9 +89,8 @@
     }
   }
 
-  #Preview("Customize Project") {
+  #Preview("Customize Project", traits: .macWorkspace) {
     MacCustomizeProjectSheet(projectID: "project_preview", currentName: "Project name", currentSymbol: "hammer")
-      .withMacWorkspacePreviewEnv()
       .frame(width: 440)
   }
 #endif

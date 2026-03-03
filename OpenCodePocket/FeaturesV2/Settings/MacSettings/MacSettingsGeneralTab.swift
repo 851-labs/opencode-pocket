@@ -65,9 +65,8 @@
     }
   }
 
-  #Preview("General") {
+  #Preview("General", traits: .macSettings()) {
     MacSettingsGeneralTab()
-      .withMacSettingsPreviewEnv()
       .frame(width: 860, height: 560)
   }
 #endif
