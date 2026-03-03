@@ -4,7 +4,7 @@ import SwiftUI
 
   struct WorkspaceComposer: View {
     @Environment(WorkspaceStore.self) private var store
-    let sessionID: String
+    let sessionID: String?
 
     var body: some View {
       VStack(spacing: 10) {
@@ -16,23 +16,25 @@ import SwiftUI
 
     @ViewBuilder
     private var promptCards: some View {
-      if let permission = store.currentPermissionRequest(for: sessionID) {
-        PermissionPromptCard(
-          sessionID: sessionID,
-          request: permission
-        )
-      }
+      if let sessionID {
+        if let permission = store.currentPermissionRequest(for: sessionID) {
+          PermissionPromptCard(
+            sessionID: sessionID,
+            request: permission
+          )
+        }
 
-      if let question = store.currentQuestionRequest(for: sessionID) {
-        QuestionPromptCard(
-          sessionID: sessionID,
-          request: question
-        )
-      }
+        if let question = store.currentQuestionRequest(for: sessionID) {
+          QuestionPromptCard(
+            sessionID: sessionID,
+            request: question
+          )
+        }
 
-      let todos = store.todos(for: sessionID)
-      if !todos.isEmpty {
-        TodoDockCard(todos: todos)
+        let todos = store.todos(for: sessionID)
+        if !todos.isEmpty {
+          TodoDockCard(todos: todos)
+        }
       }
     }
 
@@ -41,8 +43,8 @@ import SwiftUI
     }
 
     private var composerCard: some View {
-      let composerBlocked = store.isComposerBlocked(for: sessionID)
-      let isRunning = store.isSessionRunning(sessionID)
+      let composerBlocked = sessionID.map { store.isComposerBlocked(for: $0) } ?? false
+      let isRunning = sessionID.map { store.isSessionRunning($0) } ?? false
 
       return VStack(alignment: .leading, spacing: 10) {
         composerInputField(composerBlocked: composerBlocked)
@@ -112,14 +114,14 @@ import SwiftUI
     private func sendButton(composerBlocked: Bool, isRunning: Bool) -> some View {
       Button {
         Task {
-          if store.isSessionRunning(sessionID) {
+          if let sessionID, store.isSessionRunning(sessionID) {
             await store.abort(sessionID: sessionID)
           } else {
             await store.sendDraftMessage(in: sessionID)
           }
         }
       } label: {
-        Image(systemName: store.isSessionRunning(sessionID) ? "stop.fill" : "arrow.up")
+        Image(systemName: isRunning ? "stop.fill" : "arrow.up")
           .font(.subheadline.weight(.bold))
           .foregroundStyle(.white)
           .frame(width: 36, height: 36)
@@ -128,7 +130,7 @@ import SwiftUI
       .buttonStyle(.plain)
       .disabled(!isRunning && (composerBlocked || store.draftMessage.trimmedForInput.isEmpty))
       .accessibilityIdentifier("composer.sendAbort")
-      .accessibilityLabel(store.isSessionRunning(sessionID) ? "Abort" : "Send")
+      .accessibilityLabel(isRunning ? "Abort" : "Send")
     }
 
     private func menuChipLabel(_ title: String, systemImage: String) -> some View {

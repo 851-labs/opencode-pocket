@@ -308,9 +308,7 @@
     }
 
     private func createSessionInProject(_ projectID: String) {
-      Task {
-        await store.createSession(inProjectID: projectID)
-      }
+      store.beginNewSession(inProjectID: projectID)
     }
 
     private func presentSessionRenameAlert(sessionID: String, currentTitle: String) {

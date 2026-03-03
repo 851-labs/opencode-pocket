@@ -38,6 +38,7 @@ final class WorkspaceStore {
   var sessions: [Session] = []
   var pinnedSessionIDs: Set<String> = []
   var selectedSessionID: String?
+  var isNewSessionMode = false
   var sessionStateByID: [String: WorkspaceSessionRuntimeState] = [:]
 
   var availableAgents: [AgentDescriptor] = []
@@ -499,6 +500,12 @@ final class WorkspaceStore {
       await refreshInspectorServices()
     }
 
+    if isNewSessionMode {
+      selectedSessionID = nil
+      persistWorkspaceSettings()
+      return
+    }
+
     if let selectedSessionID, visibleSessions.contains(where: { $0.id == selectedSessionID }) {
       persistWorkspaceSettings()
       return
@@ -676,8 +683,11 @@ final class WorkspaceStore {
     let nextVisible = visibleSessions
 
     if let selectedSessionID, nextVisible.contains(where: { $0.id == selectedSessionID }) {
+      isNewSessionMode = false
       await loadMessages(sessionID: selectedSessionID)
       await loadDiffs(sessionID: selectedSessionID)
+    } else if isNewSessionMode {
+      selectedSessionID = nil
     } else {
       selectedSessionID = nextVisible.first?.id
       if let selectedSessionID {
@@ -699,15 +709,23 @@ final class WorkspaceStore {
     }
 
     do {
-      let created = try await client.createSession(
-        SessionCreateRequest(title: title),
-        directory: activeProjectDirectory ?? connection.resolvedDirectory
-      )
+      let created = try await createSessionOnServer(using: client, title: title)
       selectedSessionID = created.id
+      isNewSessionMode = false
       await refreshSessions()
     } catch {
       workspaceError = error.localizedDescription
     }
+  }
+
+  func beginNewSession(inProjectID projectID: String? = nil) {
+    isNewSessionMode = true
+
+    if let projectID {
+      selectProject(projectID)
+    }
+
+    selectedSessionID = nil
   }
 
   func createSession(inProjectID projectID: String, title: String? = nil) async {
@@ -725,11 +743,13 @@ final class WorkspaceStore {
   func selectSession(_ sessionID: String?) async {
     guard let sessionID else {
       selectedSessionID = nil
+      isNewSessionMode = true
       return
     }
 
     guard let session = sessions.first(where: { $0.id == sessionID }) else {
       selectedSessionID = nil
+      isNewSessionMode = false
       return
     }
 
@@ -745,6 +765,7 @@ final class WorkspaceStore {
       diffsBySession[sessionID] == nil
 
     selectedSessionID = sessionID
+    isNewSessionMode = false
 
     guard shouldReload else {
       return
@@ -789,7 +810,7 @@ final class WorkspaceStore {
     }
   }
 
-  func sendDraftMessage(in sessionID: String) async {
+  func sendDraftMessage(in sessionID: String?) async {
     let trimmed = draftMessage.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !trimmed.isEmpty else { return }
 
@@ -803,17 +824,26 @@ final class WorkspaceStore {
     }
 
     do {
+      let sessionTarget = try await resolveSessionForDraftSend(preferredSessionID: sessionID ?? selectedSessionID, client: client)
       let request = PromptRequest(
         model: selectedModel,
         agent: selectedAgentName.trimmedNonEmpty,
         variant: selectedModelVariant,
         parts: [.text(original)]
       )
-      try await client.sendMessageAsync(sessionID: sessionID, body: request, directory: connection.resolvedDirectory)
+      try await client.sendMessageAsync(
+        sessionID: sessionTarget.sessionID,
+        body: request,
+        directory: directoryForSessionAction(sessionID: sessionTarget.sessionID)
+      )
 
       try? await Task.sleep(nanoseconds: 200_000_000)
-      await loadMessages(sessionID: sessionID)
-      await loadDiffs(sessionID: sessionID)
+      if sessionTarget.created {
+        await refreshSessions()
+      } else {
+        await loadMessages(sessionID: sessionTarget.sessionID)
+        await loadDiffs(sessionID: sessionTarget.sessionID)
+      }
     } catch {
       workspaceError = error.localizedDescription
       draftMessage = original
@@ -1264,6 +1294,27 @@ final class WorkspaceStore {
     }
 
     return connection.resolvedDirectory
+  }
+
+  private func createSessionOnServer(using client: OpenCodeClient, title: String? = nil) async throws -> Session {
+    try await client.createSession(
+      SessionCreateRequest(title: title),
+      directory: activeProjectDirectory ?? connection.resolvedDirectory
+    )
+  }
+
+  private func resolveSessionForDraftSend(
+    preferredSessionID: String?,
+    client: OpenCodeClient
+  ) async throws -> (sessionID: String, created: Bool) {
+    if let preferredSessionID {
+      return (preferredSessionID, false)
+    }
+
+    let createdSession = try await createSessionOnServer(using: client)
+    selectedSessionID = createdSession.id
+    isNewSessionMode = false
+    return (createdSession.id, true)
   }
 
   private func isVisibleRootSession(_ session: Session) -> Bool {

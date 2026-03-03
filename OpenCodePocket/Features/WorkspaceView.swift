@@ -101,7 +101,7 @@ private extension WorkspaceView {
         .accessibilityIdentifier("workspace.drawer")
     }
     .safeAreaInset(edge: .bottom) {
-      if case .ready = bootstrapState, let selectedSessionID {
+      if case .ready = bootstrapState {
         WorkspaceComposer(sessionID: selectedSessionID)
           .padding(.horizontal, 14)
           .padding(.bottom, 8)
@@ -275,9 +275,9 @@ private struct WorkspacePanelContent: View {
       }
     } else {
       ContentUnavailableView(
-        "No Session Selected",
+        "New Session",
         systemImage: "bubble.left.and.bubble.right",
-        description: Text("Open sessions and choose a session.")
+        description: Text("Send a message below to start a new session.")
       )
       .frame(maxWidth: .infinity, maxHeight: .infinity)
     }

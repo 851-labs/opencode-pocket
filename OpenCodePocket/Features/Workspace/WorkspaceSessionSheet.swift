@@ -45,9 +45,8 @@ import SwiftUI
         .accessibilityIdentifier("drawer.refresh")
 
         Button {
-          Task {
-            await store.createSession()
-          }
+          store.beginNewSession()
+          isPresented = false
         } label: {
           Label("New Session", systemImage: "plus")
         }

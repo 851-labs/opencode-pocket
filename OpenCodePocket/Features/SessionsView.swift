@@ -77,9 +77,7 @@ struct SessionsView: View {
   }
 
   private func createSession() {
-    Task {
-      await store.createSession()
-    }
+    store.beginNewSession()
   }
 
   private func selectSession(_ sessionID: String?) {

@@ -16,19 +16,10 @@
       case let .failed(message):
         MacWorkspaceBootstrapErrorView(message: message, retry: retry)
       case .ready:
-        if let selectedSessionID {
-          MacWorkspaceDetailContent(
-            selectedSessionID: selectedSessionID,
-            selectedPanel: $selectedPanel
-          )
-        } else {
-          ContentUnavailableView(
-            "No Session Selected",
-            systemImage: "bubble.left.and.bubble.right",
-            description: Text("Select or create a session from the sidebar.")
-          )
-          .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
+        MacWorkspaceDetailContent(
+          selectedSessionID: selectedSessionID,
+          selectedPanel: $selectedPanel
+        )
       }
     }
   }
@@ -36,7 +27,7 @@
   private struct MacWorkspaceDetailContent: View {
     @Environment(WorkspaceStore.self) private var store
 
-    let selectedSessionID: String
+    let selectedSessionID: String?
     @Binding var selectedPanel: MacWorkspacePanel
 
     @State private var composerHeight: CGFloat = 0
@@ -46,11 +37,17 @@
     }
 
     private var selectedMessages: [MessageEnvelope]? {
-      store.loadedMessages(for: selectedSessionID)
+      guard let selectedSessionID else {
+        return nil
+      }
+      return store.loadedMessages(for: selectedSessionID)
     }
 
     private var isInitialTranscriptLoadInProgress: Bool {
-      !store.hasLoadedMessages(for: selectedSessionID) && store.isLoadingMessages(for: selectedSessionID)
+      guard let selectedSessionID else {
+        return false
+      }
+      return !store.hasLoadedMessages(for: selectedSessionID) && store.isLoadingMessages(for: selectedSessionID)
     }
 
     var body: some View {
@@ -58,20 +55,36 @@
         Group {
           switch selectedPanel {
           case .transcript:
-            MacTranscriptPane(
-              messages: selectedMessages ?? [],
-              isInitialLoadInProgress: isInitialTranscriptLoadInProgress,
-              sessionStatus: store.status(for: selectedSessionID),
-              showReasoningSummaries: store.showReasoningSummaries,
-              expandShellToolParts: store.expandShellToolParts,
-              expandEditToolParts: store.expandEditToolParts,
-              bottomInset: composerBottomInset
-            )
+            if let selectedSessionID {
+              MacTranscriptPane(
+                messages: selectedMessages ?? [],
+                isInitialLoadInProgress: isInitialTranscriptLoadInProgress,
+                sessionStatus: store.status(for: selectedSessionID),
+                showReasoningSummaries: store.showReasoningSummaries,
+                expandShellToolParts: store.expandShellToolParts,
+                expandEditToolParts: store.expandEditToolParts,
+                bottomInset: composerBottomInset
+              )
+            } else {
+              ContentUnavailableView(
+                "New Session",
+                systemImage: "bubble.left.and.bubble.right",
+                description: Text("Send a message below to start a new session.")
+              )
+            }
           case .changes:
-            MacChangesPane(
-              diffs: store.diffs(for: selectedSessionID),
-              bottomInset: composerBottomInset
-            )
+            if let selectedSessionID {
+              MacChangesPane(
+                diffs: store.diffs(for: selectedSessionID),
+                bottomInset: composerBottomInset
+              )
+            } else {
+              ContentUnavailableView(
+                "No Code Changes",
+                systemImage: "doc.text.magnifyingglass",
+                description: Text("Select a session to view code changes.")
+              )
+            }
           }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
