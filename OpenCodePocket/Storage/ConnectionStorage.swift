@@ -49,6 +49,63 @@ struct ConnectionSettings: Codable, Equatable {
   )
 }
 
+enum DefaultOpenDestination: String, Codable, CaseIterable, Equatable, Identifiable {
+  case vscode
+  case cursor
+  case finder
+  case terminal
+  case ghostty
+  case xcode
+  case androidStudio = "android-studio"
+  case zed
+
+  var id: String {
+    rawValue
+  }
+
+  var displayName: String {
+    switch self {
+    case .vscode:
+      return "VS Code"
+    case .cursor:
+      return "Cursor"
+    case .finder:
+      return "Finder"
+    case .terminal:
+      return "Terminal"
+    case .ghostty:
+      return "Ghostty"
+    case .xcode:
+      return "Xcode"
+    case .androidStudio:
+      return "Android Studio"
+    case .zed:
+      return "Zed"
+    }
+  }
+
+  var systemImage: String {
+    switch self {
+    case .vscode:
+      return "chevron.left.forwardslash.chevron.right"
+    case .cursor:
+      return "cursorarrow"
+    case .finder:
+      return "folder"
+    case .terminal:
+      return "terminal"
+    case .ghostty:
+      return "terminal.fill"
+    case .xcode:
+      return "hammer"
+    case .androidStudio:
+      return "ladybug"
+    case .zed:
+      return "square.and.pencil"
+    }
+  }
+}
+
 struct WorkspaceSettings: Codable, Equatable {
   var selectedAgent: String?
   var selectedProviderID: String?
@@ -58,6 +115,7 @@ struct WorkspaceSettings: Codable, Equatable {
   var pinnedSessionIDs: [String]
   var projects: [SavedProject]
   var selectedProjectID: String?
+  var defaultOpenDestination: DefaultOpenDestination
   var showReasoningSummaries: Bool
   var expandShellToolParts: Bool
   var expandEditToolParts: Bool
@@ -74,6 +132,7 @@ struct WorkspaceSettings: Codable, Equatable {
     pinnedSessionIDs: [String] = [],
     projects: [SavedProject],
     selectedProjectID: String?,
+    defaultOpenDestination: DefaultOpenDestination = .finder,
     showReasoningSummaries: Bool = false,
     expandShellToolParts: Bool = true,
     expandEditToolParts: Bool = false,
@@ -89,12 +148,60 @@ struct WorkspaceSettings: Codable, Equatable {
     self.pinnedSessionIDs = pinnedSessionIDs
     self.projects = projects
     self.selectedProjectID = selectedProjectID
+    self.defaultOpenDestination = defaultOpenDestination
     self.showReasoningSummaries = showReasoningSummaries
     self.expandShellToolParts = expandShellToolParts
     self.expandEditToolParts = expandEditToolParts
     self.notifyAgentSystemNotifications = notifyAgentSystemNotifications
     self.notifyPermissionSystemNotifications = notifyPermissionSystemNotifications
     self.notifyErrorSystemNotifications = notifyErrorSystemNotifications
+  }
+
+  init(from decoder: Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    selectedAgent = try container.decodeIfPresent(String.self, forKey: .selectedAgent)
+    selectedProviderID = try container.decodeIfPresent(String.self, forKey: .selectedProviderID)
+    selectedModelID = try container.decodeIfPresent(String.self, forKey: .selectedModelID)
+    selectedModelVariant = try container.decodeIfPresent(String.self, forKey: .selectedModelVariant)
+    hiddenModelKeys = try container.decodeIfPresent([String].self, forKey: .hiddenModelKeys) ?? []
+    pinnedSessionIDs = try container.decodeIfPresent([String].self, forKey: .pinnedSessionIDs) ?? []
+    projects = try container.decodeIfPresent([SavedProject].self, forKey: .projects) ?? []
+    selectedProjectID = try container.decodeIfPresent(String.self, forKey: .selectedProjectID)
+
+    if
+      let rawDestination = try container.decodeIfPresent(String.self, forKey: .defaultOpenDestination),
+      let destination = DefaultOpenDestination(rawValue: rawDestination)
+    {
+      defaultOpenDestination = destination
+    } else {
+      defaultOpenDestination = .finder
+    }
+
+    showReasoningSummaries = try container.decodeIfPresent(Bool.self, forKey: .showReasoningSummaries) ?? false
+    expandShellToolParts = try container.decodeIfPresent(Bool.self, forKey: .expandShellToolParts) ?? true
+    expandEditToolParts = try container.decodeIfPresent(Bool.self, forKey: .expandEditToolParts) ?? false
+    notifyAgentSystemNotifications = try container.decodeIfPresent(Bool.self, forKey: .notifyAgentSystemNotifications) ?? true
+    notifyPermissionSystemNotifications =
+      try container.decodeIfPresent(Bool.self, forKey: .notifyPermissionSystemNotifications) ?? true
+    notifyErrorSystemNotifications = try container.decodeIfPresent(Bool.self, forKey: .notifyErrorSystemNotifications) ?? false
+  }
+
+  private enum CodingKeys: String, CodingKey {
+    case selectedAgent
+    case selectedProviderID
+    case selectedModelID
+    case selectedModelVariant
+    case hiddenModelKeys
+    case pinnedSessionIDs
+    case projects
+    case selectedProjectID
+    case defaultOpenDestination
+    case showReasoningSummaries
+    case expandShellToolParts
+    case expandEditToolParts
+    case notifyAgentSystemNotifications
+    case notifyPermissionSystemNotifications
+    case notifyErrorSystemNotifications
   }
 
   static let `default` = WorkspaceSettings(
@@ -106,6 +213,7 @@ struct WorkspaceSettings: Codable, Equatable {
     pinnedSessionIDs: [],
     projects: [],
     selectedProjectID: nil,
+    defaultOpenDestination: .finder,
     showReasoningSummaries: false,
     expandShellToolParts: true,
     expandEditToolParts: false,
@@ -232,6 +340,7 @@ final class WorkspaceSettingsStore {
         pinnedSessionIDs: legacy.pinnedSessionIDs,
         projects: legacy.projects,
         selectedProjectID: legacy.selectedProjectID,
+        defaultOpenDestination: legacy.defaultOpenDestination,
         showReasoningSummaries: legacy.showReasoningSummaries,
         expandShellToolParts: legacy.expandShellToolParts,
         expandEditToolParts: legacy.expandEditToolParts,
@@ -259,6 +368,7 @@ private struct LegacyConnectionSettings: Codable {
   var pinnedSessionIDs: [String]
   var projects: [SavedProject]
   var selectedProjectID: String?
+  var defaultOpenDestination: DefaultOpenDestination
   var showReasoningSummaries: Bool
   var expandShellToolParts: Bool
   var expandEditToolParts: Bool
@@ -276,6 +386,16 @@ private struct LegacyConnectionSettings: Codable {
     pinnedSessionIDs = try container.decodeIfPresent([String].self, forKey: .pinnedSessionIDs) ?? []
     projects = try container.decodeIfPresent([SavedProject].self, forKey: .projects) ?? []
     selectedProjectID = try container.decodeIfPresent(String.self, forKey: .selectedProjectID)
+
+    if
+      let rawDestination = try container.decodeIfPresent(String.self, forKey: .defaultOpenDestination),
+      let destination = DefaultOpenDestination(rawValue: rawDestination)
+    {
+      defaultOpenDestination = destination
+    } else {
+      defaultOpenDestination = .finder
+    }
+
     showReasoningSummaries = try container.decodeIfPresent(Bool.self, forKey: .showReasoningSummaries) ?? false
     expandShellToolParts = try container.decodeIfPresent(Bool.self, forKey: .expandShellToolParts) ?? true
     expandEditToolParts = try container.decodeIfPresent(Bool.self, forKey: .expandEditToolParts) ?? false
@@ -294,6 +414,7 @@ private struct LegacyConnectionSettings: Codable {
     case pinnedSessionIDs
     case projects
     case selectedProjectID
+    case defaultOpenDestination
     case showReasoningSummaries
     case expandShellToolParts
     case expandEditToolParts

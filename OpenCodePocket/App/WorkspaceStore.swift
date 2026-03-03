@@ -49,6 +49,13 @@ final class WorkspaceStore {
   var selectedAgentName: String
   var selectedModel: ModelSelector?
   var selectedModelVariant: String?
+  var defaultOpenDestination: DefaultOpenDestination = .finder {
+    didSet {
+      guard oldValue != defaultOpenDestination else { return }
+      persistWorkspaceSettings()
+    }
+  }
+
   var showReasoningSummaries = false {
     didSet {
       guard oldValue != showReasoningSummaries else { return }
@@ -128,6 +135,7 @@ final class WorkspaceStore {
     }
 
     selectedModelVariant = settings.selectedModelVariant?.trimmedNonEmpty
+    defaultOpenDestination = settings.defaultOpenDestination
     showReasoningSummaries = settings.showReasoningSummaries
     expandShellToolParts = settings.expandShellToolParts
     expandEditToolParts = settings.expandEditToolParts
@@ -1384,6 +1392,7 @@ final class WorkspaceStore {
         pinnedSessionIDs: pinnedSessionIDs.sorted(),
         projects: projects,
         selectedProjectID: selectedProjectID,
+        defaultOpenDestination: defaultOpenDestination,
         showReasoningSummaries: showReasoningSummaries,
         expandShellToolParts: expandShellToolParts,
         expandEditToolParts: expandEditToolParts,
