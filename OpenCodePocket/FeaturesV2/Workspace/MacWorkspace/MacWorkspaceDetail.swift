@@ -66,11 +66,7 @@
                 bottomInset: composerBottomInset
               )
             } else {
-              ContentUnavailableView(
-                "New Session",
-                systemImage: "bubble.left.and.bubble.right",
-                description: Text("Send a message below to start a new session.")
-              )
+              MacNewChatPane(bottomInset: composerBottomInset)
             }
           case .changes:
             if let selectedSessionID {
@@ -109,6 +105,101 @@
 
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
       value = max(value, nextValue())
+    }
+  }
+
+  private struct MacNewChatPane: View {
+    @Environment(WorkspaceStore.self) private var store
+
+    let bottomInset: CGFloat
+
+    private var selectedProject: SavedProject? {
+      guard let selectedProjectID = store.selectedProjectID else {
+        return store.projects.first
+      }
+
+      return store.projects.first(where: { $0.id == selectedProjectID }) ?? store.projects.first
+    }
+
+    private var projectSymbol: String {
+      selectedProject?.symbol?.trimmedNonEmpty ?? "folder"
+    }
+
+    private var projectName: String {
+      selectedProject?.name ?? "Workspace"
+    }
+
+    private var projectDirectory: String {
+      selectedProject?.directory ?? store.connection.resolvedDirectory ?? "No directory selected"
+    }
+
+    var body: some View {
+      ScrollView {
+        VStack(alignment: .leading, spacing: 20) {
+          VStack(alignment: .leading, spacing: 8) {
+            Label("New Chat", systemImage: "sparkles")
+              .font(.title2.weight(.semibold))
+
+            Text("Start with a clear goal. Your first message creates the session.")
+              .font(.subheadline)
+              .foregroundStyle(.secondary)
+          }
+
+          VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .center, spacing: 10) {
+              Image(systemName: projectSymbol)
+                .font(.headline)
+                .frame(width: 30, height: 30)
+                .foregroundStyle(Color.accentColor)
+                .background(
+                  Circle()
+                    .fill(Color.accentColor.opacity(0.15))
+                )
+
+              VStack(alignment: .leading, spacing: 2) {
+                Text(projectName)
+                  .font(.headline)
+
+                Text(projectDirectory)
+                  .font(.caption)
+                  .foregroundStyle(.secondary)
+                  .lineLimit(1)
+                  .textSelection(.enabled)
+              }
+
+              Spacer()
+            }
+
+            Divider()
+
+            VStack(alignment: .leading, spacing: 8) {
+              Label("Ask for a plan before coding.", systemImage: "list.bullet.rectangle")
+              Label("Mention files, constraints, and expected output.", systemImage: "doc.text")
+              Label("Use the composer below to begin.", systemImage: "arrow.down.circle")
+            }
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+          }
+          .padding(16)
+          .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+              .fill(Color.secondary.opacity(0.08))
+          )
+        }
+        .frame(maxWidth: 760, alignment: .leading)
+        .padding(.horizontal, 24)
+        .padding(.top, 24)
+        .padding(.bottom, max(24, bottomInset + 8))
+      }
+      .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+      .background(
+        LinearGradient(
+          colors: [Color.accentColor.opacity(0.06), Color.clear],
+          startPoint: .topLeading,
+          endPoint: .bottomTrailing
+        )
+      )
+      .accessibilityIdentifier("workspace.newChat.pane")
     }
   }
 

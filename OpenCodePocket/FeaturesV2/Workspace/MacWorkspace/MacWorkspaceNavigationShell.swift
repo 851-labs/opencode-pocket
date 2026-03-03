@@ -84,7 +84,6 @@
         MacWorkspaceSidebar(
           selectedSession: selectedSessionBinding,
           expandedProjectIDs: $expandedProjectIDs,
-          onSelectProject: selectProjectFromSidebar,
           onTogglePinSession: togglePinSession,
           onCreateSessionInProject: createSessionInProject,
           onRequestSessionRename: presentSessionRenameAlert,
@@ -184,9 +183,20 @@
         },
         set: { selection in
           selectionTask?.cancel()
-          selectionTask = Task {
-            guard !Task.isCancelled else { return }
-            await store.selectSession(selection?.sessionID)
+          guard let selection else {
+            selectionTask = Task {
+              await store.selectSession(nil)
+            }
+            return
+          }
+
+          switch selection {
+          case let .project(projectID):
+            selectProjectFromSidebar(projectID)
+          case let .pinned(sessionID), let .thread(_, sessionID):
+            selectionTask = Task {
+              await store.selectSession(sessionID)
+            }
           }
         }
       )
@@ -194,7 +204,11 @@
 
     private func sidebarSelection(for sessionID: String?) -> MacWorkspaceSidebarSelection? {
       guard let sessionID else {
-        return nil
+        guard let selectedProjectID = store.selectedProjectID else {
+          return nil
+        }
+
+        return .project(projectID: selectedProjectID)
       }
 
       if store.isSessionPinned(sessionID) {
@@ -268,8 +282,9 @@
     }
 
     private func selectProjectFromSidebar(_ projectID: String) {
-      store.selectProject(projectID)
       expandedProjectIDs.insert(projectID)
+      selectedPanel = .transcript
+      store.beginNewSession(inProjectID: projectID)
     }
 
     private func syncExpandedProjects() {

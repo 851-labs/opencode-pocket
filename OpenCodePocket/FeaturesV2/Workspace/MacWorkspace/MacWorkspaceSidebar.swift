@@ -3,13 +3,25 @@
   import SwiftUI
 
   enum MacWorkspaceSidebarSelection: Hashable {
+    case project(projectID: String)
     case pinned(sessionID: String)
     case thread(projectID: String, sessionID: String)
 
-    var sessionID: String {
+    var sessionID: String? {
       switch self {
+      case .project:
+        return nil
       case let .pinned(sessionID), let .thread(_, sessionID):
         return sessionID
+      }
+    }
+
+    var projectID: String? {
+      switch self {
+      case let .project(projectID), let .thread(projectID, _):
+        return projectID
+      case .pinned:
+        return nil
       }
     }
   }
@@ -20,7 +32,6 @@
 
     @Binding var selectedSession: MacWorkspaceSidebarSelection?
     @Binding var expandedProjectIDs: Set<String>
-    let onSelectProject: (String) -> Void
     let onTogglePinSession: (String) -> Void
     let onCreateSessionInProject: (String) -> Void
     let onRequestSessionRename: (String, String) -> Void
@@ -54,9 +65,6 @@
             MacSidebarProjectSection(
               project: project,
               isExpanded: projectExpansionBinding(for: project.id),
-              onSelectProject: {
-                onSelectProject(project.id)
-              },
               onTogglePinSession: onTogglePinSession,
               onCreateSessionInProject: onCreateSessionInProject,
               onRequestSessionRename: onRequestSessionRename,
@@ -111,7 +119,6 @@
 
     let project: SavedProject
     @Binding var isExpanded: Bool
-    let onSelectProject: () -> Void
     let onTogglePinSession: (String) -> Void
     let onCreateSessionInProject: (String) -> Void
     let onRequestSessionRename: (String, String) -> Void
@@ -151,39 +158,37 @@
           }
         }
       } label: {
-        Button(action: onSelectProject) {
-          Label(project.name, systemImage: projectSymbol)
-            .frame(maxWidth: .infinity, alignment: .leading)
+        Label(project.name, systemImage: projectSymbol)
+          .frame(maxWidth: .infinity, alignment: .leading)
+      }
+      .tag(MacWorkspaceSidebarSelection.project(projectID: project.id))
+      .contextMenu {
+        Button {
+          onCreateSessionInProject(project.id)
+        } label: {
+          Label("New Session", systemImage: "plus")
         }
-        .buttonStyle(.plain)
-        .contextMenu {
-          Button {
-            onCreateSessionInProject(project.id)
-          } label: {
-            Label("New Session", systemImage: "plus")
-          }
 
-          Button {
-            onRequestProjectRename(project.id, project.name)
-          } label: {
-            Label("Rename Project", systemImage: "pencil")
-          }
+        Button {
+          onRequestProjectRename(project.id, project.name)
+        } label: {
+          Label("Rename Project", systemImage: "pencil")
+        }
 
-          Button {
-            routerPath.presentedSheet = .customizeProject(
-              projectID: project.id,
-              currentName: project.name,
-              currentSymbol: project.symbol
-            )
-          } label: {
-            Label("Customize Project", systemImage: "paintbrush")
-          }
+        Button {
+          routerPath.presentedSheet = .customizeProject(
+            projectID: project.id,
+            currentName: project.name,
+            currentSymbol: project.symbol
+          )
+        } label: {
+          Label("Customize Project", systemImage: "paintbrush")
+        }
 
-          Button(role: .destructive) {
-            routerPath.pendingRemoveProjectID = project.id
-          } label: {
-            Label("Remove Project", systemImage: "trash")
-          }
+        Button(role: .destructive) {
+          routerPath.pendingRemoveProjectID = project.id
+        } label: {
+          Label("Remove Project", systemImage: "trash")
         }
       }
       .accessibilityIdentifier("sidebar.project.\(project.id)")
@@ -239,7 +244,7 @@
 
     var body: some View {
       sessionRowContent
-        .tag(row.selection as MacWorkspaceSidebarSelection?)
+        .tag(row.selection)
         .contextMenu {
           if store.isSessionPinned(row.session.id) {
             Button {
@@ -321,7 +326,6 @@
       MacWorkspaceSidebar(
         selectedSession: $selectedSession,
         expandedProjectIDs: $expandedProjectIDs,
-        onSelectProject: { _ in },
         onTogglePinSession: { _ in },
         onCreateSessionInProject: { _ in },
         onRequestSessionRename: { _, _ in },
