@@ -1,8 +1,9 @@
 import OpenCodeModels
-import XCTest
+import Testing
 
-final class MessageEventNormalizationTests: XCTestCase {
-  func testPartDeltaMutationAppendsTextToExistingPart() {
+@Suite(.tags(.networking))
+struct MessageEventNormalizationTests {
+  @Test func partDeltaMutationAppendsTextToExistingPart() {
     let sessionID = "ses_1"
     let messagesBySession = [sessionID: [makeEnvelope(sessionID: sessionID, messageID: "msg_1", partID: "prt_1", text: "hello")]]
     let properties: [String: JSONValue] = [
@@ -14,11 +15,11 @@ final class MessageEventNormalizationTests: XCTestCase {
     ]
 
     let mutation = MessageEnvelope.partDeltaMutation(from: properties, messagesBySession: messagesBySession)
-    XCTAssertEqual(mutation?.sessionID, sessionID)
-    XCTAssertEqual(mutation?.messages.first?.parts.first?.text, "hello world")
+    #expect(mutation?.sessionID == sessionID)
+    #expect(mutation?.messages.first?.parts.first?.text == "hello world")
   }
 
-  func testPartUpdatedMutationInsertsPartByStableOrder() {
+  @Test func partUpdatedMutationInsertsPartByStableOrder() {
     let sessionID = "ses_1"
     let messagesBySession = [sessionID: [makeEnvelope(sessionID: sessionID, messageID: "msg_1", partID: "prt_2", text: "two")]]
 
@@ -28,10 +29,10 @@ final class MessageEventNormalizationTests: XCTestCase {
     ]
 
     let mutation = MessageEnvelope.partUpdatedMutation(from: properties, messagesBySession: messagesBySession)
-    XCTAssertEqual(mutation?.messages.first?.parts.map(\.id), ["prt_1", "prt_2"])
+    #expect(mutation?.messages.first?.parts.map(\.id) == ["prt_1", "prt_2"])
   }
 
-  func testMessageUpdatedMutationCreatesMissingMessageWithNoParts() {
+  @Test func messageUpdatedMutationCreatesMissingMessageWithNoParts() {
     let sessionID = "ses_1"
     let messagesBySession: [String: [MessageEnvelope]] = [sessionID: []]
     let info = makeInfo(sessionID: sessionID, messageID: "msg_9", role: .assistant)
@@ -40,12 +41,12 @@ final class MessageEventNormalizationTests: XCTestCase {
     ]
 
     let mutation = MessageEnvelope.messageUpdatedMutation(from: properties, messagesBySession: messagesBySession)
-    XCTAssertEqual(mutation?.messages.count, 1)
-    XCTAssertEqual(mutation?.messages.first?.info.id, "msg_9")
-    XCTAssertEqual(mutation?.messages.first?.parts.count, 0)
+    #expect(mutation?.messages.count == 1)
+    #expect(mutation?.messages.first?.info.id == "msg_9")
+    #expect(mutation?.messages.first?.parts.count == 0)
   }
 
-  func testMessageRemovalMutationRemovesMessageByID() {
+  @Test func messageRemovalMutationRemovesMessageByID() {
     let sessionID = "ses_1"
     let messagesBySession = [
       sessionID: [
@@ -59,10 +60,10 @@ final class MessageEventNormalizationTests: XCTestCase {
     ]
 
     let mutation = MessageEnvelope.messageRemovalMutation(from: properties, messagesBySession: messagesBySession)
-    XCTAssertEqual(mutation?.messages.map(\.info.id), ["msg_2"])
+    #expect(mutation?.messages.map(\.info.id) == ["msg_2"])
   }
 
-  func testPartRemovalMutationRemovesSinglePart() {
+  @Test func partRemovalMutationRemovesSinglePart() {
     let sessionID = "ses_1"
     let messagesBySession = [
       sessionID: [
@@ -82,7 +83,7 @@ final class MessageEventNormalizationTests: XCTestCase {
     ]
 
     let mutation = MessageEnvelope.partRemovalMutation(from: properties, messagesBySession: messagesBySession)
-    XCTAssertEqual(mutation?.messages.first?.parts.map(\.id), ["prt_1"])
+    #expect(mutation?.messages.first?.parts.map(\.id) == ["prt_1"])
   }
 
   private func makeEnvelope(sessionID: String, messageID: String, partID: String, text: String) -> MessageEnvelope {

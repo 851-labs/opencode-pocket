@@ -1,7 +1,7 @@
 ---
 # opencode-pocket-swt2
 title: P2 migrate decoding and request builder tests to Swift Testing
-status: todo
+status: in_progress
 type: task
 priority: normal
 tags:
@@ -10,7 +10,7 @@ tags:
     - networking
     - decoding
 created_at: 2026-03-19T00:00:00Z
-updated_at: 2026-03-19T00:00:00Z
+updated_at: 2026-03-19T22:32:00Z
 ---
 
 Migrate the deterministic decoding and request builder suites to Swift Testing once the initial package-local conventions are in place.

@@ -1,7 +1,7 @@
 ---
 # opencode-pocket-swt1
 title: P2 add Swift Testing support primitives and migrate parser and normalization suites
-status: in_progress
+status: completed
 type: task
 priority: normal
 tags:
@@ -9,7 +9,7 @@ tags:
     - sdk
     - networking
 created_at: 2026-03-19T00:00:00Z
-updated_at: 2026-03-19T00:00:00Z
+updated_at: 2026-03-19T22:32:00Z
 ---
 
 Establish Swift Testing support inside `OpenCodeSDK` and migrate the lowest-risk parser and normalization suites first so the package has a clear local pattern for later conversions.
@@ -24,3 +24,5 @@ Acceptance criteria:
 - No `XCTestCase` or `XCTAssert*` remain in the migrated files.
 - Any shared test helpers compile cleanly and follow project conventions.
 - Required validation passes (macOS build, iOS simulator build, OpenCodeSDK tests).
+
+Completed with a shared `.networking` tag helper plus Swift Testing migrations for the SSE parser and message normalization suites. Required validation passed.

@@ -1,91 +1,92 @@
 import OpenCodeNetworking
-import XCTest
+import Testing
 
-final class SSEParserTests: XCTestCase {
-  func testParsesSingleMessage() {
+@Suite(.tags(.networking))
+struct SSEParserTests {
+  @Test func parsesSingleMessage() {
     var parser = SSEParser()
 
-    XCTAssertNil(parser.ingest(line: "event: message"))
-    XCTAssertNil(parser.ingest(line: "data: {\"type\":\"server.connected\",\"properties\":{}}"))
+    #expect(parser.ingest(line: "event: message") == nil)
+    #expect(parser.ingest(line: "data: {\"type\":\"server.connected\",\"properties\":{}}") == nil)
 
     let output = parser.ingest(line: "")
 
-    XCTAssertEqual(output?.event, "message")
-    XCTAssertEqual(output?.data, "{\"type\":\"server.connected\",\"properties\":{}}")
-    XCTAssertNil(output?.retry)
+    #expect(output?.event == "message")
+    #expect(output?.data == "{\"type\":\"server.connected\",\"properties\":{}}")
+    #expect(output?.retry == nil)
   }
 
-  func testParsesMultilineData() {
+  @Test func parsesMultilineData() {
     var parser = SSEParser()
 
-    XCTAssertNil(parser.ingest(line: "data: hello"))
-    XCTAssertNil(parser.ingest(line: "data: world"))
+    #expect(parser.ingest(line: "data: hello") == nil)
+    #expect(parser.ingest(line: "data: world") == nil)
 
     let output = parser.ingest(line: "")
-    XCTAssertEqual(output?.data, "hello\nworld")
+    #expect(output?.data == "hello\nworld")
   }
 
-  func testParsesRetryAndID() {
+  @Test func parsesRetryAndID() {
     var parser = SSEParser()
 
-    XCTAssertNil(parser.ingest(line: "id: evt-1"))
-    XCTAssertNil(parser.ingest(line: "retry: 1500"))
-    XCTAssertNil(parser.ingest(line: "data: ok"))
+    #expect(parser.ingest(line: "id: evt-1") == nil)
+    #expect(parser.ingest(line: "retry: 1500") == nil)
+    #expect(parser.ingest(line: "data: ok") == nil)
 
     let output = parser.ingest(line: "")
-    XCTAssertEqual(output?.id, "evt-1")
-    XCTAssertEqual(output?.retry, 1500)
-    XCTAssertEqual(output?.data, "ok")
+    #expect(output?.id == "evt-1")
+    #expect(output?.retry == 1500)
+    #expect(output?.data == "ok")
   }
 
-  func testIgnoresInvalidRetry() {
+  @Test func ignoresInvalidRetry() {
     var parser = SSEParser()
 
-    XCTAssertNil(parser.ingest(line: "retry: nope"))
-    XCTAssertNil(parser.ingest(line: "data: hello"))
+    #expect(parser.ingest(line: "retry: nope") == nil)
+    #expect(parser.ingest(line: "data: hello") == nil)
 
     let output = parser.ingest(line: "")
-    XCTAssertNil(output?.retry)
-    XCTAssertEqual(output?.data, "hello")
+    #expect(output?.retry == nil)
+    #expect(output?.data == "hello")
   }
 
-  func testIgnoresCommentLines() {
+  @Test func ignoresCommentLines() {
     var parser = SSEParser()
 
-    XCTAssertNil(parser.ingest(line: ": keep-alive"))
-    XCTAssertNil(parser.ingest(line: "data: ping"))
+    #expect(parser.ingest(line: ": keep-alive") == nil)
+    #expect(parser.ingest(line: "data: ping") == nil)
 
     let output = parser.ingest(line: "")
-    XCTAssertEqual(output?.data, "ping")
+    #expect(output?.data == "ping")
   }
 
-  func testNormalizesCarriageReturn() {
+  @Test func normalizesCarriageReturn() {
     var parser = SSEParser()
 
-    XCTAssertNil(parser.ingest(line: "data: hello\r"))
+    #expect(parser.ingest(line: "data: hello\r") == nil)
 
     let output = parser.ingest(line: "\r")
-    XCTAssertEqual(output?.data, "hello")
+    #expect(output?.data == "hello")
   }
 
-  func testFinishFlushesPendingMessage() {
+  @Test func finishFlushesPendingMessage() {
     var parser = SSEParser()
 
-    XCTAssertNil(parser.ingest(line: "event: message"))
-    XCTAssertNil(parser.ingest(line: "data: tail"))
+    #expect(parser.ingest(line: "event: message") == nil)
+    #expect(parser.ingest(line: "data: tail") == nil)
 
     let output = parser.finish()
-    XCTAssertEqual(output?.event, "message")
-    XCTAssertEqual(output?.data, "tail")
+    #expect(output?.event == "message")
+    #expect(output?.data == "tail")
   }
 
-  func testFlushesEventWithoutData() {
+  @Test func flushesEventWithoutData() {
     var parser = SSEParser()
 
-    XCTAssertNil(parser.ingest(line: "event: ping"))
+    #expect(parser.ingest(line: "event: ping") == nil)
 
     let output = parser.ingest(line: "")
-    XCTAssertEqual(output?.event, "ping")
-    XCTAssertNil(output?.data)
+    #expect(output?.event == "ping")
+    #expect(output?.data == nil)
   }
 }
