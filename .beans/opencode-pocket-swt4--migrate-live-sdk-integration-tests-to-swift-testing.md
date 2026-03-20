@@ -1,7 +1,7 @@
 ---
 # opencode-pocket-swt4
 title: P2 migrate live SDK integration tests to Swift Testing traits and tags
-status: in_progress
+status: completed
 type: task
 priority: normal
 tags:
@@ -10,7 +10,7 @@ tags:
     - networking
     - integration
 created_at: 2026-03-19T00:00:00Z
-updated_at: 2026-03-19T22:48:00Z
+updated_at: 2026-03-19T22:49:00Z
 ---
 
 Migrate the live server integration coverage to Swift Testing while preserving the existing environment-gated contract for optional live execution.
@@ -24,3 +24,5 @@ Acceptance criteria:
 - Default local `swift test` runs keep live coverage disabled unless the expected environment is configured.
 - The live test contract documented in `AGENTS.md` remains intact.
 - Required validation passes (macOS build, iOS simulator build, OpenCodeSDK tests).
+
+Completed by migrating the live integration suite to Swift Testing with explicit `.live` tagging and env-based enablement, while preserving the existing live-test contract. Required validation passed.

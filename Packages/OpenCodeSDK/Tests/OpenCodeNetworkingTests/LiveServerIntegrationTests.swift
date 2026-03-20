@@ -1,22 +1,14 @@
 import Foundation
 import OpenCodeNetworking
-import XCTest
+import Testing
 
-final class LiveServerIntegrationTests: XCTestCase {
-  func testHealthAndSessionListAgainstLiveServer() async throws {
-    let env = ProcessInfo.processInfo.environment
-
-    guard env["OPENCODE_RUN_LIVE_TESTS"] == "1" else {
-      throw XCTSkip("Skipping live tests because OPENCODE_RUN_LIVE_TESTS is not enabled")
-    }
-
-    if env["OPENCODE_SKIP_LIVE_TESTS"] == "1" {
-      throw XCTSkip("Skipping live tests because OPENCODE_SKIP_LIVE_TESTS=1")
-    }
-
-    guard let baseURLString = env["OPENCODE_BASE_URL"], let baseURL = URL(string: baseURLString) else {
-      throw XCTSkip("Skipping live tests because OPENCODE_BASE_URL is not configured")
-    }
+@Suite(.tags(.networking, .live))
+struct LiveServerIntegrationTests {
+  @Test(.enabled(if: Self.shouldRunLiveTests), .timeLimit(.minutes(1)))
+  func healthAndSessionListAgainstLiveServer() async throws {
+    let env = Self.environment
+    let baseURLString = try #require(env["OPENCODE_BASE_URL"])
+    let baseURL = try #require(URL(string: baseURLString))
 
     let client = OpenCodeClient(
       configuration: OpenCodeClientConfiguration(
@@ -28,9 +20,28 @@ final class LiveServerIntegrationTests: XCTestCase {
     )
 
     let health = try await client.health()
-    XCTAssertTrue(health.healthy)
-    XCTAssertFalse(health.version.isEmpty)
+    #expect(health.healthy == true)
+    #expect(health.version.isEmpty == false)
 
     _ = try await client.listSessions()
+  }
+}
+
+private extension LiveServerIntegrationTests {
+  static var environment: [String: String] {
+    ProcessInfo.processInfo.environment
+  }
+
+  static var shouldRunLiveTests: Bool {
+    guard environment["OPENCODE_RUN_LIVE_TESTS"] == "1" else {
+      return false
+    }
+    guard environment["OPENCODE_SKIP_LIVE_TESTS"] != "1" else {
+      return false
+    }
+    guard let baseURLString = environment["OPENCODE_BASE_URL"] else {
+      return false
+    }
+    return URL(string: baseURLString) != nil
   }
 }
