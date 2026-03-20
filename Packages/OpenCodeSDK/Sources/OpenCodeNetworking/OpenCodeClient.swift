@@ -90,8 +90,32 @@ public final class OpenCodeClient {
     return try await request(.get, path: "/find/file", query: queryItems, response: [String].self)
   }
 
-  public func listSessions(directory: String? = nil) async throws -> [Session] {
-    try await request(.get, path: "/session", query: mergedDirectoryQuery(directory), response: [Session].self)
+  public func listSessions(
+    directory: String? = nil,
+    roots: Bool? = nil,
+    start: Double? = nil,
+    search: String? = nil,
+    limit: Int? = nil
+  ) async throws -> [Session] {
+    var query = mergedDirectoryQuery(directory)
+    if let roots {
+      query.append(URLQueryItem(name: "roots", value: roots ? "true" : "false"))
+    }
+    if let start {
+      query.append(URLQueryItem(name: "start", value: String(start)))
+    }
+    if let search, !search.isEmpty {
+      query.append(URLQueryItem(name: "search", value: search))
+    }
+    if let limit {
+      query.append(URLQueryItem(name: "limit", value: String(limit)))
+    }
+
+    return try await request(.get, path: "/session", query: query, response: [Session].self)
+  }
+
+  public func listSessionStatuses() async throws -> [String: SessionStatus] {
+    try await request(.get, path: "/session/status", response: [String: SessionStatus].self)
   }
 
   public func listAgents(directory: String? = nil) async throws -> [AgentDescriptor] {
@@ -148,16 +172,36 @@ public final class OpenCodeClient {
     )
   }
 
-  public func listMessages(sessionID: String, limit: Int? = nil, directory: String? = nil) async throws -> [MessageEnvelope] {
+  public func listMessages(
+    sessionID: String,
+    limit: Int? = nil,
+    before: String? = nil,
+    directory: String? = nil
+  ) async throws -> [MessageEnvelope] {
+    let page = try await listMessagesPage(sessionID: sessionID, limit: limit, before: before, directory: directory)
+    return page.items
+  }
+
+  public func listMessagesPage(
+    sessionID: String,
+    limit: Int? = nil,
+    before: String? = nil,
+    directory: String? = nil
+  ) async throws -> OpenCodePage<MessageEnvelope> {
     var query = mergedDirectoryQuery(directory)
     if let limit {
       query.append(URLQueryItem(name: "limit", value: String(limit)))
     }
-    return try await request(
+
+    if let before, !before.isEmpty {
+      query.append(URLQueryItem(name: "before", value: before))
+    }
+
+    return try await requestPage(
       .get,
       path: "/session/\(escapedPathComponent(sessionID))/message",
       query: query,
-      response: [MessageEnvelope].self
+      response: MessageEnvelope.self
     )
   }
 
@@ -486,19 +530,38 @@ public final class OpenCodeClient {
     body: AnyEncodable? = nil,
     response type: T.Type
   ) async throws -> T {
-    let bodyData = try encodeBody(body)
-    let request = try requestBuilder.makeRequest(path: path, method: method, query: query, body: bodyData)
-
     do {
-      let (data, response) = try await urlSession.data(for: request)
-      let httpResponse = try validatedHTTPResponse(from: response)
-
-      guard (200 ..< 300).contains(httpResponse.statusCode) else {
-        throw parseHTTPError(code: httpResponse.statusCode, data: data)
-      }
+      let (data, _) = try await performRequest(method, path: path, query: query, body: body)
 
       do {
         return try JSONDecoder().decode(type, from: data)
+      } catch {
+        throw OpenCodeClientError.decoding(error)
+      }
+    } catch let error as OpenCodeClientError {
+      throw error
+    } catch {
+      throw OpenCodeClientError.transport(error)
+    }
+  }
+
+  private func requestPage<T: Decodable & Sendable>(
+    _ method: HTTPMethod,
+    path: String,
+    query: [URLQueryItem] = [],
+    body: AnyEncodable? = nil,
+    response type: T.Type
+  ) async throws -> OpenCodePage<T> {
+    do {
+      let (data, response) = try await performRequest(method, path: path, query: query, body: body)
+
+      do {
+        let items = try JSONDecoder().decode([T].self, from: data)
+        return OpenCodePage(
+          items: items,
+          nextCursor: response.value(forHTTPHeaderField: "X-Next-Cursor")?.trimmedNonEmpty,
+          nextURL: parseNextURL(from: response.value(forHTTPHeaderField: "Link"))
+        )
       } catch {
         throw OpenCodeClientError.decoding(error)
       }
@@ -515,21 +578,32 @@ public final class OpenCodeClient {
     query: [URLQueryItem] = [],
     body: AnyEncodable? = nil
   ) async throws {
-    let bodyData = try encodeBody(body)
-    let request = try requestBuilder.makeRequest(path: path, method: method, query: query, body: bodyData)
-
     do {
-      let (data, response) = try await urlSession.data(for: request)
-      let httpResponse = try validatedHTTPResponse(from: response)
-
-      guard (200 ..< 300).contains(httpResponse.statusCode) else {
-        throw parseHTTPError(code: httpResponse.statusCode, data: data)
-      }
+      _ = try await performRequest(method, path: path, query: query, body: body)
     } catch let error as OpenCodeClientError {
       throw error
     } catch {
       throw OpenCodeClientError.transport(error)
     }
+  }
+
+  private func performRequest(
+    _ method: HTTPMethod,
+    path: String,
+    query: [URLQueryItem] = [],
+    body: AnyEncodable? = nil,
+    headers: [String: String] = [:]
+  ) async throws -> (Data, HTTPURLResponse) {
+    let bodyData = try encodeBody(body)
+    let request = try requestBuilder.makeRequest(path: path, method: method, query: query, body: bodyData, headers: headers)
+    let (data, response) = try await urlSession.data(for: request)
+    let httpResponse = try validatedHTTPResponse(from: response)
+
+    guard (200 ..< 300).contains(httpResponse.statusCode) else {
+      throw parseHTTPError(code: httpResponse.statusCode, data: data)
+    }
+
+    return (data, httpResponse)
   }
 
   private func validatedHTTPResponse(from response: URLResponse) throws -> HTTPURLResponse {
@@ -578,6 +652,21 @@ public final class OpenCodeClient {
       return []
     }
     return [URLQueryItem(name: "directory", value: resolved)]
+  }
+
+  private func parseNextURL(from linkHeader: String?) -> URL? {
+    guard let linkHeader else {
+      return nil
+    }
+
+    for item in linkHeader.split(separator: ",") {
+      let value = String(item).trimmingCharacters(in: .whitespacesAndNewlines)
+      guard value.contains("rel=\"next\"") else { continue }
+      guard let start = value.firstIndex(of: "<"), let end = value.firstIndex(of: ">") else { continue }
+      return URL(string: String(value[value.index(after: start) ..< end]))
+    }
+
+    return nil
   }
 
   private static func decodeServerEvent(from payload: String) -> ServerEvent {

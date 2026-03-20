@@ -163,6 +163,8 @@ public struct MessageMetadata: Codable, Hashable, Identifiable, Sendable {
   public let agent: String?
   public let providerID: String?
   public let modelID: String?
+  public let mode: String?
+  public let variant: String?
   public let parentID: String?
   public let createdAt: Double?
   public let completedAt: Double?
@@ -199,6 +201,8 @@ public struct MessageMetadata: Codable, Hashable, Identifiable, Sendable {
     let nestedModel = object.object(for: "model")
     providerID = object.string(for: "providerID") ?? nestedModel?.string(for: "providerID")
     modelID = object.string(for: "modelID") ?? nestedModel?.string(for: "modelID")
+    mode = object.string(for: "mode")
+    variant = object.string(for: "variant")
 
     if let errorValue = object["error"] {
       error = errorValue.decoded(as: MessageFailure.self)
@@ -229,6 +233,8 @@ public struct MessageMetadata: Codable, Hashable, Identifiable, Sendable {
     agent: String?,
     providerID: String?,
     modelID: String?,
+    mode: String? = nil,
+    variant: String? = nil,
     parentID: String?,
     createdAt: Double? = nil,
     completedAt: Double? = nil,
@@ -244,6 +250,8 @@ public struct MessageMetadata: Codable, Hashable, Identifiable, Sendable {
     self.agent = agent
     self.providerID = providerID
     self.modelID = modelID
+    self.mode = mode
+    self.variant = variant
     self.parentID = parentID
     self.createdAt = createdAt
     self.completedAt = completedAt

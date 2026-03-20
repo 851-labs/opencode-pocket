@@ -52,6 +52,10 @@ struct OpenCodeClientTests {
         return try makeJSONResponse(request: request, json: """
         [{"id":"ses_1","slug":"slug","projectID":"prj_1","directory":"/tmp/project","parentID":null,"title":"Session","version":"1","time":{"created":1,"updated":2,"archived":null},"summary":null,"share":null,"revert":null}]
         """)
+      case ("GET", "/session/status"):
+        return try makeJSONResponse(request: request, json: """
+        {"ses_1":{"type":"busy"},"ses_2":{"type":"retry","attempt":2,"message":"Retrying","next":174000}}
+        """)
       case ("GET", "/agent"):
         return try makeJSONResponse(request: request, json: """
         [{"name":"build","description":"Build agent","mode":"primary","hidden":false}]
@@ -75,7 +79,16 @@ struct OpenCodeClientTests {
       case let ("GET", path) where path?.contains("/message/") == true:
         return try makeJSONResponse(request: request, json: Self.messageJSON(id: "msg_get", sessionID: "ses_1", text: "hello"))
       case let ("GET", path) where path?.hasSuffix("/message") == true:
-        return try makeJSONResponse(request: request, json: "[\(Self.messageJSON(id: "msg_list", sessionID: "ses_1", text: "listed"))]")
+        return try makeStatusResponse(
+          request: request,
+          code: 200,
+          body: Data("[\(Self.messageJSON(id: "msg_list", sessionID: "ses_1", text: "listed"))]".utf8),
+          headers: [
+            "Content-Type": "application/json",
+            "Link": "<http://localhost:4096/session/ses_1/message?limit=5&before=cur_5>; rel=\"next\"",
+            "X-Next-Cursor": "cur_5",
+          ]
+        )
       case let ("GET", path) where path?.hasSuffix("/diff") == true:
         return try makeJSONResponse(request: request, json: "[{\"file\":\"a.swift\",\"before\":\"\",\"after\":\"\",\"additions\":2,\"deletions\":1,\"status\":\"modified\"}]")
       case let ("GET", path) where path?.hasPrefix("/session/") == true:
@@ -144,8 +157,12 @@ struct OpenCodeClientTests {
     )
     #expect(directoryMatches == ["src", "tests"])
 
-    let sessions = try await client.listSessions()
+    let sessions = try await client.listSessions(roots: true, limit: 10)
     #expect(sessions.count == 1)
+
+    let sessionStatuses = try await client.listSessionStatuses()
+    #expect(sessionStatuses["ses_1"]?.type == .busy)
+    #expect(sessionStatuses["ses_2"]?.type == .retry)
 
     let configProviders = try await client.listConfigProviders()
     #expect(configProviders.providers.first?.id == "openai")
@@ -170,8 +187,12 @@ struct OpenCodeClientTests {
     let deleted = try await client.deleteSession(id: "ses_1")
     #expect(deleted == true)
 
-    let listedMessages = try await client.listMessages(sessionID: "ses_1", limit: 5)
+    let listedMessages = try await client.listMessages(sessionID: "ses_1", limit: 5, before: "cur_0")
     #expect(listedMessages.first?.id == "msg_list")
+
+    let listedMessagesPage = try await client.listMessagesPage(sessionID: "ses_1", limit: 5)
+    #expect(listedMessagesPage.nextCursor == "cur_5")
+    #expect(listedMessagesPage.nextURL?.absoluteString == "http://localhost:4096/session/ses_1/message?limit=5&before=cur_5")
 
     let fetchedMessage = try await client.getMessage(sessionID: "ses_1", messageID: "msg_1")
     #expect(fetchedMessage.id == "msg_get")
@@ -196,6 +217,9 @@ struct OpenCodeClientTests {
     #expect(requests.contains { $0.url?.path == "/provider/auth" && $0.url?.query?.contains("directory=/tmp/default") == true })
     #expect(requests.contains { $0.url?.path == "/session" && $0.httpMethod == "GET" })
     #expect(requests.contains { $0.url?.path == "/session" && $0.url?.query?.contains("directory=/tmp/default") == true })
+    #expect(requests.contains { $0.url?.path == "/session" && $0.url?.query?.contains("roots=true") == true })
+    #expect(requests.contains { $0.url?.path == "/session" && $0.url?.query?.contains("limit=10") == true })
+    #expect(requests.contains { $0.url?.path == "/session/status" && $0.httpMethod == "GET" })
     #expect(requests.contains { $0.url?.path == "/path" && $0.httpMethod == "GET" })
     #expect(requests.contains { $0.url?.path == "/file" && $0.url?.query?.contains("path=") == true })
     #expect(requests.contains { $0.url?.path == "/find/file" && $0.url?.query?.contains("type=directory") == true })
@@ -205,6 +229,7 @@ struct OpenCodeClientTests {
     #expect(requests.contains { $0.url?.path == "/mcp" && $0.httpMethod == "GET" })
     #expect(requests.contains { $0.url?.path.contains("/session/ses") == true && $0.httpMethod == "GET" })
     #expect(requests.contains { $0.url?.absoluteString.contains("limit=5") == true })
+    #expect(requests.contains { $0.url?.absoluteString.contains("before=cur_0") == true })
     #expect(requests.contains { $0.url?.absoluteString.contains("messageID=msg_1") == true })
   }
 
@@ -939,9 +964,14 @@ private func requestBodyData(_ request: URLRequest) throws -> Data {
   return data
 }
 
-private func makeStatusResponse(request: URLRequest, code: Int, body: Data) throws -> (URLResponse, Data) {
+private func makeStatusResponse(
+  request: URLRequest,
+  code: Int,
+  body: Data,
+  headers: [String: String] = ["Content-Type": "application/json"]
+) throws -> (URLResponse, Data) {
   let url = try requireURL(from: request)
-  guard let response = HTTPURLResponse(url: url, statusCode: code, httpVersion: "HTTP/1.1", headerFields: ["Content-Type": "application/json"]) else {
+  guard let response = HTTPURLResponse(url: url, statusCode: code, httpVersion: "HTTP/1.1", headerFields: headers) else {
     throw OpenCodeClientError.message("Failed to build HTTP response")
   }
   return (response, body)

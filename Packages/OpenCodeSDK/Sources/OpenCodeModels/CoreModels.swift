@@ -10,6 +10,22 @@ public struct HealthResponse: Decodable, Equatable, Sendable {
   }
 }
 
+public struct OpenCodePage<Item: Sendable>: Sendable {
+  public let items: [Item]
+  public let nextCursor: String?
+  public let nextURL: URL?
+
+  public var hasNextPage: Bool {
+    nextCursor != nil || nextURL != nil
+  }
+
+  public init(items: [Item], nextCursor: String? = nil, nextURL: URL? = nil) {
+    self.items = items
+    self.nextCursor = nextCursor
+    self.nextURL = nextURL
+  }
+}
+
 public struct ModelSelector: Codable, Hashable, Sendable {
   public let providerID: String
   public let modelID: String

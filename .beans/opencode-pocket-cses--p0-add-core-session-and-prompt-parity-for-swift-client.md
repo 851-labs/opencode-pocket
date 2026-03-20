@@ -1,7 +1,7 @@
 ---
 # opencode-pocket-cses
 title: P0 add core session and prompt parity for the Swift client
-status: todo
+status: completed
 type: feature
 priority: high
 tags:
@@ -10,7 +10,7 @@ tags:
     - sessions
     - messages
 created_at: 2026-03-20T21:50:45Z
-updated_at: 2026-03-20T21:50:45Z
+updated_at: 2026-03-20T22:04:05Z
 ---
 
 The Swift client needs the same core session creation, transcript loading, and prompt submission flow as the app client.
