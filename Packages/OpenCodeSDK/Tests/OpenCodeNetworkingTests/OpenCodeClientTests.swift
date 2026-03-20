@@ -44,9 +44,21 @@ struct OpenCodeClientTests {
         return try makeJSONResponse(request: request, json: """
         [{"name":"src","path":"src","absolute":"/tmp/project/src","type":"directory","ignored":false},{"name":"README.md","path":"README.md","absolute":"/tmp/project/README.md","type":"file","ignored":false}]
         """)
+      case ("GET", "/file/content"):
+        return try makeJSONResponse(request: request, json: """
+        {"type":"text","content":"print(\\\"Hello\\\")","diff":"@@ -1 +1 @@","patch":{"oldFileName":"a.swift","newFileName":"a.swift","hunks":[{"oldStart":1,"oldLines":1,"newStart":1,"newLines":1,"lines":["-old","+new"]}]},"mimeType":"text/x-swift"}
+        """)
+      case ("GET", "/file/status"):
+        return try makeJSONResponse(request: request, json: """
+        [{"path":"README.md","added":3,"removed":1,"status":"modified"}]
+        """)
       case ("GET", "/find/file"):
         return try makeJSONResponse(request: request, json: """
         ["src","tests"]
+        """)
+      case ("GET", "/vcs"):
+        return try makeJSONResponse(request: request, json: """
+        {"branch":"main"}
         """)
       case ("GET", "/session"):
         return try makeJSONResponse(request: request, json: """
@@ -164,6 +176,17 @@ struct OpenCodeClientTests {
     #expect(listedFiles.count == 2)
     #expect(listedFiles.first?.type == .directory)
 
+    let fileContent = try await client.readFile(path: "README.md", directory: "/tmp/project")
+    #expect(fileContent.type == .text)
+    #expect(fileContent.mimeType == "text/x-swift")
+
+    let fileStatus = try await client.listFileStatus()
+    #expect(fileStatus.first?.path == "README.md")
+    #expect(fileStatus.first?.status == .modified)
+
+    let vcs = try await client.getVCSInfo()
+    #expect(vcs.branch == "main")
+
     let directoryMatches = try await client.findFiles(
       query: "src",
       includeDirectories: true,
@@ -256,9 +279,12 @@ struct OpenCodeClientTests {
     #expect(requests.contains { $0.url?.path == "/session/status" && $0.httpMethod == "GET" })
     #expect(requests.contains { $0.url?.path == "/path" && $0.httpMethod == "GET" })
     #expect(requests.contains { $0.url?.path == "/file" && $0.url?.query?.contains("path=") == true })
+    #expect(requests.contains { $0.url?.path == "/file/content" && $0.url?.query?.contains("path=README.md") == true })
+    #expect(requests.contains { $0.url?.path == "/file/status" && $0.httpMethod == "GET" })
     #expect(requests.contains { $0.url?.path == "/find/file" && $0.url?.query?.contains("type=directory") == true })
     #expect(requests.contains { $0.url?.path == "/find/file" && $0.url?.query?.contains("dirs=true") == true })
     #expect(requests.contains { $0.url?.path == "/find/file" && $0.url?.query?.contains("limit=10") == true })
+    #expect(requests.contains { $0.url?.path == "/vcs" && $0.httpMethod == "GET" })
     #expect(requests.contains { $0.url?.path == "/lsp" && $0.httpMethod == "GET" })
     #expect(requests.contains { $0.url?.path == "/mcp" && $0.httpMethod == "GET" })
     #expect(requests.contains { $0.url?.path.contains("/session/ses") == true && $0.httpMethod == "GET" })

@@ -68,6 +68,20 @@ public final class OpenCodeClient {
     return try await request(.get, path: "/file", query: queryItems, response: [FileNode].self)
   }
 
+  public func readFile(path: String, directory: String? = nil) async throws -> FileContent {
+    var queryItems = mergedDirectoryQuery(directory)
+    queryItems.append(URLQueryItem(name: "path", value: path))
+    return try await request(.get, path: "/file/content", query: queryItems, response: FileContent.self)
+  }
+
+  public func listFileStatus(directory: String? = nil) async throws -> [FileStatusEntry] {
+    try await request(.get, path: "/file/status", query: mergedDirectoryQuery(directory), response: [FileStatusEntry].self)
+  }
+
+  public func getVCSInfo(directory: String? = nil) async throws -> VCSInfo {
+    try await request(.get, path: "/vcs", query: mergedDirectoryQuery(directory), response: VCSInfo.self)
+  }
+
   public func findFiles(
     query searchQuery: String,
     includeDirectories: Bool? = nil,

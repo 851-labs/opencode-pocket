@@ -1,7 +1,7 @@
 ---
 # opencode-pocket-cfil
 title: P0 add file context and repo status parity to OpenCodeSDK
-status: todo
+status: completed
 type: feature
 priority: high
 tags:
@@ -10,7 +10,7 @@ tags:
     - files
     - vcs
 created_at: 2026-03-20T21:50:45Z
-updated_at: 2026-03-20T21:50:45Z
+updated_at: 2026-03-20T22:17:08Z
 ---
 
 The app client uses file browsing and repo status APIs to provide context selection and review surfaces.

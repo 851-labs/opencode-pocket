@@ -219,6 +219,56 @@ struct JSONDecodingTests {
     #expect(event.payload.eventType == .serverConnected)
   }
 
+  @Test func decodesFileContentStatusAndVCSInfo() throws {
+    let fileContentJSON = """
+    {
+      "type": "text",
+      "content": "print(\\\"Hello\\\")",
+      "diff": "@@ -1 +1 @@",
+      "patch": {
+        "oldFileName": "a.swift",
+        "newFileName": "a.swift",
+        "hunks": [
+          {
+            "oldStart": 1,
+            "oldLines": 1,
+            "newStart": 1,
+            "newLines": 1,
+            "lines": ["-old", "+new"]
+          }
+        ]
+      },
+      "mimeType": "text/x-swift"
+    }
+    """.data(using: .utf8)!
+
+    let fileStatusJSON = """
+    [
+      {
+        "path": "README.md",
+        "added": 3,
+        "removed": 1,
+        "status": "modified"
+      }
+    ]
+    """.data(using: .utf8)!
+
+    let vcsJSON = """
+    {
+      "branch": "main"
+    }
+    """.data(using: .utf8)!
+
+    let fileContent = try JSONDecoder().decode(FileContent.self, from: fileContentJSON)
+    let fileStatus = try JSONDecoder().decode([FileStatusEntry].self, from: fileStatusJSON)
+    let vcs = try JSONDecoder().decode(VCSInfo.self, from: vcsJSON)
+
+    #expect(fileContent.type == .text)
+    #expect(fileContent.patch?.hunks.first?.lines == ["-old", "+new"])
+    #expect(fileStatus.first?.status == .modified)
+    #expect(vcs.branch == "main")
+  }
+
   @Test func decodesLSPAndMCPStatusPayloads() throws {
     let lspJSON = """
     [
