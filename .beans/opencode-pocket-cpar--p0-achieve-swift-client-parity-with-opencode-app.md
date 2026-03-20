@@ -10,7 +10,7 @@ tags:
     - parity
     - networking
 created_at: 2026-03-20T21:50:45Z
-updated_at: 2026-03-20T22:22:44Z
+updated_at: 2026-03-20T22:40:51Z
 ---
 
 `OpenCodeSDK` should target parity with the real opencode app client in `.local/opencode/packages/app`, not the full server or TUI control surface.

@@ -1,7 +1,7 @@
 ---
 # opencode-pocket-cadv
 title: P1 add advanced session controls used by the app client
-status: todo
+status: completed
 type: feature
 priority: high
 tags:
@@ -10,7 +10,7 @@ tags:
     - sessions
     - controls
 created_at: 2026-03-20T21:50:45Z
-updated_at: 2026-03-20T21:50:45Z
+updated_at: 2026-03-20T22:40:51Z
 ---
 
 After core chat parity lands, the Swift client should support the richer session controls the app client exposes.

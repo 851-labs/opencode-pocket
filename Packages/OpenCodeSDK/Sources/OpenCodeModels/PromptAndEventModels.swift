@@ -63,16 +63,20 @@ public struct TextPartInput: Encodable, Hashable, Sendable {
 }
 
 public struct FilePartInput: Encodable, Hashable, Sendable {
+  public let id: String?
   public let type: String
   public let mime: String
   public let filename: String?
   public let url: String
+  public let source: JSONValue?
 
-  public init(mime: String, filename: String?, url: String) {
+  public init(id: String? = nil, mime: String, filename: String?, url: String, source: JSONValue? = nil) {
+    self.id = id
     type = "file"
     self.mime = mime
     self.filename = filename
     self.url = url
+    self.source = source
   }
 }
 

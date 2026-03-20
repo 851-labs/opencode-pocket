@@ -350,6 +350,71 @@ public final class OpenCodeClient {
     )
   }
 
+  public func sendSessionCommand(
+    sessionID: String,
+    body: SessionCommandRequest,
+    directory: String? = nil
+  ) async throws -> MessageEnvelope {
+    try await request(
+      .post,
+      path: "/session/\(escapedPathComponent(sessionID))/command",
+      query: mergedDirectoryQuery(directory),
+      body: AnyEncodable(body),
+      response: MessageEnvelope.self
+    )
+  }
+
+  public func sendSessionShell(
+    sessionID: String,
+    body: SessionShellRequest,
+    directory: String? = nil
+  ) async throws -> MessageEnvelope {
+    try await request(
+      .post,
+      path: "/session/\(escapedPathComponent(sessionID))/shell",
+      query: mergedDirectoryQuery(directory),
+      body: AnyEncodable(body),
+      response: MessageEnvelope.self
+    )
+  }
+
+  public func revertSession(
+    sessionID: String,
+    body: SessionRevertRequest,
+    directory: String? = nil
+  ) async throws -> Session {
+    try await request(
+      .post,
+      path: "/session/\(escapedPathComponent(sessionID))/revert",
+      query: mergedDirectoryQuery(directory),
+      body: AnyEncodable(body),
+      response: Session.self
+    )
+  }
+
+  public func unrevertSession(sessionID: String, directory: String? = nil) async throws -> Session {
+    try await request(
+      .post,
+      path: "/session/\(escapedPathComponent(sessionID))/unrevert",
+      query: mergedDirectoryQuery(directory),
+      response: Session.self
+    )
+  }
+
+  public func summarizeSession(
+    sessionID: String,
+    body: SessionSummarizeRequest,
+    directory: String? = nil
+  ) async throws -> Bool {
+    try await request(
+      .post,
+      path: "/session/\(escapedPathComponent(sessionID))/summarize",
+      query: mergedDirectoryQuery(directory),
+      body: AnyEncodable(body),
+      response: Bool.self
+    )
+  }
+
   public func listPermissions(directory: String? = nil) async throws -> [OpenCodeModels.PermissionRequest] {
     try await request(
       .get,

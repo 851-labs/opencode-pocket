@@ -145,7 +145,36 @@ struct OpenCodeClientTests {
         return try makeJSONResponse(request: request, json: Self.messageJSON(id: "msg_send", sessionID: "ses_1", text: "sent"))
       case let ("POST", path) where path?.hasSuffix("/prompt_async") == true:
         return try makeJSONResponse(request: request, json: "{}")
+      case let ("POST", path) where path?.hasSuffix("/command") == true:
+        let body = try JSONSerialization.jsonObject(with: requestBodyData(request))
+        let object = try requireDictionary(body)
+        #expect(object["command"] as? String == "fix")
+        #expect(object["arguments"] as? String == "--all")
+        #expect(object["model"] as? String == "openai/gpt-5")
+        return try makeJSONResponse(request: request, json: Self.messageJSON(id: "msg_command", sessionID: "ses_1", text: "command"))
+      case let ("POST", path) where path?.hasSuffix("/shell") == true:
+        let body = try JSONSerialization.jsonObject(with: requestBodyData(request))
+        let object = try requireDictionary(body)
+        #expect(object["command"] as? String == "git status")
+        return try makeJSONResponse(request: request, json: Self.messageJSON(id: "msg_shell", sessionID: "ses_1", text: "shell"))
       case let ("POST", path) where path?.hasSuffix("/abort") == true:
+        return try makeJSONResponse(request: request, json: "true")
+      case let ("POST", path) where path?.hasSuffix("/revert") == true:
+        let body = try JSONSerialization.jsonObject(with: requestBodyData(request))
+        let object = try requireDictionary(body)
+        #expect(object["messageID"] as? String == "msg_1")
+        return try makeJSONResponse(request: request, json: """
+        {"id":"ses_revert","slug":"slug","projectID":"prj_1","directory":"/tmp/project","parentID":null,"title":"Reverted","version":"1","time":{"created":1,"updated":3,"archived":null},"summary":null,"share":null,"revert":{"messageID":"msg_1"}}
+        """)
+      case let ("POST", path) where path?.hasSuffix("/unrevert") == true:
+        return try makeJSONResponse(request: request, json: """
+        {"id":"ses_revert","slug":"slug","projectID":"prj_1","directory":"/tmp/project","parentID":null,"title":"Restored","version":"1","time":{"created":1,"updated":4,"archived":null},"summary":null,"share":null,"revert":null}
+        """)
+      case let ("POST", path) where path?.hasSuffix("/summarize") == true:
+        let body = try JSONSerialization.jsonObject(with: requestBodyData(request))
+        let object = try requireDictionary(body)
+        #expect(object["providerID"] as? String == "openai")
+        #expect(object["modelID"] as? String == "gpt-5")
         return try makeJSONResponse(request: request, json: "true")
       case ("GET", "/permission"):
         return try makeJSONResponse(request: request, json: """
@@ -308,6 +337,39 @@ struct OpenCodeClientTests {
     let aborted = try await client.abortSession(sessionID: "ses_1")
     #expect(aborted == true)
 
+    let commandMessage = try await client.sendSessionCommand(
+      sessionID: "ses_1",
+      body: SessionCommandRequest(
+        messageID: "msg_cmd_1",
+        agent: "build",
+        model: "openai/gpt-5",
+        arguments: "--all",
+        command: "fix",
+        variant: "high",
+        parts: [FilePartInput(id: "part_file_1", mime: "image/png", filename: "image.png", url: "data:image/png;base64,abc")]
+      )
+    )
+    #expect(commandMessage.id == "msg_command")
+
+    let shellMessage = try await client.sendSessionShell(
+      sessionID: "ses_1",
+      body: SessionShellRequest(agent: "build", model: ModelSelector(providerID: "openai", modelID: "gpt-5"), command: "git status")
+    )
+    #expect(shellMessage.id == "msg_shell")
+
+    let reverted = try await client.revertSession(sessionID: "ses_1", body: SessionRevertRequest(messageID: "msg_1"))
+    #expect(reverted.id == "ses_revert")
+    #expect(reverted.revert?.objectValue?["messageID"]?.stringValue == "msg_1")
+
+    let unreverted = try await client.unrevertSession(sessionID: "ses_1")
+    #expect(unreverted.revert == nil)
+
+    let summarized = try await client.summarizeSession(
+      sessionID: "ses_1",
+      body: SessionSummarizeRequest(providerID: "openai", modelID: "gpt-5")
+    )
+    #expect(summarized == true)
+
     let permissions = try await client.listPermissions()
     #expect(permissions.first?.id == "perm_1")
 
@@ -358,6 +420,11 @@ struct OpenCodeClientTests {
     #expect(requests.contains { $0.url?.absoluteString.contains("before=cur_0") == true })
     #expect(requests.contains { $0.url?.absoluteString.contains("messageID=msg_1") == true })
     #expect(requests.contains { $0.url?.path == "/session/ses_1/todo" && $0.httpMethod == "GET" })
+    #expect(requests.contains { $0.url?.path == "/session/ses_1/command" && $0.httpMethod == "POST" })
+    #expect(requests.contains { $0.url?.path == "/session/ses_1/shell" && $0.httpMethod == "POST" })
+    #expect(requests.contains { $0.url?.path == "/session/ses_1/revert" && $0.httpMethod == "POST" })
+    #expect(requests.contains { $0.url?.path == "/session/ses_1/unrevert" && $0.httpMethod == "POST" })
+    #expect(requests.contains { $0.url?.path == "/session/ses_1/summarize" && $0.httpMethod == "POST" })
     #expect(requests.contains { $0.url?.path == "/permission" && $0.httpMethod == "GET" })
     #expect(requests.contains { $0.url?.path == "/permission/perm_1/reply" && $0.httpMethod == "POST" })
     #expect(requests.contains { $0.url?.path == "/question" && $0.httpMethod == "GET" })
