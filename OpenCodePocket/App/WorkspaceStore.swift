@@ -49,7 +49,7 @@ final class WorkspaceStore {
   var selectedAgentName: String
   var selectedModel: ModelSelector?
   var selectedModelVariant: String?
-  var defaultOpenDestination: DefaultOpenDestination = .finder {
+  var defaultOpenDestination: DefaultOpenDestination = .vscode {
     didSet {
       guard oldValue != defaultOpenDestination else { return }
       persistWorkspaceSettings()

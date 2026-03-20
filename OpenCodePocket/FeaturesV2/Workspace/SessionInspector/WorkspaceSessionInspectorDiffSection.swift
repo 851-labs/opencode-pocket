@@ -9,6 +9,7 @@ import SwiftUI
 struct WorkspaceSessionInspectorDiffSection: View {
   let items: [FileDiff]
   let rootDirectory: String?
+  let defaultOpenDestination: DefaultOpenDestination
   @Binding var isExpanded: Bool
 
   var body: some View {
@@ -19,31 +20,62 @@ struct WorkspaceSessionInspectorDiffSection: View {
       isExpanded: $isExpanded
     ) {
       ForEach(items) { diff in
-        LabeledContent {
-          HStack(spacing: 6) {
-            if diff.additionsCount > 0 {
-              Text("+\(diff.additionsCount)")
-                .fontWeight(.medium)
-                .foregroundStyle(.green)
-            }
-
-            if diff.deletionsCount > 0 {
-              Text("-\(diff.deletionsCount)")
-                .fontWeight(.medium)
-                .foregroundStyle(.red)
-            }
-          }
-        } label: {
-          Label {
-            Text(diff.file)
-              .lineLimit(1)
-              .truncationMode(.middle)
-          } icon: {
-            fileIcon(for: diff.file)
-          }
-        }
+        diffRow(for: diff)
       }
     }
+  }
+
+  @ViewBuilder
+  private func diffRow(for diff: FileDiff) -> some View {
+    #if os(macOS)
+      Button {
+        openDiffFile(diff.file)
+      } label: {
+        diffRowContent(for: diff)
+      }
+      .buttonStyle(.plain)
+      .accessibilityIdentifier("workspace.inspector.diff.row.\(diff.id)")
+    #else
+      diffRowContent(for: diff)
+    #endif
+  }
+
+  private func diffRowContent(for diff: FileDiff) -> some View {
+    LabeledContent {
+      HStack(spacing: 6) {
+        if diff.additionsCount > 0 {
+          Text("+\(diff.additionsCount)")
+            .fontWeight(.medium)
+            .foregroundStyle(.green)
+        }
+
+        if diff.deletionsCount > 0 {
+          Text("-\(diff.deletionsCount)")
+            .fontWeight(.medium)
+            .foregroundStyle(.red)
+        }
+      }
+    } label: {
+      Label {
+        Text(diff.file)
+          .lineLimit(1)
+          .truncationMode(.middle)
+      } icon: {
+        fileIcon(for: diff.file)
+      }
+    }
+  }
+
+  private func openDiffFile(_ path: String) {
+    #if os(macOS)
+      let resolvedPath = resolvedFilePath(for: path)
+      guard FileManager.default.fileExists(atPath: resolvedPath) else {
+        return
+      }
+      defaultOpenDestination.openFile(at: URL(fileURLWithPath: resolvedPath))
+    #else
+      _ = path
+    #endif
   }
 
   @ViewBuilder
@@ -122,6 +154,7 @@ struct WorkspaceSessionInspectorDiffSection: View {
         ),
       ],
       rootDirectory: nil,
+      defaultOpenDestination: .vscode,
       isExpanded: $isExpanded
     )
   }

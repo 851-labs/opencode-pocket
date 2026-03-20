@@ -1,6 +1,10 @@
 import Foundation
 import Security
 
+#if os(macOS)
+  import AppKit
+#endif
+
 struct SavedProject: Codable, Equatable, Identifiable {
   var id: String
   var name: String
@@ -52,7 +56,6 @@ struct ConnectionSettings: Codable, Equatable {
 enum DefaultOpenDestination: String, Codable, CaseIterable, Equatable, Identifiable {
   case vscode
   case cursor
-  case finder
   case terminal
   case ghostty
   case xcode
@@ -69,8 +72,6 @@ enum DefaultOpenDestination: String, Codable, CaseIterable, Equatable, Identifia
       return "VS Code"
     case .cursor:
       return "Cursor"
-    case .finder:
-      return "Finder"
     case .terminal:
       return "Terminal"
     case .ghostty:
@@ -90,8 +91,6 @@ enum DefaultOpenDestination: String, Codable, CaseIterable, Equatable, Identifia
       return "chevron.left.forwardslash.chevron.right"
     case .cursor:
       return "cursorarrow"
-    case .finder:
-      return "folder"
     case .terminal:
       return "terminal"
     case .ghostty:
@@ -105,6 +104,98 @@ enum DefaultOpenDestination: String, Codable, CaseIterable, Equatable, Identifia
     }
   }
 }
+
+#if os(macOS)
+  extension DefaultOpenDestination {
+    var macAppIcon: NSImage? {
+      guard let appURL = resolvedMacApplicationURL() else {
+        return nil
+      }
+      return NSWorkspace.shared.icon(forFile: appURL.path)
+    }
+
+    func openFile(at fileURL: URL) {
+      let workspace = NSWorkspace.shared
+
+      guard let appURL = resolvedMacApplicationURL() else {
+        workspace.open(fileURL)
+        return
+      }
+
+      let configuration = NSWorkspace.OpenConfiguration()
+      workspace.open([fileURL], withApplicationAt: appURL, configuration: configuration) { _, _ in }
+    }
+
+    private func resolvedMacApplicationURL() -> URL? {
+      let workspace = NSWorkspace.shared
+
+      for bundleIdentifier in macBundleIdentifiers {
+        if let url = workspace.urlForApplication(withBundleIdentifier: bundleIdentifier) {
+          return url
+        }
+      }
+
+      for appName in macAppNames {
+        for searchDirectory in appSearchDirectories {
+          let path = URL(fileURLWithPath: searchDirectory)
+            .appendingPathComponent("\(appName).app")
+            .path
+          if FileManager.default.fileExists(atPath: path) {
+            return URL(fileURLWithPath: path)
+          }
+        }
+      }
+
+      return nil
+    }
+
+    private var appSearchDirectories: [String] {
+      [
+        "/Applications",
+        "/System/Applications",
+        NSHomeDirectory() + "/Applications",
+      ]
+    }
+
+    private var macBundleIdentifiers: [String] {
+      switch self {
+      case .vscode:
+        return ["com.microsoft.VSCode", "com.microsoft.VSCodeInsiders"]
+      case .cursor:
+        return ["com.todesktop.230313mzl4w4u92"]
+      case .terminal:
+        return ["com.apple.Terminal"]
+      case .ghostty:
+        return ["com.mitchellh.ghostty"]
+      case .xcode:
+        return ["com.apple.dt.Xcode"]
+      case .androidStudio:
+        return ["com.google.android.studio", "com.google.android.studio-EAP"]
+      case .zed:
+        return ["dev.zed.Zed"]
+      }
+    }
+
+    private var macAppNames: [String] {
+      switch self {
+      case .vscode:
+        return ["Visual Studio Code", "Code"]
+      case .cursor:
+        return ["Cursor"]
+      case .terminal:
+        return ["Terminal"]
+      case .ghostty:
+        return ["Ghostty"]
+      case .xcode:
+        return ["Xcode"]
+      case .androidStudio:
+        return ["Android Studio"]
+      case .zed:
+        return ["Zed"]
+      }
+    }
+  }
+#endif
 
 struct WorkspaceSettings: Codable, Equatable {
   var selectedAgent: String?
@@ -132,7 +223,7 @@ struct WorkspaceSettings: Codable, Equatable {
     pinnedSessionIDs: [String] = [],
     projects: [SavedProject],
     selectedProjectID: String?,
-    defaultOpenDestination: DefaultOpenDestination = .finder,
+    defaultOpenDestination: DefaultOpenDestination = .vscode,
     showReasoningSummaries: Bool = false,
     expandShellToolParts: Bool = true,
     expandEditToolParts: Bool = false,
@@ -174,7 +265,7 @@ struct WorkspaceSettings: Codable, Equatable {
     {
       defaultOpenDestination = destination
     } else {
-      defaultOpenDestination = .finder
+      defaultOpenDestination = .vscode
     }
 
     showReasoningSummaries = try container.decodeIfPresent(Bool.self, forKey: .showReasoningSummaries) ?? false
@@ -213,7 +304,7 @@ struct WorkspaceSettings: Codable, Equatable {
     pinnedSessionIDs: [],
     projects: [],
     selectedProjectID: nil,
-    defaultOpenDestination: .finder,
+    defaultOpenDestination: .vscode,
     showReasoningSummaries: false,
     expandShellToolParts: true,
     expandEditToolParts: false,
@@ -393,7 +484,7 @@ private struct LegacyConnectionSettings: Codable {
     {
       defaultOpenDestination = destination
     } else {
-      defaultOpenDestination = .finder
+      defaultOpenDestination = .vscode
     }
 
     showReasoningSummaries = try container.decodeIfPresent(Bool.self, forKey: .showReasoningSummaries) ?? false

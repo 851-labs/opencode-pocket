@@ -164,6 +164,7 @@ struct WorkspaceSessionInspector: View {
             WorkspaceSessionInspectorDiffSection(
               items: diffItems,
               rootDirectory: inspectorRootDirectory,
+              defaultOpenDestination: store.defaultOpenDestination,
               isExpanded: sectionExpansionBinding(for: .diff)
             )
           }
