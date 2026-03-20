@@ -84,6 +84,10 @@ struct OpenCodeClientTests {
         return try makeJSONResponse(request: request, json: """
         {"branch":"main"}
         """)
+      case ("GET", "/command"):
+        return try makeJSONResponse(request: request, json: """
+        [{"name":"fix","description":"Fix issues","agent":"build","model":"openai/gpt-5","source":"command","template":"Fix {{input}}","subtask":true,"hints":["be precise"]}]
+        """)
       case ("GET", "/session"):
         return try makeJSONResponse(request: request, json: """
         [{"id":"ses_1","slug":"slug","projectID":"prj_1","directory":"/tmp/project","parentID":null,"title":"Session","version":"1","time":{"created":1,"updated":2,"archived":null},"summary":null,"share":null,"revert":null}]
@@ -274,6 +278,11 @@ struct OpenCodeClientTests {
     let vcs = try await client.getVCSInfo()
     #expect(vcs.branch == "main")
 
+    let commands = try await client.listCommands()
+    #expect(commands.first?.name == "fix")
+    #expect(commands.first?.source == .command)
+    #expect(commands.first?.subtask == true)
+
     let directoryMatches = try await client.findFiles(
       query: "src",
       includeDirectories: true,
@@ -413,6 +422,7 @@ struct OpenCodeClientTests {
     #expect(requests.contains { $0.url?.path == "/find/file" && $0.url?.query?.contains("dirs=true") == true })
     #expect(requests.contains { $0.url?.path == "/find/file" && $0.url?.query?.contains("limit=10") == true })
     #expect(requests.contains { $0.url?.path == "/vcs" && $0.httpMethod == "GET" })
+    #expect(requests.contains { $0.url?.path == "/command" && $0.httpMethod == "GET" })
     #expect(requests.contains { $0.url?.path == "/lsp" && $0.httpMethod == "GET" })
     #expect(requests.contains { $0.url?.path == "/mcp" && $0.httpMethod == "GET" })
     #expect(requests.contains { $0.url?.path.contains("/session/ses") == true && $0.httpMethod == "GET" })

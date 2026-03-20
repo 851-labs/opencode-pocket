@@ -269,6 +269,35 @@ struct JSONDecodingTests {
     #expect(vcs.branch == "main")
   }
 
+  @Test func decodesCommandCatalog() throws {
+    let json = """
+    [
+      {
+        "name": "fix",
+        "description": "Fix issues",
+        "agent": "build",
+        "model": "openai/gpt-5",
+        "source": "command",
+        "template": "Fix {{input}}",
+        "subtask": true,
+        "hints": ["be precise"]
+      },
+      {
+        "name": "custom",
+        "template": "Run {{input}}",
+        "source": "other",
+        "hints": []
+      }
+    ]
+    """.data(using: .utf8)!
+
+    let commands = try JSONDecoder().decode([CommandDescriptor].self, from: json)
+
+    #expect(commands.first?.source == .command)
+    #expect(commands.first?.hints == ["be precise"])
+    #expect(commands.last?.source == .unknown("other"))
+  }
+
   @Test func decodesAuthCredentialAndOAuthAuthorization() throws {
     let authJSON = """
     {

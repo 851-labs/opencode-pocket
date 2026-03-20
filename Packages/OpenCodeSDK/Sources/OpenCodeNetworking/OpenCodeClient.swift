@@ -153,6 +153,10 @@ public final class OpenCodeClient {
     try await request(.get, path: "/vcs", query: mergedDirectoryQuery(directory), response: VCSInfo.self)
   }
 
+  public func listCommands() async throws -> [CommandDescriptor] {
+    try await request(.get, path: "/command", response: [CommandDescriptor].self)
+  }
+
   public func findFiles(
     query searchQuery: String,
     includeDirectories: Bool? = nil,
