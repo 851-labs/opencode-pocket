@@ -269,6 +269,42 @@ struct JSONDecodingTests {
     #expect(vcs.branch == "main")
   }
 
+  @Test func decodesAuthCredentialAndOAuthAuthorization() throws {
+    let authJSON = """
+    {
+      "type": "oauth",
+      "refresh": "refresh-token",
+      "access": "access-token",
+      "expires": 42,
+      "accountId": "acct_1"
+    }
+    """.data(using: .utf8)!
+
+    let authorizationJSON = """
+    {
+      "url": "https://provider.example/auth",
+      "method": "code",
+      "instructions": "Paste the code here"
+    }
+    """.data(using: .utf8)!
+
+    let auth = try JSONDecoder().decode(AuthCredential.self, from: authJSON)
+    let authorization = try JSONDecoder().decode(ProviderOAuthAuthorization.self, from: authorizationJSON)
+
+    switch auth {
+    case let .oauth(refresh, access, expires, accountID, _):
+      #expect(refresh == "refresh-token")
+      #expect(access == "access-token")
+      #expect(expires == 42)
+      #expect(accountID == "acct_1")
+    default:
+      Issue.record("Expected oauth auth credential")
+    }
+
+    #expect(authorization.method == "code")
+    #expect(authorization.url == "https://provider.example/auth")
+  }
+
   @Test func decodesLSPAndMCPStatusPayloads() throws {
     let lspJSON = """
     [

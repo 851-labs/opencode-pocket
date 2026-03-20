@@ -16,6 +16,12 @@ struct OpenCodeClientTests {
         return try makeJSONResponse(request: request, json: """
         {"model":"openai/gpt-5","share":"manual","disabled_providers":["demo"]}
         """)
+      case ("PATCH", "/global/config"):
+        return try makeJSONResponse(request: request, json: """
+        {"model":"anthropic/claude-sonnet-4","disabled_providers":["demo","test"]}
+        """)
+      case ("POST", "/global/dispose"):
+        return try makeJSONResponse(request: request, json: "true")
       case ("GET", "/path"):
         return try makeJSONResponse(request: request, json: """
         {"home":"/Users/opencode","state":"/Users/opencode/.config/opencode/state","config":"/Users/opencode/.config/opencode/config","worktree":"/Users/opencode/.local/opencode/worktree","directory":"/Users/opencode/projects"}
@@ -23,6 +29,10 @@ struct OpenCodeClientTests {
       case ("GET", "/config"):
         return try makeJSONResponse(request: request, json: """
         {"model":"anthropic/claude-sonnet-4","default_agent":"build"}
+        """)
+      case ("PATCH", "/config"):
+        return try makeJSONResponse(request: request, json: """
+        {"model":"openai/gpt-5","default_agent":"fast"}
         """)
       case ("GET", "/project/current"):
         return try makeJSONResponse(request: request, json: """
@@ -32,6 +42,10 @@ struct OpenCodeClientTests {
         return try makeJSONResponse(request: request, json: """
         [{"id":"prj_1","worktree":"/tmp/project","vcs":"git","name":"Project","icon":null,"commands":null,"time":{"created":1,"updated":2},"sandboxes":[]}]
         """)
+      case let ("PATCH", path) where path?.contains("/project/") == true:
+        return try makeJSONResponse(request: request, json: """
+        {"id":"prj_1","worktree":"/tmp/project","vcs":"git","name":"Renamed","icon":{"override":"bolt","color":"blue"},"commands":{"start":"npm start"},"time":{"created":1,"updated":3},"sandboxes":[]}
+        """)
       case ("GET", "/provider/auth"):
         return try makeJSONResponse(request: request, json: """
         {"openai":[{"type":"api","label":"API key","prompts":[{"type":"text","key":"key","message":"API key"}]}]}
@@ -40,6 +54,16 @@ struct OpenCodeClientTests {
         return try makeJSONResponse(request: request, json: """
         {"all":[{"id":"openai","name":"OpenAI","source":"api","env":["OPENAI_API_KEY"],"models":{"gpt-5":{"id":"gpt-5","providerID":"openai","name":"GPT-5","status":"active","variants":{"high":{}},"limit":{"context":272000,"input":272000,"output":32000}}}}],"default":{"openai":"gpt-5"},"connected":["openai"]}
         """)
+      case let ("POST", path) where path?.contains("/oauth/authorize") == true:
+        return try makeJSONResponse(request: request, json: """
+        {"url":"https://provider.example/auth","method":"code","instructions":"Paste the code here"}
+        """)
+      case let ("POST", path) where path?.contains("/oauth/callback") == true:
+        return try makeJSONResponse(request: request, json: "true")
+      case let ("PUT", path) where path?.contains("/auth/") == true:
+        return try makeJSONResponse(request: request, json: "true")
+      case let ("DELETE", path) where path?.contains("/auth/") == true:
+        return try makeJSONResponse(request: request, json: "true")
       case ("GET", "/file"):
         return try makeJSONResponse(request: request, json: """
         [{"name":"src","path":"src","absolute":"/tmp/project/src","type":"directory","ignored":false},{"name":"README.md","path":"README.md","absolute":"/tmp/project/README.md","type":"file","ignored":false}]
@@ -149,11 +173,26 @@ struct OpenCodeClientTests {
     let globalConfig = try await client.getGlobalConfig()
     #expect(globalConfig["model"]?.stringValue == "openai/gpt-5")
 
+    let updatedGlobalConfig = try await client.updateGlobalConfig([
+      "model": .string("anthropic/claude-sonnet-4"),
+      "disabled_providers": .array([.string("demo"), .string("test")]),
+    ])
+    #expect(updatedGlobalConfig["disabled_providers"]?.arrayValue?.count == 2)
+
+    let disposedGlobal = try await client.disposeGlobal()
+    #expect(disposedGlobal == true)
+
     let pathInfo = try await client.getPath()
     #expect(pathInfo.home == "/Users/opencode")
 
     let config = try await client.getConfig()
     #expect(config["default_agent"]?.stringValue == "build")
+
+    let updatedConfig = try await client.updateConfig([
+      "model": .string("openai/gpt-5"),
+      "default_agent": .string("fast"),
+    ])
+    #expect(updatedConfig["default_agent"]?.stringValue == "fast")
 
     let projects = try await client.listProjects()
     #expect(projects.first?.id == "prj_1")
@@ -162,12 +201,31 @@ struct OpenCodeClientTests {
     #expect(currentProject.id == "prj_current")
     #expect(currentProject.commands?.start == "bun dev")
 
+    let updatedProject = try await client.updateProject(
+      id: "prj_1",
+      body: ProjectUpdateRequest(name: "Renamed", icon: ProjectIcon(url: nil, override: "bolt", color: "blue"), commands: ProjectCommands(start: "npm start"))
+    )
+    #expect(updatedProject.name == "Renamed")
+    #expect(updatedProject.icon?.override == "bolt")
+
     let providerList = try await client.listProviders()
     #expect(providerList.all.first?.id == "openai")
     #expect(providerList.connected == ["openai"])
 
     let authMethods = try await client.listProviderAuthMethods()
     #expect(authMethods["openai"]?.first?.type == "api")
+
+    let oauth = try await client.authorizeProviderOAuth(providerID: "openai", method: 0, inputs: ["region": "us"])
+    #expect(oauth?.url == "https://provider.example/auth")
+
+    let oauthCallback = try await client.callbackProviderOAuth(providerID: "openai", method: 0, code: "abc123")
+    #expect(oauthCallback == true)
+
+    let authSet = try await client.setAuth(providerID: "openai", auth: .api(key: "secret"))
+    #expect(authSet == true)
+
+    let authRemoved = try await client.removeAuth(providerID: "openai")
+    #expect(authRemoved == true)
 
     let agents = try await client.listAgents()
     #expect(agents.first?.name == "build")
@@ -267,11 +325,19 @@ struct OpenCodeClientTests {
 
     let requests = controller.recordedRequests
     #expect(requests.contains { $0.url?.path == "/global/config" && $0.httpMethod == "GET" })
+    #expect(requests.contains { $0.url?.path == "/global/config" && $0.httpMethod == "PATCH" })
+    #expect(requests.contains { $0.url?.path == "/global/dispose" && $0.httpMethod == "POST" })
     #expect(requests.contains { $0.url?.path == "/config" && $0.httpMethod == "GET" })
+    #expect(requests.contains { $0.url?.path == "/config" && $0.httpMethod == "PATCH" })
     #expect(requests.contains { $0.url?.path == "/project" && $0.httpMethod == "GET" })
     #expect(requests.contains { $0.url?.path == "/project/current" && $0.url?.query?.contains("directory=/tmp/default") == true })
+    #expect(requests.contains { $0.url?.path == "/project/prj_1" && $0.httpMethod == "PATCH" })
     #expect(requests.contains { $0.url?.path == "/provider" && $0.url?.query?.contains("directory=/tmp/default") == true })
     #expect(requests.contains { $0.url?.path == "/provider/auth" && $0.url?.query?.contains("directory=/tmp/default") == true })
+    #expect(requests.contains { $0.url?.path == "/provider/openai/oauth/authorize" && $0.httpMethod == "POST" })
+    #expect(requests.contains { $0.url?.path == "/provider/openai/oauth/callback" && $0.httpMethod == "POST" })
+    #expect(requests.contains { $0.url?.path == "/auth/openai" && $0.httpMethod == "PUT" })
+    #expect(requests.contains { $0.url?.path == "/auth/openai" && $0.httpMethod == "DELETE" })
     #expect(requests.contains { $0.url?.path == "/session" && $0.httpMethod == "GET" })
     #expect(requests.contains { $0.url?.path == "/session" && $0.url?.query?.contains("directory=/tmp/default") == true })
     #expect(requests.contains { $0.url?.path == "/session" && $0.url?.query?.contains("roots=true") == true })

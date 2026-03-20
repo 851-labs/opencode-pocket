@@ -1,7 +1,7 @@
 ---
 # opencode-pocket-cset
 title: P1 add settings, auth, provider, and project parity to OpenCodeSDK
-status: todo
+status: completed
 type: feature
 priority: high
 tags:
@@ -10,7 +10,7 @@ tags:
     - settings
     - auth
 created_at: 2026-03-20T21:50:45Z
-updated_at: 2026-03-20T21:50:45Z
+updated_at: 2026-03-20T22:22:44Z
 ---
 
 The app client also needs provider setup and project settings flows beyond the core transcript surface.

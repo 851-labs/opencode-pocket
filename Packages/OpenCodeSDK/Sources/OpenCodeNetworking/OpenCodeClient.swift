@@ -38,8 +38,26 @@ public final class OpenCodeClient {
     try await request(.get, path: "/global/config", response: OpenCodeConfig.self)
   }
 
+  public func updateGlobalConfig(_ config: OpenCodeConfig) async throws -> OpenCodeConfig {
+    try await request(.patch, path: "/global/config", body: AnyEncodable(config), response: OpenCodeConfig.self)
+  }
+
+  public func disposeGlobal() async throws -> Bool {
+    try await request(.post, path: "/global/dispose", response: Bool.self)
+  }
+
   public func getConfig(directory: String? = nil) async throws -> OpenCodeConfig {
     try await request(.get, path: "/config", query: mergedDirectoryQuery(directory), response: OpenCodeConfig.self)
+  }
+
+  public func updateConfig(_ config: OpenCodeConfig, directory: String? = nil) async throws -> OpenCodeConfig {
+    try await request(
+      .patch,
+      path: "/config",
+      query: mergedDirectoryQuery(directory),
+      body: AnyEncodable(config),
+      response: OpenCodeConfig.self
+    )
   }
 
   public func getPath() async throws -> PathInfo {
@@ -54,12 +72,65 @@ public final class OpenCodeClient {
     try await request(.get, path: "/project/current", query: mergedDirectoryQuery(directory), response: ProjectInfo.self)
   }
 
+  public func updateProject(id: String, body: ProjectUpdateRequest, directory: String? = nil) async throws -> ProjectInfo {
+    try await request(
+      .patch,
+      path: "/project/\(escapedPathComponent(id))",
+      query: mergedDirectoryQuery(directory),
+      body: AnyEncodable(body),
+      response: ProjectInfo.self
+    )
+  }
+
   public func listProviders(directory: String? = nil) async throws -> ProviderListResponse {
     try await request(.get, path: "/provider", query: mergedDirectoryQuery(directory), response: ProviderListResponse.self)
   }
 
   public func listProviderAuthMethods(directory: String? = nil) async throws -> ProviderAuthMethodResponse {
     try await request(.get, path: "/provider/auth", query: mergedDirectoryQuery(directory), response: ProviderAuthMethodResponse.self)
+  }
+
+  public func authorizeProviderOAuth(
+    providerID: String,
+    method: Int,
+    inputs: [String: String]? = nil,
+    directory: String? = nil
+  ) async throws -> ProviderOAuthAuthorization? {
+    try await request(
+      .post,
+      path: "/provider/\(escapedPathComponent(providerID))/oauth/authorize",
+      query: mergedDirectoryQuery(directory),
+      body: AnyEncodable(ProviderOAuthAuthorizeRequest(method: method, inputs: inputs)),
+      response: ProviderOAuthAuthorization?.self
+    )
+  }
+
+  public func callbackProviderOAuth(
+    providerID: String,
+    method: Int,
+    code: String? = nil,
+    directory: String? = nil
+  ) async throws -> Bool {
+    try await request(
+      .post,
+      path: "/provider/\(escapedPathComponent(providerID))/oauth/callback",
+      query: mergedDirectoryQuery(directory),
+      body: AnyEncodable(ProviderOAuthCallbackRequest(method: method, code: code)),
+      response: Bool.self
+    )
+  }
+
+  public func setAuth(providerID: String, auth: AuthCredential) async throws -> Bool {
+    try await request(
+      .put,
+      path: "/auth/\(escapedPathComponent(providerID))",
+      body: AnyEncodable(auth),
+      response: Bool.self
+    )
+  }
+
+  public func removeAuth(providerID: String) async throws -> Bool {
+    try await request(.delete, path: "/auth/\(escapedPathComponent(providerID))", response: Bool.self)
   }
 
   public func listFiles(path: String, directory: String? = nil) async throws -> [FileNode] {
