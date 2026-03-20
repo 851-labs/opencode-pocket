@@ -1,7 +1,7 @@
 ---
 # opencode-pocket-swt2
 title: P2 migrate decoding and request builder tests to Swift Testing
-status: in_progress
+status: completed
 type: task
 priority: normal
 tags:
@@ -10,7 +10,7 @@ tags:
     - networking
     - decoding
 created_at: 2026-03-19T00:00:00Z
-updated_at: 2026-03-19T22:32:00Z
+updated_at: 2026-03-19T22:34:00Z
 ---
 
 Migrate the deterministic decoding and request builder suites to Swift Testing once the initial package-local conventions are in place.
@@ -25,3 +25,5 @@ Acceptance criteria:
 - Error assertions use `#expect(throws:)`, `Issue.record()`, and `#require` appropriately.
 - No production behavior changes are needed for these suites.
 - Required validation passes (macOS build, iOS simulator build, OpenCodeSDK tests).
+
+Completed by migrating the decoding and request builder suites to Swift Testing, including `#require` preconditions and the modern `#expect(throws:)` error flow. Required validation passed.

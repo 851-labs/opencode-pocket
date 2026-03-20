@@ -1,8 +1,10 @@
+import Foundation
 import OpenCodeModels
-import XCTest
+import Testing
 
-final class JSONDecodingTests: XCTestCase {
-  func testDecodesSession() throws {
+@Suite(.tags(.networking))
+struct JSONDecodingTests {
+  @Test func decodesSession() throws {
     let json = """
     {
       "id": "ses_123",
@@ -20,13 +22,13 @@ final class JSONDecodingTests: XCTestCase {
 
     let session = try JSONDecoder().decode(Session.self, from: json)
 
-    XCTAssertEqual(session.id, "ses_123")
-    XCTAssertEqual(session.title, "My Session")
-    XCTAssertEqual(session.time.created, 123)
-    XCTAssertEqual(session.time.updated, 456)
+    #expect(session.id == "ses_123")
+    #expect(session.title == "My Session")
+    #expect(session.time.created == 123)
+    #expect(session.time.updated == 456)
   }
 
-  func testDecodesMessageEnvelopeAndRendersText() throws {
+  @Test func decodesMessageEnvelopeAndRendersText() throws {
     let json = """
     {
       "info": {
@@ -57,14 +59,14 @@ final class JSONDecodingTests: XCTestCase {
 
     let envelope = try JSONDecoder().decode(MessageEnvelope.self, from: json)
 
-    XCTAssertEqual(envelope.id, "msg_1")
-    XCTAssertEqual(envelope.info.role, .assistant)
-    XCTAssertEqual(envelope.info.cost, 0)
-    XCTAssertEqual(envelope.info.tokenUsage?.output, 0)
-    XCTAssertEqual(envelope.textBody, "Hello from assistant")
+    #expect(envelope.id == "msg_1")
+    #expect(envelope.info.role == .assistant)
+    #expect(envelope.info.cost == 0)
+    #expect(envelope.info.tokenUsage?.output == 0)
+    #expect(envelope.textBody == "Hello from assistant")
   }
 
-  func testDecodesMessageTokenUsageWithSparseFields() throws {
+  @Test func decodesMessageTokenUsageWithSparseFields() throws {
     let json = """
     {
       "input": 120,
@@ -77,15 +79,15 @@ final class JSONDecodingTests: XCTestCase {
 
     let usage = try JSONDecoder().decode(MessageTokenUsage.self, from: json)
 
-    XCTAssertEqual(usage.input, 120)
-    XCTAssertEqual(usage.output, 55)
-    XCTAssertEqual(usage.reasoning, 0)
-    XCTAssertEqual(usage.cache.read, 10)
-    XCTAssertEqual(usage.cache.write, 0)
-    XCTAssertEqual(usage.contextUsageTotal, 185)
+    #expect(usage.input == 120)
+    #expect(usage.output == 55)
+    #expect(usage.reasoning == 0)
+    #expect(usage.cache.read == 10)
+    #expect(usage.cache.write == 0)
+    #expect(usage.contextUsageTotal == 185)
   }
 
-  func testDecodesProviderModelContextLimit() throws {
+  @Test func decodesProviderModelContextLimit() throws {
     let json = """
     {
       "providers": [
@@ -116,12 +118,13 @@ final class JSONDecodingTests: XCTestCase {
     """.data(using: .utf8)!
 
     let response = try JSONDecoder().decode(ProviderCatalogResponse.self, from: json)
+    let provider = try #require(response.providers.first)
 
-    XCTAssertEqual(response.providers.first?.models["gpt-5"]?.limit?.context, 272_000)
-    XCTAssertEqual(response.providers.first?.models["gpt-5"]?.limit?.output, 32_000)
+    #expect(provider.models["gpt-5"]?.limit?.context == 272_000)
+    #expect(provider.models["gpt-5"]?.limit?.output == 32_000)
   }
 
-  func testDecodesLSPAndMCPStatusPayloads() throws {
+  @Test func decodesLSPAndMCPStatusPayloads() throws {
     let lspJSON = """
     [
       {
@@ -143,14 +146,15 @@ final class JSONDecodingTests: XCTestCase {
 
     let lsp = try JSONDecoder().decode([LSPServerStatus].self, from: lspJSON)
     let mcp = try JSONDecoder().decode([String: MCPServerStatus].self, from: mcpJSON)
+    let firstLSP = try #require(lsp.first)
 
-    XCTAssertEqual(lsp.first?.status, .connected)
-    XCTAssertEqual(mcp["github"]?.status, .connected)
-    XCTAssertEqual(mcp["linear"]?.status, .needsAuth)
-    XCTAssertEqual(mcp["legacy"]?.status, .unknown("other"))
+    #expect(firstLSP.status == .connected)
+    #expect(mcp["github"]?.status == .connected)
+    #expect(mcp["linear"]?.status == .needsAuth)
+    #expect(mcp["legacy"]?.status == .unknown("other"))
   }
 
-  func testDecodesToolPartState() throws {
+  @Test func decodesToolPartState() throws {
     let json = """
     {
       "id": "part_tool",
@@ -178,15 +182,15 @@ final class JSONDecodingTests: XCTestCase {
 
     let part = try JSONDecoder().decode(MessagePart.self, from: json)
 
-    XCTAssertEqual(part.type, "tool")
-    XCTAssertEqual(part.tool, "bash")
-    XCTAssertEqual(part.callID, "call_1")
-    XCTAssertEqual(part.toolState?.status.rawValue, "completed")
-    XCTAssertEqual(part.toolInputString("command"), "ls")
-    XCTAssertEqual(part.toolState?.output, "README.md")
+    #expect(part.type == "tool")
+    #expect(part.tool == "bash")
+    #expect(part.callID == "call_1")
+    #expect(part.toolState?.status.rawValue == "completed")
+    #expect(part.toolInputString("command") == "ls")
+    #expect(part.toolState?.output == "README.md")
   }
 
-  func testDecodesSessionStatusRetry() throws {
+  @Test func decodesSessionStatusRetry() throws {
     let json = """
     {
       "type": "retry",
@@ -198,24 +202,24 @@ final class JSONDecodingTests: XCTestCase {
 
     let status = try JSONDecoder().decode(SessionStatus.self, from: json)
 
-    XCTAssertEqual(status.type.rawValue, "retry")
-    XCTAssertEqual(status.attempt, 2)
-    XCTAssertEqual(status.message, "Retrying")
-    XCTAssertEqual(status.next, 174_000)
-    XCTAssertTrue(status.isRunning)
+    #expect(status.type.rawValue == "retry")
+    #expect(status.attempt == 2)
+    #expect(status.message == "Retrying")
+    #expect(status.next == 174_000)
+    #expect(status.isRunning == true)
   }
 
-  func testServerEventTypeMappingSupportsKnownAndUnknownEvents() {
+  @Test func serverEventTypeMappingSupportsKnownAndUnknownEvents() {
     let known = ServerEvent(type: "message.part.updated", properties: .object([:]))
-    XCTAssertEqual(known.eventType, .messagePartUpdated)
+    #expect(known.eventType == .messagePartUpdated)
 
     let lsp = ServerEvent(type: "lsp.updated", properties: .object([:]))
-    XCTAssertEqual(lsp.eventType, .lspUpdated)
+    #expect(lsp.eventType == .lspUpdated)
 
     let mcp = ServerEvent(type: "mcp.tools.changed", properties: .object([:]))
-    XCTAssertEqual(mcp.eventType, .mcpToolsChanged)
+    #expect(mcp.eventType == .mcpToolsChanged)
 
     let unknown = ServerEvent(type: "custom.event", properties: .object([:]))
-    XCTAssertEqual(unknown.eventType, .unknown("custom.event"))
+    #expect(unknown.eventType == .unknown("custom.event"))
   }
 }

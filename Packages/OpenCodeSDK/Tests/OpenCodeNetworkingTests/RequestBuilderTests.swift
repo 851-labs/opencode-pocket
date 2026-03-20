@@ -1,8 +1,10 @@
+import Foundation
 import OpenCodeNetworking
-import XCTest
+import Testing
 
-final class RequestBuilderTests: XCTestCase {
-  func testBuildsGETRequestWithQueryAndAuth() throws {
+@Suite(.tags(.networking))
+struct RequestBuilderTests {
+  @Test func buildsGETRequestWithQueryAndAuth() throws {
     let builder = HTTPRequestBuilder(
       baseURL: URL(string: "http://example.com:4096")!,
       username: "opencode",
@@ -15,13 +17,13 @@ final class RequestBuilderTests: XCTestCase {
       query: [URLQueryItem(name: "directory", value: "/tmp/project")]
     )
 
-    XCTAssertEqual(request.httpMethod, "GET")
-    XCTAssertEqual(request.url?.absoluteString, "http://example.com:4096/session?directory=/tmp/project")
-    XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Basic b3BlbmNvZGU6c2VjcmV0")
-    XCTAssertEqual(request.value(forHTTPHeaderField: "Accept"), "application/json")
+    #expect(request.httpMethod == "GET")
+    #expect(request.url?.absoluteString == "http://example.com:4096/session?directory=/tmp/project")
+    #expect(request.value(forHTTPHeaderField: "Authorization") == "Basic b3BlbmNvZGU6c2VjcmV0")
+    #expect(request.value(forHTTPHeaderField: "Accept") == "application/json")
   }
 
-  func testBuildsPOSTRequestWithBody() throws {
+  @Test func buildsPOSTRequestWithBody() throws {
     let builder = HTTPRequestBuilder(
       baseURL: URL(string: "http://localhost:4096")!,
       username: nil,
@@ -34,12 +36,12 @@ final class RequestBuilderTests: XCTestCase {
       body: Data("{}".utf8)
     )
 
-    XCTAssertEqual(request.httpMethod, "POST")
-    XCTAssertEqual(request.value(forHTTPHeaderField: "Content-Type"), "application/json")
-    XCTAssertEqual(request.httpBody, Data("{}".utf8))
+    #expect(request.httpMethod == "POST")
+    #expect(request.value(forHTTPHeaderField: "Content-Type") == "application/json")
+    #expect(request.httpBody == Data("{}".utf8))
   }
 
-  func testCustomHeadersOverrideDefaults() throws {
+  @Test func customHeadersOverrideDefaults() throws {
     let builder = HTTPRequestBuilder(
       baseURL: URL(string: "http://localhost:4096")!,
       username: nil,
@@ -55,11 +57,11 @@ final class RequestBuilderTests: XCTestCase {
       ]
     )
 
-    XCTAssertEqual(request.value(forHTTPHeaderField: "Accept"), "text/event-stream")
-    XCTAssertEqual(request.value(forHTTPHeaderField: "Last-Event-ID"), "evt-42")
+    #expect(request.value(forHTTPHeaderField: "Accept") == "text/event-stream")
+    #expect(request.value(forHTTPHeaderField: "Last-Event-ID") == "evt-42")
   }
 
-  func testIncludesBasePathWhenPresent() throws {
+  @Test func includesBasePathWhenPresent() throws {
     let builder = HTTPRequestBuilder(
       baseURL: URL(string: "http://localhost:4096/api")!,
       username: nil,
@@ -67,10 +69,10 @@ final class RequestBuilderTests: XCTestCase {
     )
 
     let request = try builder.makeRequest(path: "session", method: .get)
-    XCTAssertEqual(request.url?.absoluteString, "http://localhost:4096/api/session")
+    #expect(request.url?.absoluteString == "http://localhost:4096/api/session")
   }
 
-  func testBuildsPUTRequest() throws {
+  @Test func buildsPUTRequest() throws {
     let builder = HTTPRequestBuilder(
       baseURL: URL(string: "http://localhost:4096")!,
       username: nil,
@@ -78,22 +80,25 @@ final class RequestBuilderTests: XCTestCase {
     )
 
     let request = try builder.makeRequest(path: "/session", method: .put)
-    XCTAssertEqual(request.httpMethod, "PUT")
+    #expect(request.httpMethod == "PUT")
   }
 
-  func testThrowsForRelativeBaseURL() throws {
+  @Test func throwsForRelativeBaseURL() {
     let builder = HTTPRequestBuilder(
       baseURL: URL(string: "relative/base")!,
       username: nil,
       password: nil
     )
 
-    XCTAssertThrowsError(try builder.makeRequest(path: "/session", method: .get)) { error in
-      guard case let OpenCodeClientError.invalidURL(value) = error else {
-        return XCTFail("Unexpected error: \(error)")
-      }
-
-      XCTAssertEqual(value, "relative/base")
+    let error = #expect(throws: OpenCodeClientError.self) {
+      try builder.makeRequest(path: "/session", method: .get)
     }
+
+    guard case let .invalidURL(value) = error else {
+      Issue.record("Unexpected error: \(error)")
+      return
+    }
+
+    #expect(value == "relative/base")
   }
 }

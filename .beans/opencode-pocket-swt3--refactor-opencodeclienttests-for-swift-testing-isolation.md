@@ -1,7 +1,7 @@
 ---
 # opencode-pocket-swt3
 title: P1 refactor OpenCodeClientTests for Swift Testing isolation and deterministic async behavior
-status: todo
+status: in_progress
 type: task
 priority: high
 tags:
@@ -10,7 +10,7 @@ tags:
     - networking
     - async
 created_at: 2026-03-19T00:00:00Z
-updated_at: 2026-03-19T00:00:00Z
+updated_at: 2026-03-19T22:34:00Z
 ---
 
 Migrate `OpenCodeClientTests` to Swift Testing and remove the shared global test harness patterns that would become unsafe or flaky under parallel execution.
