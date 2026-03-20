@@ -1,7 +1,7 @@
 ---
 # opencode-pocket-swt3
 title: P1 refactor OpenCodeClientTests for Swift Testing isolation and deterministic async behavior
-status: in_progress
+status: completed
 type: task
 priority: high
 tags:
@@ -10,7 +10,7 @@ tags:
     - networking
     - async
 created_at: 2026-03-19T00:00:00Z
-updated_at: 2026-03-19T22:34:00Z
+updated_at: 2026-03-19T22:48:00Z
 ---
 
 Migrate `OpenCodeClientTests` to Swift Testing and remove the shared global test harness patterns that would become unsafe or flaky under parallel execution.
@@ -26,3 +26,5 @@ Acceptance criteria:
 - Shared mutable test state no longer allows cross-test interference under parallel execution.
 - Cancellation and reconnect assertions are deterministic rather than sleep-based.
 - Required validation passes (macOS build, iOS simulator build, OpenCodeSDK tests).
+
+Completed by migrating `OpenCodeClientTests` to Swift Testing, replacing global URL protocol state with per-test controllers, and removing the sleep-based and live-network cancellation paths. Required validation passed.

@@ -1,7 +1,7 @@
 ---
 # opencode-pocket-swt4
 title: P2 migrate live SDK integration tests to Swift Testing traits and tags
-status: todo
+status: in_progress
 type: task
 priority: normal
 tags:
@@ -10,7 +10,7 @@ tags:
     - networking
     - integration
 created_at: 2026-03-19T00:00:00Z
-updated_at: 2026-03-19T00:00:00Z
+updated_at: 2026-03-19T22:48:00Z
 ---
 
 Migrate the live server integration coverage to Swift Testing while preserving the existing environment-gated contract for optional live execution.

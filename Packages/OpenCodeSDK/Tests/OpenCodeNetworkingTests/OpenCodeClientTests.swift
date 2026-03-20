@@ -1,21 +1,12 @@
 import Foundation
 import OpenCodeModels
 import OpenCodeNetworking
-import XCTest
+import Testing
 
-final class OpenCodeClientTests: XCTestCase {
-  override func setUp() {
-    super.setUp()
-    URLProtocolStub.reset()
-  }
-
-  override func tearDown() {
-    URLProtocolStub.reset()
-    super.tearDown()
-  }
-
-  func testEndpointsAndSuccessPaths() async throws {
-    URLProtocolStub.handler = { request in
+@Suite(.tags(.networking))
+struct OpenCodeClientTests {
+  @Test func endpointsAndSuccessPaths() async throws {
+    let controller = URLProtocolStubController { request in
       switch (request.httpMethod, request.url?.path) {
       case ("GET", "/global/health"):
         return try makeJSONResponse(request: request, json: """
@@ -80,23 +71,22 @@ final class OpenCodeClientTests: XCTestCase {
       case let ("POST", path) where path?.hasSuffix("/abort") == true:
         return try makeJSONResponse(request: request, json: "true")
       default:
-        XCTFail("Unexpected request: \(request.httpMethod ?? "?") \(request.url?.absoluteString ?? "nil")")
-        return try makeStatusResponse(request: request, code: 500, body: Data())
+        throw OpenCodeClientError.message("Unexpected request: \(request.httpMethod ?? "?") \(request.url?.absoluteString ?? "nil")")
       }
     }
 
-    let client = makeClient(directory: "/tmp/default")
+    let client = makeClient(controller: controller, directory: "/tmp/default")
 
     let health = try await client.health()
-    XCTAssertTrue(health.healthy)
-    XCTAssertEqual(health.version, "1.2.3")
+    #expect(health.healthy == true)
+    #expect(health.version == "1.2.3")
 
     let pathInfo = try await client.getPath()
-    XCTAssertEqual(pathInfo.home, "/Users/opencode")
+    #expect(pathInfo.home == "/Users/opencode")
 
     let listedFiles = try await client.listFiles(path: "", directory: "/tmp/project")
-    XCTAssertEqual(listedFiles.count, 2)
-    XCTAssertEqual(listedFiles.first?.type, .directory)
+    #expect(listedFiles.count == 2)
+    #expect(listedFiles.first?.type == .directory)
 
     let directoryMatches = try await client.findFiles(
       query: "src",
@@ -105,180 +95,187 @@ final class OpenCodeClientTests: XCTestCase {
       limit: 10,
       directory: "/tmp/project"
     )
-    XCTAssertEqual(directoryMatches, ["src", "tests"])
+    #expect(directoryMatches == ["src", "tests"])
 
     let sessions = try await client.listSessions()
-    XCTAssertEqual(sessions.count, 1)
+    #expect(sessions.count == 1)
 
     let agents = try await client.listAgents()
-    XCTAssertEqual(agents.first?.name, "build")
+    #expect(agents.first?.name == "build")
 
     let providers = try await client.listConfigProviders()
-    XCTAssertEqual(providers.providers.first?.id, "openai")
+    #expect(providers.providers.first?.id == "openai")
 
     let lspStatus = try await client.listLSPStatus()
-    XCTAssertEqual(lspStatus.first?.id, "sourcekit-lsp")
-    XCTAssertEqual(lspStatus.first?.status, .connected)
+    #expect(lspStatus.first?.id == "sourcekit-lsp")
+    #expect(lspStatus.first?.status == .connected)
 
     let mcpStatus = try await client.listMCPStatus()
-    XCTAssertEqual(mcpStatus["github"]?.status, .connected)
-    XCTAssertEqual(mcpStatus["linear"]?.status, .needsAuth)
+    #expect(mcpStatus["github"]?.status == .connected)
+    #expect(mcpStatus["linear"]?.status == .needsAuth)
 
     let created = try await client.createSession(SessionCreateRequest(title: "Hi"))
-    XCTAssertEqual(created.id, "ses_new")
+    #expect(created.id == "ses_new")
 
     let fetched = try await client.getSession(id: "ses 1")
-    XCTAssertEqual(fetched.id, "ses_get")
+    #expect(fetched.id == "ses_get")
 
     let updated = try await client.updateSession(id: "ses 1", body: SessionUpdateRequest(title: "Renamed"))
-    XCTAssertEqual(updated.id, "ses_patch")
+    #expect(updated.id == "ses_patch")
 
     let deleted = try await client.deleteSession(id: "ses_1")
-    XCTAssertTrue(deleted)
+    #expect(deleted == true)
 
     let listedMessages = try await client.listMessages(sessionID: "ses_1", limit: 5)
-    XCTAssertEqual(listedMessages.first?.id, "msg_list")
+    #expect(listedMessages.first?.id == "msg_list")
 
     let fetchedMessage = try await client.getMessage(sessionID: "ses_1", messageID: "msg_1")
-    XCTAssertEqual(fetchedMessage.id, "msg_get")
+    #expect(fetchedMessage.id == "msg_get")
 
     let diffs = try await client.getSessionDiff(sessionID: "ses_1", messageID: "msg_1")
-    XCTAssertEqual(diffs.first?.file, "a.swift")
+    #expect(diffs.first?.file == "a.swift")
 
     let sent = try await client.sendMessage(sessionID: "ses_1", body: PromptRequest(parts: [.text("Hello")]))
-    XCTAssertEqual(sent.id, "msg_send")
+    #expect(sent.id == "msg_send")
 
     try await client.sendMessageAsync(sessionID: "ses_1", body: PromptRequest(parts: [.text("async")]))
 
     let aborted = try await client.abortSession(sessionID: "ses_1")
-    XCTAssertTrue(aborted)
+    #expect(aborted == true)
 
-    let requests = URLProtocolStub.recordedRequests
-    XCTAssertTrue(requests.contains { $0.url?.path == "/session" && $0.httpMethod == "GET" })
-    XCTAssertTrue(requests.contains { $0.url?.path == "/session" && $0.url?.query?.contains("directory=/tmp/default") == true })
-    XCTAssertTrue(requests.contains { $0.url?.path == "/path" && $0.httpMethod == "GET" })
-    XCTAssertTrue(requests.contains { $0.url?.path == "/file" && $0.url?.query?.contains("path=") == true })
-    XCTAssertTrue(requests.contains { $0.url?.path == "/find/file" && $0.url?.query?.contains("type=directory") == true })
-    XCTAssertTrue(requests.contains { $0.url?.path == "/find/file" && $0.url?.query?.contains("dirs=true") == true })
-    XCTAssertTrue(requests.contains { $0.url?.path == "/find/file" && $0.url?.query?.contains("limit=10") == true })
-    XCTAssertTrue(requests.contains { $0.url?.path == "/lsp" && $0.httpMethod == "GET" })
-    XCTAssertTrue(requests.contains { $0.url?.path == "/mcp" && $0.httpMethod == "GET" })
-    XCTAssertTrue(requests.contains { $0.url?.path.contains("/session/ses") == true && $0.httpMethod == "GET" })
-    XCTAssertTrue(requests.contains { $0.url?.absoluteString.contains("limit=5") == true })
-    XCTAssertTrue(requests.contains { $0.url?.absoluteString.contains("messageID=msg_1") == true })
+    let requests = controller.recordedRequests
+    #expect(requests.contains { $0.url?.path == "/session" && $0.httpMethod == "GET" })
+    #expect(requests.contains { $0.url?.path == "/session" && $0.url?.query?.contains("directory=/tmp/default") == true })
+    #expect(requests.contains { $0.url?.path == "/path" && $0.httpMethod == "GET" })
+    #expect(requests.contains { $0.url?.path == "/file" && $0.url?.query?.contains("path=") == true })
+    #expect(requests.contains { $0.url?.path == "/find/file" && $0.url?.query?.contains("type=directory") == true })
+    #expect(requests.contains { $0.url?.path == "/find/file" && $0.url?.query?.contains("dirs=true") == true })
+    #expect(requests.contains { $0.url?.path == "/find/file" && $0.url?.query?.contains("limit=10") == true })
+    #expect(requests.contains { $0.url?.path == "/lsp" && $0.httpMethod == "GET" })
+    #expect(requests.contains { $0.url?.path == "/mcp" && $0.httpMethod == "GET" })
+    #expect(requests.contains { $0.url?.path.contains("/session/ses") == true && $0.httpMethod == "GET" })
+    #expect(requests.contains { $0.url?.absoluteString.contains("limit=5") == true })
+    #expect(requests.contains { $0.url?.absoluteString.contains("messageID=msg_1") == true })
   }
 
-  func testDirectoryQueryOverride() async throws {
-    URLProtocolStub.handler = { request in
-      XCTAssertEqual(request.url?.path, "/session")
-      XCTAssertEqual(request.url?.query, "directory=/tmp/override")
+  @Test func directoryQueryOverride() async throws {
+    let controller = URLProtocolStubController { request in
+      #expect(request.url?.path == "/session")
+      #expect(request.url?.query == "directory=/tmp/override")
       return try makeJSONResponse(request: request, json: "[]")
     }
 
-    let client = makeClient(directory: "/tmp/default")
+    let client = makeClient(controller: controller, directory: "/tmp/default")
     _ = try await client.listSessions(directory: "/tmp/override")
   }
 
-  func testNoDirectoryQueryWhenUnset() async throws {
-    URLProtocolStub.handler = { request in
-      XCTAssertNil(request.url?.query)
+  @Test func noDirectoryQueryWhenUnset() async throws {
+    let controller = URLProtocolStubController { request in
+      #expect(request.url?.query == nil)
       return try makeJSONResponse(request: request, json: "[]")
     }
 
-    let client = makeClient(directory: nil)
+    let client = makeClient(controller: controller, directory: nil)
     _ = try await client.listSessions()
   }
 
-  func testWhitespaceDirectoryQueryIsDropped() async throws {
-    URLProtocolStub.handler = { request in
-      XCTAssertNil(request.url?.query)
+  @Test func whitespaceDirectoryQueryIsDropped() async throws {
+    let controller = URLProtocolStubController { request in
+      #expect(request.url?.query == nil)
       return try makeJSONResponse(request: request, json: "[]")
     }
 
-    let client = makeClient(directory: nil)
+    let client = makeClient(controller: controller, directory: nil)
     _ = try await client.listSessions(directory: "   ")
   }
 
-  func testUpdateSessionSendsArchiveTimestampPayload() async throws {
+  @Test func updateSessionSendsArchiveTimestampPayload() async throws {
     let archiveTime = 1_761_224_322_123.0
 
-    URLProtocolStub.handler = { request in
-      XCTAssertEqual(request.httpMethod, "PATCH")
-      XCTAssertEqual(request.url?.path, "/session/ses_1")
+    let controller = URLProtocolStubController { request in
+      #expect(request.httpMethod == "PATCH")
+      #expect(request.url?.path == "/session/ses_1")
 
       let bodyData = try requestBodyData(request)
       let bodyObject = try JSONSerialization.jsonObject(with: bodyData)
-      let body = try XCTUnwrap(bodyObject as? [String: Any])
-      let time = try XCTUnwrap(body["time"] as? [String: Any])
+      let body = try requireDictionary(bodyObject)
+      let time = try requireDictionary(body["time"])
 
-      XCTAssertEqual(time["archived"] as? Double, archiveTime)
+      #expect(time["archived"] as? Double == archiveTime)
 
       return try makeJSONResponse(request: request, json: """
       {"id":"ses_patch","slug":"slug","projectID":"prj_1","directory":"/tmp/project","parentID":null,"title":"Patched","version":"1","time":{"created":1,"updated":2,"archived":null},"summary":null,"share":null,"revert":null}
       """)
     }
 
-    let client = makeClient(directory: "/tmp/project")
+    let client = makeClient(controller: controller, directory: "/tmp/project")
     _ = try await client.updateSession(
       id: "ses_1",
       body: SessionUpdateRequest(time: SessionUpdateTime(archived: archiveTime))
     )
   }
 
-  func testUpdateSessionSendsArchivedNullPayloadForUnarchive() async throws {
-    URLProtocolStub.handler = { request in
-      XCTAssertEqual(request.httpMethod, "PATCH")
-      XCTAssertEqual(request.url?.path, "/session/ses_1")
+  @Test func updateSessionSendsArchivedNullPayloadForUnarchive() async throws {
+    let controller = URLProtocolStubController { request in
+      #expect(request.httpMethod == "PATCH")
+      #expect(request.url?.path == "/session/ses_1")
 
       let bodyData = try requestBodyData(request)
       let bodyObject = try JSONSerialization.jsonObject(with: bodyData)
-      let body = try XCTUnwrap(bodyObject as? [String: Any])
-      let time = try XCTUnwrap(body["time"] as? [String: Any])
+      let body = try requireDictionary(bodyObject)
+      let time = try requireDictionary(body["time"])
 
-      XCTAssertTrue(time["archived"] is NSNull)
+      #expect(time["archived"] is NSNull)
 
       return try makeJSONResponse(request: request, json: """
       {"id":"ses_patch","slug":"slug","projectID":"prj_1","directory":"/tmp/project","parentID":null,"title":"Patched","version":"1","time":{"created":1,"updated":2,"archived":null},"summary":null,"share":null,"revert":null}
       """)
     }
 
-    let client = makeClient(directory: "/tmp/project")
+    let client = makeClient(controller: controller, directory: "/tmp/project")
     _ = try await client.updateSession(
       id: "ses_1",
       body: SessionUpdateRequest(time: SessionUpdateTime.clearArchived())
     )
   }
 
-  func testRequestFailsWithInvalidResponse() async {
-    URLProtocolStub.handler = { request in
-      let response = try URLResponse(url: XCTUnwrap(request.url), mimeType: "application/json", expectedContentLength: 2, textEncodingName: nil)
+  @Test func requestFailsWithInvalidResponse() async {
+    let controller = URLProtocolStubController { request in
+      let url = try requireURL(from: request)
+      let response = URLResponse(url: url, mimeType: "application/json", expectedContentLength: 2, textEncodingName: nil)
       return (response, Data("{}".utf8))
     }
 
-    let client = makeClient()
-    try await assertClientError(await client.health(), expected: .invalidResponse)
+    let client = makeClient(controller: controller)
+    await assertClientError(expected: .invalidResponse) {
+      try await client.health()
+    }
   }
 
-  func testRequestWrapsTransportError() async {
-    URLProtocolStub.handler = { _ in
+  @Test func requestWrapsTransportError() async {
+    let controller = URLProtocolStubController { _ in
       throw URLError(.timedOut)
     }
 
-    let client = makeClient()
-    try await assertClientError(await client.health(), expected: .transport)
+    let client = makeClient(controller: controller)
+    await assertClientError(expected: .transport) {
+      try await client.health()
+    }
   }
 
-  func testRequestThrowsDecodingError() async {
-    URLProtocolStub.handler = { request in
+  @Test func requestThrowsDecodingError() async {
+    let controller = URLProtocolStubController { request in
       try makeJSONResponse(request: request, json: "{\"healthy\":\"oops\"}")
     }
 
-    let client = makeClient()
-    try await assertClientError(await client.health(), expected: .decoding)
+    let client = makeClient(controller: controller)
+    await assertClientError(expected: .decoding) {
+      try await client.health()
+    }
   }
 
-  func testParsesNotFoundEnvelopeError() async {
-    URLProtocolStub.handler = { request in
+  @Test func parsesNotFoundEnvelopeError() async {
+    let controller = URLProtocolStubController { request in
       try makeStatusResponse(
         request: request,
         code: 404,
@@ -286,12 +283,14 @@ final class OpenCodeClientTests: XCTestCase {
       )
     }
 
-    let client = makeClient()
-    try await assertHTTPStatusError(await client.health(), code: 404, contains: "Missing")
+    let client = makeClient(controller: controller)
+    await assertHTTPStatusError(code: 404, contains: "Missing") {
+      try await client.health()
+    }
   }
 
-  func testParsesNotFoundEnvelopeWithoutMessage() async {
-    URLProtocolStub.handler = { request in
+  @Test func parsesNotFoundEnvelopeWithoutMessage() async {
+    let controller = URLProtocolStubController { request in
       try makeStatusResponse(
         request: request,
         code: 404,
@@ -299,12 +298,14 @@ final class OpenCodeClientTests: XCTestCase {
       )
     }
 
-    let client = makeClient()
-    try await assertHTTPStatusError(await client.health(), code: 404, contains: "Not found")
+    let client = makeClient(controller: controller)
+    await assertHTTPStatusError(code: 404, contains: "Not found") {
+      try await client.health()
+    }
   }
 
-  func testParsesBadRequestErrorArrayEnvelope() async {
-    URLProtocolStub.handler = { request in
+  @Test func parsesBadRequestErrorArrayEnvelope() async {
+    let controller = URLProtocolStubController { request in
       try makeStatusResponse(
         request: request,
         code: 400,
@@ -312,12 +313,14 @@ final class OpenCodeClientTests: XCTestCase {
       )
     }
 
-    let client = makeClient()
-    try await assertHTTPStatusError(await client.health(), code: 400, contains: "Bad input")
+    let client = makeClient(controller: controller)
+    await assertHTTPStatusError(code: 400, contains: "Bad input") {
+      try await client.health()
+    }
   }
 
-  func testParsesBadRequestDataEnvelope() async {
-    URLProtocolStub.handler = { request in
+  @Test func parsesBadRequestDataEnvelope() async {
+    let controller = URLProtocolStubController { request in
       try makeStatusResponse(
         request: request,
         code: 400,
@@ -325,42 +328,47 @@ final class OpenCodeClientTests: XCTestCase {
       )
     }
 
-    let client = makeClient()
-    try await assertHTTPStatusError(await client.health(), code: 400, contains: "Data error")
+    let client = makeClient(controller: controller)
+    await assertHTTPStatusError(code: 400, contains: "Data error") {
+      try await client.health()
+    }
   }
 
-  func testParsesRawBodyError() async {
-    URLProtocolStub.handler = { request in
+  @Test func parsesRawBodyError() async {
+    let controller = URLProtocolStubController { request in
       try makeStatusResponse(request: request, code: 500, body: Data("boom".utf8))
     }
 
-    let client = makeClient()
-    try await assertHTTPStatusError(await client.health(), code: 500, contains: "boom")
+    let client = makeClient(controller: controller)
+    await assertHTTPStatusError(code: 500, contains: "boom") {
+      try await client.health()
+    }
   }
 
-  func testParsesEmptyBodyError() async {
-    URLProtocolStub.handler = { request in
+  @Test func parsesEmptyBodyError() async {
+    let controller = URLProtocolStubController { request in
       try makeStatusResponse(request: request, code: 500, body: Data())
     }
 
-    let client = makeClient()
-    try await assertHTTPStatusError(await client.health(), code: 500, contains: nil)
+    let client = makeClient(controller: controller)
+    await assertHTTPStatusError(code: 500, contains: nil) {
+      try await client.health()
+    }
   }
 
-  func testRequestNoContentPathWrapsTransportError() async {
-    URLProtocolStub.handler = { _ in
+  @Test func requestNoContentPathWrapsTransportError() async {
+    let controller = URLProtocolStubController { _ in
       throw URLError(.cannotConnectToHost)
     }
 
-    let client = makeClient()
-    try await assertClientError(
-      await client.sendMessageAsync(sessionID: "ses_1", body: PromptRequest(parts: [.text("x")])),
-      expected: .transport
-    )
+    let client = makeClient(controller: controller)
+    await assertClientError(expected: .transport) {
+      try await client.sendMessageAsync(sessionID: "ses_1", body: PromptRequest(parts: [.text("x")]))
+    }
   }
 
-  func testRequestNoContentPathParsesStatusError() async {
-    URLProtocolStub.handler = { request in
+  @Test func requestNoContentPathParsesStatusError() async {
+    let controller = URLProtocolStubController { request in
       try makeStatusResponse(
         request: request,
         code: 400,
@@ -368,75 +376,72 @@ final class OpenCodeClientTests: XCTestCase {
       )
     }
 
-    let client = makeClient()
-    try await assertHTTPStatusError(
-      await client.sendMessageAsync(sessionID: "ses_1", body: PromptRequest(parts: [.text("x")])),
-      code: 400,
-      contains: "No content failed"
-    )
+    let client = makeClient(controller: controller)
+    await assertHTTPStatusError(code: 400, contains: "No content failed") {
+      try await client.sendMessageAsync(sessionID: "ses_1", body: PromptRequest(parts: [.text("x")]))
+    }
   }
 
-  func testRequestNoContentPathFailsWithInvalidResponse() async {
-    URLProtocolStub.handler = { request in
-      let response = try URLResponse(url: XCTUnwrap(request.url), mimeType: "application/json", expectedContentLength: 0, textEncodingName: nil)
+  @Test func requestNoContentPathFailsWithInvalidResponse() async {
+    let controller = URLProtocolStubController { request in
+      let url = try requireURL(from: request)
+      let response = URLResponse(url: url, mimeType: "application/json", expectedContentLength: 0, textEncodingName: nil)
       return (response, Data())
     }
 
-    let client = makeClient()
-    try await assertClientError(
-      await client.sendMessageAsync(sessionID: "ses_1", body: PromptRequest(parts: [.text("x")])),
-      expected: .invalidResponse
-    )
+    let client = makeClient(controller: controller)
+    await assertClientError(expected: .invalidResponse) {
+      try await client.sendMessageAsync(sessionID: "ses_1", body: PromptRequest(parts: [.text("x")]))
+    }
   }
 
-  func testEncodeBodyFailureReturnsMessageError() async {
-    URLProtocolStub.handler = { request in
+  @Test func encodeBodyFailureReturnsMessageError() async {
+    let controller = URLProtocolStubController { request in
       try makeJSONResponse(request: request, json: "{}")
     }
 
-    let client = makeClient()
-    try await assertClientError(
-      await client.updateSession(
+    let client = makeClient(controller: controller)
+    await assertClientError(expected: .message) {
+      try await client.updateSession(
         id: "ses_1",
         body: SessionUpdateRequest(time: SessionUpdateTime(archived: .nan))
-      ),
-      expected: .message
-    )
+      )
+    }
   }
 
-  func testSubscribeEventsParsesStreamReconnectsAndSendsLastEventID() async {
+  @Test func subscribeEventsParsesStreamReconnectsAndSendsLastEventID() async {
     let lock = NSLock()
     var attempts = 0
-
-    URLProtocolStub.handler = { request in
-      lock.lock()
-      attempts += 1
-      let currentAttempt = attempts
-      lock.unlock()
+    let controller = URLProtocolStubController { request in
+      let currentAttempt: Int = lock.withLock {
+        attempts += 1
+        return attempts
+      }
 
       switch currentAttempt {
       case 1:
-        XCTAssertEqual(request.value(forHTTPHeaderField: "Accept"), "text/event-stream")
-        XCTAssertNil(request.value(forHTTPHeaderField: "Last-Event-ID"))
+        #expect(request.value(forHTTPHeaderField: "Accept") == "text/event-stream")
+        #expect(request.value(forHTTPHeaderField: "Last-Event-ID") == nil)
         return try makeStatusResponse(
           request: request,
           code: 200,
           body: Data("id: evt-1\nretry: 1\ndata: {\"type\":\"server.connected\",\"properties\":{}}\n\ndata: not-json\n\n".utf8)
         )
       case 2:
-        XCTAssertEqual(request.value(forHTTPHeaderField: "Last-Event-ID"), "evt-1")
-        let response = try URLResponse(
-          url: XCTUnwrap(request.url),
+        #expect(request.value(forHTTPHeaderField: "Last-Event-ID") == "evt-1")
+        let url = try requireURL(from: request)
+        let response = URLResponse(
+          url: url,
           mimeType: "text/event-stream",
           expectedContentLength: 0,
           textEncodingName: nil
         )
         return (response, Data())
       case 3:
-        XCTAssertEqual(request.value(forHTTPHeaderField: "Last-Event-ID"), "evt-1")
+        #expect(request.value(forHTTPHeaderField: "Last-Event-ID") == "evt-1")
         return try makeStatusResponse(request: request, code: 503, body: Data())
       default:
-        XCTAssertEqual(request.value(forHTTPHeaderField: "Last-Event-ID"), "evt-1")
+        #expect(request.value(forHTTPHeaderField: "Last-Event-ID") == "evt-1")
         return try makeStatusResponse(
           request: request,
           code: 200,
@@ -445,23 +450,24 @@ final class OpenCodeClientTests: XCTestCase {
       }
     }
 
-    let client = makeClient()
+    let client = makeClient(controller: controller)
     let stream = client.subscribeEvents()
 
     var received: [ServerEvent] = []
-    for await event in stream {
+    var iterator = stream.makeAsyncIterator()
+    while let event = await iterator.next() {
       received.append(event)
       if received.count == 3 {
         break
       }
     }
 
-    XCTAssertEqual(received.map(\.type), ["server.connected", "event.decode.error", "server.heartbeat"])
-    XCTAssertGreaterThanOrEqual(URLProtocolStub.recordedRequests.count, 4)
+    #expect(received.map(\.type) == ["server.connected", "event.decode.error", "server.heartbeat"])
+    #expect(controller.recordedRequests.count >= 4)
   }
 
-  func testSubscribeEventsIgnoresEmptyPayloadDataFrame() async {
-    URLProtocolStub.handler = { request in
+  @Test func subscribeEventsIgnoresEmptyPayloadDataFrame() async {
+    let controller = URLProtocolStubController { request in
       try makeStatusResponse(
         request: request,
         code: 200,
@@ -469,20 +475,15 @@ final class OpenCodeClientTests: XCTestCase {
       )
     }
 
-    let client = makeClient()
-    let stream = client.subscribeEvents()
+    let client = makeClient(controller: controller)
+    var iterator = client.subscribeEvents().makeAsyncIterator()
+    let first = await iterator.next()
 
-    var first: ServerEvent?
-    for await event in stream {
-      first = event
-      break
-    }
-
-    XCTAssertEqual(first?.type, "server.connected")
+    #expect(first?.type == "server.connected")
   }
 
-  func testSubscribeEventsFlushesRemainingBufferWithoutDelimiter() async {
-    URLProtocolStub.handler = { request in
+  @Test func subscribeEventsFlushesRemainingBufferWithoutDelimiter() async {
+    let controller = URLProtocolStubController { request in
       try makeStatusResponse(
         request: request,
         code: 200,
@@ -490,25 +491,22 @@ final class OpenCodeClientTests: XCTestCase {
       )
     }
 
-    let client = makeClient()
-    let stream = client.subscribeEvents()
+    let client = makeClient(controller: controller)
+    var iterator = client.subscribeEvents().makeAsyncIterator()
+    let first = await iterator.next()
 
-    var first: ServerEvent?
-    for await event in stream {
-      first = event
-      break
-    }
-
-    try? await Task.sleep(nanoseconds: 10_000_000)
-    XCTAssertEqual(first?.type, "server.connected")
+    #expect(first?.type == "server.connected")
   }
 
-  func testSubscribeEventsStopsWhenConsumerCancels() async {
-    URLProtocolStub.handler = { _ in
-      throw URLError(.cannotConnectToHost)
+  @Test(.timeLimit(.minutes(1)))
+  func subscribeEventsStopsWhenConsumerCancels() async {
+    let handlerCancelled = AsyncSignal()
+    let controller = URLProtocolStubController { _ in
+      try await suspendUntilCancelled(signal: handlerCancelled)
+      throw URLError(.cancelled)
     }
 
-    let client = makeClient()
+    let client = makeClient(controller: controller)
     let stream = client.subscribeEvents()
 
     let consumer = Task {
@@ -516,16 +514,18 @@ final class OpenCodeClientTests: XCTestCase {
       _ = await iterator.next()
     }
 
-    try? await Task.sleep(nanoseconds: 20_000_000)
+    await controller.waitForFirstRequest()
     consumer.cancel()
+    await controller.waitForStopLoading()
+    await handlerCancelled.wait()
     _ = await consumer.result
-    XCTAssertGreaterThanOrEqual(URLProtocolStub.recordedRequests.count, 1)
+
+    #expect(controller.recordedRequests.count >= 1)
   }
 
-  func testSubscribeEventsCancelsDuringBufferedByteIteration() async {
+  @Test func subscribeEventsCancelsDuringBufferedByteIteration() async {
     let trailingPayload = String(repeating: "x", count: 750_000)
-
-    URLProtocolStub.handler = { request in
+    let controller = URLProtocolStubController { request in
       try makeStatusResponse(
         request: request,
         code: 200,
@@ -533,53 +533,52 @@ final class OpenCodeClientTests: XCTestCase {
       )
     }
 
-    let client = makeClient()
-    let stream = client.subscribeEvents()
+    let client = makeClient(controller: controller)
+    var iterator = client.subscribeEvents().makeAsyncIterator()
+    let first = await iterator.next()
 
-    var first: ServerEvent?
-    for await event in stream {
-      first = event
-      break
-    }
-
-    try? await Task.sleep(nanoseconds: 20_000_000)
-    XCTAssertEqual(first?.type, "server.connected")
+    #expect(first?.type == "server.connected")
   }
 
-  func testSubscribeEventsCancellationWhileConnecting() async {
-    let client = OpenCodeClient(
-      configuration: OpenCodeClientConfiguration(
-        baseURL: URL(string: "http://192.0.2.1:65535")!,
-        username: nil,
-        password: nil,
-        directory: nil
-      )
-    )
+  @Test(.timeLimit(.minutes(1)))
+  func subscribeEventsCancellationWhileConnecting() async {
+    let handlerCancelled = AsyncSignal()
+    let controller = URLProtocolStubController { _ in
+      try await suspendUntilCancelled(signal: handlerCancelled)
+      throw URLError(.cancelled)
+    }
 
+    let client = makeClient(controller: controller, directory: nil)
     let stream = client.subscribeEvents()
+
     let consumer = Task {
       var iterator = stream.makeAsyncIterator()
       _ = await iterator.next()
     }
 
-    try? await Task.sleep(nanoseconds: 20_000_000)
+    await controller.waitForFirstRequest()
     consumer.cancel()
+    await controller.waitForStopLoading()
+    await handlerCancelled.wait()
     _ = await consumer.result
+
+    #expect(controller.recordedRequests.count == 1)
   }
 
-  func testErrorDescriptions() {
-    XCTAssertEqual(OpenCodeClientError.invalidURL("x").errorDescription, "Invalid server URL: x")
-    XCTAssertEqual(OpenCodeClientError.invalidResponse.errorDescription, "Server returned an invalid response.")
-    XCTAssertTrue(OpenCodeClientError.transport(URLError(.timedOut)).errorDescription?.contains("Network error") == true)
-    XCTAssertTrue(OpenCodeClientError.decoding(NSError(domain: "test", code: 1)).errorDescription?.contains("Failed to decode") == true)
-    XCTAssertEqual(OpenCodeClientError.httpStatus(code: 500, message: "boom").errorDescription, "Server error (500): boom")
-    XCTAssertEqual(OpenCodeClientError.httpStatus(code: 500, message: nil).errorDescription, "Server error (500): No details")
-    XCTAssertEqual(OpenCodeClientError.message("custom").errorDescription, "custom")
+  @Test func errorDescriptions() {
+    #expect(OpenCodeClientError.invalidURL("x").errorDescription == "Invalid server URL: x")
+    #expect(OpenCodeClientError.invalidResponse.errorDescription == "Server returned an invalid response.")
+    #expect(OpenCodeClientError.transport(URLError(.timedOut)).errorDescription?.contains("Network error") == true)
+    #expect(OpenCodeClientError.decoding(NSError(domain: "test", code: 1)).errorDescription?.contains("Failed to decode") == true)
+    #expect(OpenCodeClientError.httpStatus(code: 500, message: "boom").errorDescription == "Server error (500): boom")
+    #expect(OpenCodeClientError.httpStatus(code: 500, message: nil).errorDescription == "Server error (500): No details")
+    #expect(OpenCodeClientError.message("custom").errorDescription == "custom")
   }
 
-  private func makeClient(directory: String? = "/tmp/default") -> OpenCodeClient {
+  private func makeClient(controller: URLProtocolStubController, directory: String? = "/tmp/default") -> OpenCodeClient {
     let config = URLSessionConfiguration.ephemeral
     config.protocolClasses = [URLProtocolStub.self]
+    config.httpAdditionalHeaders = [URLProtocolStub.controllerIDHeader: controller.id]
     let session = URLSession(configuration: config)
 
     return OpenCodeClient(
@@ -593,42 +592,54 @@ final class OpenCodeClientTests: XCTestCase {
     )
   }
 
-  private func assertClientError<T>(_ operation: @autoclosure () async throws -> T, expected: ErrorKind) async {
+  private func assertClientError<T>(
+    expected: ErrorKind,
+    operation: () async throws -> T,
+    sourceLocation: SourceLocation = #_sourceLocation
+  ) async {
     do {
       _ = try await operation()
-      XCTFail("Expected error")
+      #expect(Bool(false), "Expected an OpenCodeClientError.", sourceLocation: sourceLocation)
     } catch let error as OpenCodeClientError {
-      switch (expected, error) {
+      let matched = switch (expected, error) {
       case (.invalidResponse, .invalidResponse),
            (.transport, .transport),
            (.decoding, .decoding),
            (.message, .message):
-        return
+        true
       default:
-        XCTFail("Unexpected error: \(error)")
+        false
       }
+
+      #expect(matched, "Unexpected error: \(error)", sourceLocation: sourceLocation)
     } catch {
-      XCTFail("Unexpected non-client error: \(error)")
+      #expect(Bool(false), "Unexpected non-client error: \(error)", sourceLocation: sourceLocation)
     }
   }
 
-  private func assertHTTPStatusError<T>(_ operation: @autoclosure () async throws -> T, code: Int, contains fragment: String?) async {
+  private func assertHTTPStatusError<T>(
+    code: Int,
+    contains fragment: String?,
+    operation: () async throws -> T,
+    sourceLocation: SourceLocation = #_sourceLocation
+  ) async {
     do {
       _ = try await operation()
-      XCTFail("Expected HTTP status error")
+      #expect(Bool(false), "Expected an HTTP status error.", sourceLocation: sourceLocation)
     } catch let error as OpenCodeClientError {
       guard case let .httpStatus(statusCode, message) = error else {
-        XCTFail("Unexpected error: \(error)")
+        #expect(Bool(false), "Unexpected error: \(error)", sourceLocation: sourceLocation)
         return
       }
-      XCTAssertEqual(statusCode, code)
+
+      #expect(statusCode == code, sourceLocation: sourceLocation)
       if let fragment {
-        XCTAssertTrue(message?.contains(fragment) == true)
+        #expect(message?.contains(fragment) == true, sourceLocation: sourceLocation)
       } else {
-        XCTAssertNil(message)
+        #expect(message == nil, sourceLocation: sourceLocation)
       }
     } catch {
-      XCTFail("Unexpected non-client error: \(error)")
+      #expect(Bool(false), "Unexpected non-client error: \(error)", sourceLocation: sourceLocation)
     }
   }
 }
@@ -640,23 +651,119 @@ private enum ErrorKind {
   case message
 }
 
-private final class URLProtocolStub: URLProtocol {
-  static var handler: ((URLRequest) throws -> (URLResponse, Data))?
+private final class URLProtocolStubController: @unchecked Sendable {
+  let id = UUID().uuidString
 
-  private static let lock = NSLock()
-  private static var requests: [URLRequest] = []
+  private let lock = NSLock()
+  private let handler: (URLRequest) async throws -> (URLResponse, Data)
+  private let firstRequestSignal = AsyncSignal()
+  private let stopLoadingSignal = AsyncSignal()
+  private var requests: [URLRequest] = []
 
-  static var recordedRequests: [URLRequest] {
-    lock.lock()
-    defer { lock.unlock() }
-    return requests
+  init(handler: @escaping (URLRequest) async throws -> (URLResponse, Data)) {
+    self.handler = handler
+    URLProtocolStub.register(self)
   }
 
-  static func reset() {
-    lock.lock()
-    handler = nil
-    requests.removeAll()
-    lock.unlock()
+  deinit {
+    URLProtocolStub.unregister(id)
+  }
+
+  var recordedRequests: [URLRequest] {
+    lock.withLock {
+      requests
+    }
+  }
+
+  func respond(to request: URLRequest) async throws -> (URLResponse, Data) {
+    lock.withLock {
+      requests.append(request)
+    }
+    firstRequestSignal.fire()
+    return try await handler(request)
+  }
+
+  func notifyStopLoading() {
+    stopLoadingSignal.fire()
+  }
+
+  func waitForFirstRequest() async {
+    await firstRequestSignal.wait()
+  }
+
+  func waitForStopLoading() async {
+    await stopLoadingSignal.wait()
+  }
+}
+
+private final class AsyncSignal: @unchecked Sendable {
+  private let lock = NSLock()
+  private var hasFired = false
+  private var continuations: [CheckedContinuation<Void, Never>] = []
+
+  func fire() {
+    let pending: [CheckedContinuation<Void, Never>] = lock.withLock {
+      guard !hasFired else {
+        return []
+      }
+
+      hasFired = true
+      let continuations = continuations
+      self.continuations.removeAll()
+      return continuations
+    }
+
+    pending.forEach { $0.resume() }
+  }
+
+  func wait() async {
+    let shouldReturnImmediately = lock.withLock {
+      hasFired
+    }
+    if shouldReturnImmediately {
+      return
+    }
+
+    await withCheckedContinuation { continuation in
+      let continuationToResume: CheckedContinuation<Void, Never>? = lock.withLock {
+        if hasFired {
+          return continuation
+        }
+
+        continuations.append(continuation)
+        return nil
+      }
+
+      continuationToResume?.resume()
+    }
+  }
+}
+
+private final class URLProtocolStub: URLProtocol {
+  static let controllerIDHeader = "X-OpenCode-Test-ID"
+
+  private static let lock = NSLock()
+  private static var controllers: [String: URLProtocolStubController] = [:]
+
+  private var controller: URLProtocolStubController?
+  private var loadingTask: Task<Void, Never>?
+
+  static func register(_ controller: URLProtocolStubController) {
+    lock.withLock {
+      controllers[controller.id] = controller
+    }
+  }
+
+  static func unregister(_ id: String) {
+    lock.withLock {
+      controllers[id] = nil
+    }
+  }
+
+  private static func controller(for id: String) -> URLProtocolStubController? {
+    lock.withLock {
+      controllers[id]
+    }
   }
 
   override class func canInit(with _: URLRequest) -> Bool {
@@ -668,28 +775,66 @@ private final class URLProtocolStub: URLProtocol {
   }
 
   override func startLoading() {
-    guard let handler = Self.handler else {
-      client?.urlProtocol(self, didFailWithError: URLError(.badServerResponse))
+    guard let controllerID = request.value(forHTTPHeaderField: Self.controllerIDHeader),
+          let controller = Self.controller(for: controllerID)
+    else {
+      client?.urlProtocol(self, didFailWithError: URLError(.badURL))
       return
     }
 
-    Self.lock.lock()
-    Self.requests.append(request)
-    Self.lock.unlock()
+    self.controller = controller
+    let urlProtocolClient = client
+    let request = request
 
-    do {
-      let (response, data) = try handler(request)
-      client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
-      if !data.isEmpty {
-        client?.urlProtocol(self, didLoad: data)
+    loadingTask = Task {
+      do {
+        let (response, data) = try await controller.respond(to: request)
+        guard !Task.isCancelled else {
+          return
+        }
+        urlProtocolClient?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+        if !data.isEmpty {
+          urlProtocolClient?.urlProtocol(self, didLoad: data)
+        }
+        urlProtocolClient?.urlProtocolDidFinishLoading(self)
+      } catch {
+        guard !Task.isCancelled else {
+          return
+        }
+        urlProtocolClient?.urlProtocol(self, didFailWithError: error)
       }
-      client?.urlProtocolDidFinishLoading(self)
-    } catch {
-      client?.urlProtocol(self, didFailWithError: error)
     }
   }
 
-  override func stopLoading() {}
+  override func stopLoading() {
+    controller?.notifyStopLoading()
+    loadingTask?.cancel()
+    loadingTask = nil
+  }
+}
+
+private func suspendUntilCancelled(signal: AsyncSignal) async throws {
+  try await withTaskCancellationHandler {
+    while true {
+      try await Task.sleep(nanoseconds: 60_000_000_000)
+    }
+  } onCancel: {
+    signal.fire()
+  }
+}
+
+private func requireDictionary(_ value: Any?) throws -> [String: Any] {
+  guard let dictionary = value as? [String: Any] else {
+    throw OpenCodeClientError.message("Expected dictionary payload")
+  }
+  return dictionary
+}
+
+private func requireURL(from request: URLRequest) throws -> URL {
+  guard let url = request.url else {
+    throw OpenCodeClientError.message("Request URL is missing")
+  }
+  return url
 }
 
 private func requestBodyData(_ request: URLRequest) throws -> Data {
@@ -724,10 +869,10 @@ private func requestBodyData(_ request: URLRequest) throws -> Data {
 }
 
 private func makeStatusResponse(request: URLRequest, code: Int, body: Data) throws -> (URLResponse, Data) {
-  let url = try XCTUnwrap(request.url)
-  let response = try XCTUnwrap(
-    HTTPURLResponse(url: url, statusCode: code, httpVersion: "HTTP/1.1", headerFields: ["Content-Type": "application/json"])
-  )
+  let url = try requireURL(from: request)
+  guard let response = HTTPURLResponse(url: url, statusCode: code, httpVersion: "HTTP/1.1", headerFields: ["Content-Type": "application/json"]) else {
+    throw OpenCodeClientError.message("Failed to build HTTP response")
+  }
   return (response, body)
 }
 
@@ -756,5 +901,13 @@ private extension OpenCodeClientTests {
       ]
     }
     """
+  }
+}
+
+private extension NSLock {
+  func withLock<T>(_ body: () throws -> T) rethrows -> T {
+    lock()
+    defer { unlock() }
+    return try body()
   }
 }
