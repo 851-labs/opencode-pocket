@@ -1,7 +1,7 @@
 ---
 # opencode-pocket-ctrn
 title: P0 add transcript support flows for permissions, questions, and diffs
-status: todo
+status: completed
 type: feature
 priority: high
 tags:
@@ -10,7 +10,7 @@ tags:
     - transcript
     - interactions
 created_at: 2026-03-20T21:50:45Z
-updated_at: 2026-03-20T21:50:45Z
+updated_at: 2026-03-20T22:12:54Z
 ---
 
 The app client relies on more than plain transcript messages; it also needs diffs, todos, permissions, and question-response flows.

@@ -228,6 +228,15 @@ public final class OpenCodeClient {
     )
   }
 
+  public func getSessionTodo(sessionID: String, directory: String? = nil) async throws -> [TodoItem] {
+    try await request(
+      .get,
+      path: "/session/\(escapedPathComponent(sessionID))/todo",
+      query: mergedDirectoryQuery(directory),
+      response: [TodoItem].self
+    )
+  }
+
   public func sendMessage(sessionID: String, body: PromptRequest, directory: String? = nil) async throws -> MessageEnvelope {
     try await request(
       .post,
@@ -271,11 +280,20 @@ public final class OpenCodeClient {
     message: String? = nil,
     directory: String? = nil
   ) async throws -> Bool {
+    try await respondPermission(requestID: requestID, response: reply, message: message, directory: directory)
+  }
+
+  public func respondPermission(
+    requestID: String,
+    response: OpenCodeModels.PermissionReply,
+    message: String? = nil,
+    directory: String? = nil
+  ) async throws -> Bool {
     try await request(
       .post,
       path: "/permission/\(escapedPathComponent(requestID))/reply",
       query: mergedDirectoryQuery(directory),
-      body: AnyEncodable(OpenCodeModels.PermissionReplyRequest(reply: reply, message: message)),
+      body: AnyEncodable(OpenCodeModels.PermissionReplyRequest(reply: response, message: message)),
       response: Bool.self
     )
   }

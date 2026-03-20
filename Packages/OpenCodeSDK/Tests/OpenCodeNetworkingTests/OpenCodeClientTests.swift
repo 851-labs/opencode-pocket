@@ -91,6 +91,10 @@ struct OpenCodeClientTests {
         )
       case let ("GET", path) where path?.hasSuffix("/diff") == true:
         return try makeJSONResponse(request: request, json: "[{\"file\":\"a.swift\",\"before\":\"\",\"after\":\"\",\"additions\":2,\"deletions\":1,\"status\":\"modified\"}]")
+      case let ("GET", path) where path?.hasSuffix("/todo") == true:
+        return try makeJSONResponse(request: request, json: """
+        [{"content":"Implement API","status":"in_progress","priority":"high"}]
+        """)
       case let ("GET", path) where path?.hasPrefix("/session/") == true:
         return try makeJSONResponse(request: request, json: """
         {"id":"ses_get","slug":"slug","projectID":"prj_1","directory":"/tmp/project","parentID":null,"title":"Fetched","version":"1","time":{"created":1,"updated":1,"archived":null},"summary":null,"share":null,"revert":null}
@@ -106,6 +110,18 @@ struct OpenCodeClientTests {
       case let ("POST", path) where path?.hasSuffix("/prompt_async") == true:
         return try makeJSONResponse(request: request, json: "{}")
       case let ("POST", path) where path?.hasSuffix("/abort") == true:
+        return try makeJSONResponse(request: request, json: "true")
+      case ("GET", "/permission"):
+        return try makeJSONResponse(request: request, json: """
+        [{"id":"perm_1","sessionID":"ses_1","permission":"edit","patterns":["src/**"],"metadata":{"tool":"edit"},"always":[],"tool":{"messageID":"msg_1","callID":"call_1"}}]
+        """)
+      case let ("POST", path) where path?.contains("/permission/") == true:
+        return try makeJSONResponse(request: request, json: "true")
+      case ("GET", "/question"):
+        return try makeJSONResponse(request: request, json: """
+        [{"id":"question_1","sessionID":"ses_1","questions":[{"question":"Pick one","header":"Choice","options":[{"label":"Yes","description":"Confirm"}],"multiple":false,"custom":true}],"tool":{"messageID":"msg_2","callID":"call_2"}}]
+        """)
+      case let ("POST", path) where path?.contains("/question/") == true:
         return try makeJSONResponse(request: request, json: "true")
       default:
         throw OpenCodeClientError.message("Unexpected request: \(request.httpMethod ?? "?") \(request.url?.absoluteString ?? "nil")")
@@ -200,6 +216,9 @@ struct OpenCodeClientTests {
     let diffs = try await client.getSessionDiff(sessionID: "ses_1", messageID: "msg_1")
     #expect(diffs.first?.file == "a.swift")
 
+    let todos = try await client.getSessionTodo(sessionID: "ses_1")
+    #expect(todos.first?.content == "Implement API")
+
     let sent = try await client.sendMessage(sessionID: "ses_1", body: PromptRequest(parts: [.text("Hello")]))
     #expect(sent.id == "msg_send")
 
@@ -207,6 +226,21 @@ struct OpenCodeClientTests {
 
     let aborted = try await client.abortSession(sessionID: "ses_1")
     #expect(aborted == true)
+
+    let permissions = try await client.listPermissions()
+    #expect(permissions.first?.id == "perm_1")
+
+    let repliedPermission = try await client.respondPermission(requestID: "perm_1", response: .once, message: "Proceed")
+    #expect(repliedPermission == true)
+
+    let questions = try await client.listQuestions()
+    #expect(questions.first?.id == "question_1")
+
+    let repliedQuestion = try await client.replyQuestion(requestID: "question_1", answers: [["Yes"]])
+    #expect(repliedQuestion == true)
+
+    let rejectedQuestion = try await client.rejectQuestion(requestID: "question_1")
+    #expect(rejectedQuestion == true)
 
     let requests = controller.recordedRequests
     #expect(requests.contains { $0.url?.path == "/global/config" && $0.httpMethod == "GET" })
@@ -231,6 +265,12 @@ struct OpenCodeClientTests {
     #expect(requests.contains { $0.url?.absoluteString.contains("limit=5") == true })
     #expect(requests.contains { $0.url?.absoluteString.contains("before=cur_0") == true })
     #expect(requests.contains { $0.url?.absoluteString.contains("messageID=msg_1") == true })
+    #expect(requests.contains { $0.url?.path == "/session/ses_1/todo" && $0.httpMethod == "GET" })
+    #expect(requests.contains { $0.url?.path == "/permission" && $0.httpMethod == "GET" })
+    #expect(requests.contains { $0.url?.path == "/permission/perm_1/reply" && $0.httpMethod == "POST" })
+    #expect(requests.contains { $0.url?.path == "/question" && $0.httpMethod == "GET" })
+    #expect(requests.contains { $0.url?.path == "/question/question_1/reply" && $0.httpMethod == "POST" })
+    #expect(requests.contains { $0.url?.path == "/question/question_1/reject" && $0.httpMethod == "POST" })
   }
 
   @Test func directoryQueryOverride() async throws {
