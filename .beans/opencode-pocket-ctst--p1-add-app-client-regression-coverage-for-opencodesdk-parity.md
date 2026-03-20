@@ -1,7 +1,7 @@
 ---
 # opencode-pocket-ctst
 title: P1 add app-client regression coverage for OpenCodeSDK parity
-status: todo
+status: completed
 type: task
 priority: high
 tags:
@@ -10,7 +10,7 @@ tags:
     - testing
     - parity
 created_at: 2026-03-20T21:50:45Z
-updated_at: 2026-03-20T21:50:45Z
+updated_at: 2026-03-20T22:43:14Z
 ---
 
 Parity work will drift unless the SDK test suite protects the route families the app client actually relies on.

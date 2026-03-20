@@ -102,3 +102,10 @@ Those routes either support the TUI/CLI control layer or desktop-terminal featur
 ## Working Rule
 
 When deciding whether to add a new SDK route for this initiative, first confirm it is used by `.local/opencode/packages/app`. If it is only used by the TUI or broader server tooling, it should not expand the Swift client parity scope by default.
+
+## Regression Coverage
+
+- main SDK smoke coverage: `Packages/OpenCodeSDK/Tests/OpenCodeNetworkingTests/OpenCodeClientTests.swift`
+- model decoding coverage: `Packages/OpenCodeSDK/Tests/OpenCodeNetworkingTests/JSONDecodingTests.swift`
+- transport/request coverage: `Packages/OpenCodeSDK/Tests/OpenCodeNetworkingTests/RequestBuilderTests.swift`
+- coverage notes: `Packages/OpenCodeSDK/Tests/OpenCodeNetworkingTests/APP_CLIENT_PARITY_COVERAGE.md`

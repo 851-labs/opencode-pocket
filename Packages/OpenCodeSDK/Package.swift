@@ -25,6 +25,9 @@ let package = Package(
       dependencies: [
         "OpenCodeNetworking",
         "OpenCodeModels",
+      ],
+      exclude: [
+        "APP_CLIENT_PARITY_COVERAGE.md",
       ]
     ),
   ]

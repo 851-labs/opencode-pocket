@@ -1,7 +1,7 @@
 ---
 # opencode-pocket-cpar
 title: P0 achieve Swift client parity with the OpenCode app client
-status: in_progress
+status: completed
 type: feature
 priority: high
 tags:
@@ -10,7 +10,7 @@ tags:
     - parity
     - networking
 created_at: 2026-03-20T21:50:45Z
-updated_at: 2026-03-20T22:40:51Z
+updated_at: 2026-03-20T22:43:14Z
 ---
 
 `OpenCodeSDK` should target parity with the real opencode app client in `.local/opencode/packages/app`, not the full server or TUI control surface.
