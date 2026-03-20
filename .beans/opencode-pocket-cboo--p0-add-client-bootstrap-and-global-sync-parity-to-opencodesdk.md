@@ -1,7 +1,7 @@
 ---
 # opencode-pocket-cboo
 title: P0 add client bootstrap and global sync parity to OpenCodeSDK
-status: todo
+status: completed
 type: feature
 priority: high
 tags:
@@ -10,7 +10,7 @@ tags:
     - bootstrap
     - events
 created_at: 2026-03-20T21:50:45Z
-updated_at: 2026-03-20T21:50:45Z
+updated_at: 2026-03-20T21:59:57Z
 ---
 
 The Swift client needs the same startup and live-sync primitives used by the opencode app client.

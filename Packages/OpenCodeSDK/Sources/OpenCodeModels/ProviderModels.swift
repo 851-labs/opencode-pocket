@@ -5,18 +5,54 @@ public struct AgentDescriptor: Codable, Hashable, Identifiable, Sendable {
   public let description: String?
   public let mode: String
   public let hidden: Bool?
+  public let native: Bool?
+  public let options: [String: JSONValue]?
 
   public var id: String {
     name
   }
 
-  public init(name: String, description: String?, mode: String, hidden: Bool?) {
+  public init(name: String, description: String?, mode: String, hidden: Bool?, native: Bool? = nil, options: [String: JSONValue]? = nil) {
     self.name = name
     self.description = description
     self.mode = mode
     self.hidden = hidden
+    self.native = native
+    self.options = options
   }
 }
+
+public struct ProviderListResponse: Decodable, Hashable, Sendable {
+  public let all: [ProviderDescriptor]
+  public let defaultModels: [String: String]
+  public let connected: [String]
+
+  enum CodingKeys: String, CodingKey {
+    case all
+    case defaultModels = "default"
+    case connected
+  }
+
+  public init(all: [ProviderDescriptor], defaultModels: [String: String], connected: [String]) {
+    self.all = all
+    self.defaultModels = defaultModels
+    self.connected = connected
+  }
+}
+
+public struct ProviderAuthMethod: Codable, Hashable, Sendable {
+  public let type: String
+  public let label: String
+  public let prompts: [JSONValue]?
+
+  public init(type: String, label: String, prompts: [JSONValue]? = nil) {
+    self.type = type
+    self.label = label
+    self.prompts = prompts
+  }
+}
+
+public typealias ProviderAuthMethodResponse = [String: [ProviderAuthMethod]]
 
 public struct ProviderCatalogResponse: Decodable, Sendable {
   public let providers: [ProviderDescriptor]
@@ -36,11 +72,27 @@ public struct ProviderCatalogResponse: Decodable, Sendable {
 public struct ProviderDescriptor: Decodable, Hashable, Sendable {
   public let id: String
   public let name: String
+  public let source: String?
+  public let env: [String]?
+  public let key: String?
+  public let options: [String: JSONValue]?
   public let models: [String: ProviderModelDescriptor]
 
-  public init(id: String, name: String, models: [String: ProviderModelDescriptor]) {
+  public init(
+    id: String,
+    name: String,
+    source: String? = nil,
+    env: [String]? = nil,
+    key: String? = nil,
+    options: [String: JSONValue]? = nil,
+    models: [String: ProviderModelDescriptor]
+  ) {
     self.id = id
     self.name = name
+    self.source = source
+    self.env = env
+    self.key = key
+    self.options = options
     self.models = models
   }
 }
@@ -61,6 +113,8 @@ public struct ProviderModelDescriptor: Decodable, Hashable, Sendable {
   public let id: String
   public let providerID: String
   public let name: String
+  public let family: String?
+  public let status: String?
   public let variants: [String: JSONValue]?
   public let limit: ProviderModelLimitDescriptor?
 
@@ -68,12 +122,16 @@ public struct ProviderModelDescriptor: Decodable, Hashable, Sendable {
     id: String,
     providerID: String,
     name: String,
+    family: String? = nil,
+    status: String? = nil,
     variants: [String: JSONValue]?,
     limit: ProviderModelLimitDescriptor? = nil
   ) {
     self.id = id
     self.providerID = providerID
     self.name = name
+    self.family = family
+    self.status = status
     self.variants = variants
     self.limit = limit
   }

@@ -124,6 +124,101 @@ struct JSONDecodingTests {
     #expect(provider.models["gpt-5"]?.limit?.output == 32_000)
   }
 
+  @Test func decodesProviderListAndAuthMethods() throws {
+    let providerJSON = """
+    {
+      "all": [
+        {
+          "id": "openai",
+          "name": "OpenAI",
+          "source": "api",
+          "env": ["OPENAI_API_KEY"],
+          "models": {
+            "gpt-5": {
+              "id": "gpt-5",
+              "providerID": "openai",
+              "name": "GPT-5",
+              "status": "active",
+              "variants": {
+                "high": {}
+              }
+            }
+          }
+        }
+      ],
+      "default": {
+        "openai": "gpt-5"
+      },
+      "connected": ["openai"]
+    }
+    """.data(using: .utf8)!
+
+    let authJSON = """
+    {
+      "openai": [
+        {
+          "type": "api",
+          "label": "API key",
+          "prompts": [
+            {
+              "type": "text",
+              "key": "key",
+              "message": "API key"
+            }
+          ]
+        }
+      ]
+    }
+    """.data(using: .utf8)!
+
+    let providers = try JSONDecoder().decode(ProviderListResponse.self, from: providerJSON)
+    let auth = try JSONDecoder().decode(ProviderAuthMethodResponse.self, from: authJSON)
+
+    #expect(providers.all.first?.source == "api")
+    #expect(providers.all.first?.models["gpt-5"]?.status == "active")
+    #expect(providers.connected == ["openai"])
+    #expect(auth["openai"]?.first?.prompts?.first?.objectValue?["key"]?.stringValue == "key")
+  }
+
+  @Test func decodesProjectAndGlobalEvent() throws {
+    let projectJSON = """
+    {
+      "id": "prj_1",
+      "worktree": "/tmp/project",
+      "vcs": "git",
+      "name": "Project",
+      "icon": {
+        "override": "hammer"
+      },
+      "commands": {
+        "start": "bun dev"
+      },
+      "time": {
+        "created": 1,
+        "updated": 2
+      },
+      "sandboxes": ["main"]
+    }
+    """.data(using: .utf8)!
+
+    let eventJSON = """
+    {
+      "payload": {
+        "type": "server.connected",
+        "properties": {}
+      }
+    }
+    """.data(using: .utf8)!
+
+    let project = try JSONDecoder().decode(ProjectInfo.self, from: projectJSON)
+    let event = try JSONDecoder().decode(GlobalServerEvent.self, from: eventJSON)
+
+    #expect(project.commands?.start == "bun dev")
+    #expect(project.icon?.override == "hammer")
+    #expect(event.resolvedDirectory == "global")
+    #expect(event.payload.eventType == .serverConnected)
+  }
+
   @Test func decodesLSPAndMCPStatusPayloads() throws {
     let lspJSON = """
     [
@@ -212,6 +307,12 @@ struct JSONDecodingTests {
   @Test func serverEventTypeMappingSupportsKnownAndUnknownEvents() {
     let known = ServerEvent(type: "message.part.updated", properties: .object([:]))
     #expect(known.eventType == .messagePartUpdated)
+
+    let heartbeat = ServerEvent(type: "server.heartbeat", properties: .object([:]))
+    #expect(heartbeat.eventType == .serverHeartbeat)
+
+    let project = ServerEvent(type: "project.updated", properties: .object([:]))
+    #expect(project.eventType == .projectUpdated)
 
     let lsp = ServerEvent(type: "lsp.updated", properties: .object([:]))
     #expect(lsp.eventType == .lspUpdated)

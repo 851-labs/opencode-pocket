@@ -12,9 +12,33 @@ struct OpenCodeClientTests {
         return try makeJSONResponse(request: request, json: """
         {"healthy":true,"version":"1.2.3"}
         """)
+      case ("GET", "/global/config"):
+        return try makeJSONResponse(request: request, json: """
+        {"model":"openai/gpt-5","share":"manual","disabled_providers":["demo"]}
+        """)
       case ("GET", "/path"):
         return try makeJSONResponse(request: request, json: """
         {"home":"/Users/opencode","state":"/Users/opencode/.config/opencode/state","config":"/Users/opencode/.config/opencode/config","worktree":"/Users/opencode/.local/opencode/worktree","directory":"/Users/opencode/projects"}
+        """)
+      case ("GET", "/config"):
+        return try makeJSONResponse(request: request, json: """
+        {"model":"anthropic/claude-sonnet-4","default_agent":"build"}
+        """)
+      case ("GET", "/project/current"):
+        return try makeJSONResponse(request: request, json: """
+        {"id":"prj_current","worktree":"/tmp/project","vcs":"git","name":"Current","icon":{"override":"hammer"},"commands":{"start":"bun dev"},"time":{"created":1,"updated":2},"sandboxes":["main"]}
+        """)
+      case ("GET", "/project"):
+        return try makeJSONResponse(request: request, json: """
+        [{"id":"prj_1","worktree":"/tmp/project","vcs":"git","name":"Project","icon":null,"commands":null,"time":{"created":1,"updated":2},"sandboxes":[]}]
+        """)
+      case ("GET", "/provider/auth"):
+        return try makeJSONResponse(request: request, json: """
+        {"openai":[{"type":"api","label":"API key","prompts":[{"type":"text","key":"key","message":"API key"}]}]}
+        """)
+      case ("GET", "/provider"):
+        return try makeJSONResponse(request: request, json: """
+        {"all":[{"id":"openai","name":"OpenAI","source":"api","env":["OPENAI_API_KEY"],"models":{"gpt-5":{"id":"gpt-5","providerID":"openai","name":"GPT-5","status":"active","variants":{"high":{}},"limit":{"context":272000,"input":272000,"output":32000}}}}],"default":{"openai":"gpt-5"},"connected":["openai"]}
         """)
       case ("GET", "/file"):
         return try makeJSONResponse(request: request, json: """
@@ -81,8 +105,31 @@ struct OpenCodeClientTests {
     #expect(health.healthy == true)
     #expect(health.version == "1.2.3")
 
+    let globalConfig = try await client.getGlobalConfig()
+    #expect(globalConfig["model"]?.stringValue == "openai/gpt-5")
+
     let pathInfo = try await client.getPath()
     #expect(pathInfo.home == "/Users/opencode")
+
+    let config = try await client.getConfig()
+    #expect(config["default_agent"]?.stringValue == "build")
+
+    let projects = try await client.listProjects()
+    #expect(projects.first?.id == "prj_1")
+
+    let currentProject = try await client.getCurrentProject()
+    #expect(currentProject.id == "prj_current")
+    #expect(currentProject.commands?.start == "bun dev")
+
+    let providerList = try await client.listProviders()
+    #expect(providerList.all.first?.id == "openai")
+    #expect(providerList.connected == ["openai"])
+
+    let authMethods = try await client.listProviderAuthMethods()
+    #expect(authMethods["openai"]?.first?.type == "api")
+
+    let agents = try await client.listAgents()
+    #expect(agents.first?.name == "build")
 
     let listedFiles = try await client.listFiles(path: "", directory: "/tmp/project")
     #expect(listedFiles.count == 2)
@@ -100,11 +147,8 @@ struct OpenCodeClientTests {
     let sessions = try await client.listSessions()
     #expect(sessions.count == 1)
 
-    let agents = try await client.listAgents()
-    #expect(agents.first?.name == "build")
-
-    let providers = try await client.listConfigProviders()
-    #expect(providers.providers.first?.id == "openai")
+    let configProviders = try await client.listConfigProviders()
+    #expect(configProviders.providers.first?.id == "openai")
 
     let lspStatus = try await client.listLSPStatus()
     #expect(lspStatus.first?.id == "sourcekit-lsp")
@@ -144,6 +188,12 @@ struct OpenCodeClientTests {
     #expect(aborted == true)
 
     let requests = controller.recordedRequests
+    #expect(requests.contains { $0.url?.path == "/global/config" && $0.httpMethod == "GET" })
+    #expect(requests.contains { $0.url?.path == "/config" && $0.httpMethod == "GET" })
+    #expect(requests.contains { $0.url?.path == "/project" && $0.httpMethod == "GET" })
+    #expect(requests.contains { $0.url?.path == "/project/current" && $0.url?.query?.contains("directory=/tmp/default") == true })
+    #expect(requests.contains { $0.url?.path == "/provider" && $0.url?.query?.contains("directory=/tmp/default") == true })
+    #expect(requests.contains { $0.url?.path == "/provider/auth" && $0.url?.query?.contains("directory=/tmp/default") == true })
     #expect(requests.contains { $0.url?.path == "/session" && $0.httpMethod == "GET" })
     #expect(requests.contains { $0.url?.path == "/session" && $0.url?.query?.contains("directory=/tmp/default") == true })
     #expect(requests.contains { $0.url?.path == "/path" && $0.httpMethod == "GET" })
@@ -464,6 +514,27 @@ struct OpenCodeClientTests {
 
     #expect(received.map(\.type) == ["server.connected", "event.decode.error", "server.heartbeat"])
     #expect(controller.recordedRequests.count >= 4)
+  }
+
+  @Test func subscribeGlobalEventsParsesDirectoryAndFallsBackToGlobal() async {
+    let controller = URLProtocolStubController { request in
+      #expect(request.url?.path == "/global/event")
+      return try makeStatusResponse(
+        request: request,
+        code: 200,
+        body: Data("data: {\"payload\":{\"type\":\"server.connected\",\"properties\":{}}}\n\ndata: {\"directory\":\"/tmp/project\",\"payload\":{\"type\":\"project.updated\",\"properties\":{\"id\":\"prj_1\"}}}\n\n".utf8)
+      )
+    }
+
+    let client = makeClient(controller: controller)
+    var iterator = client.subscribeGlobalEvents().makeAsyncIterator()
+    let first = await iterator.next()
+    let second = await iterator.next()
+
+    #expect(first?.resolvedDirectory == "global")
+    #expect(first?.payload.type == "server.connected")
+    #expect(second?.resolvedDirectory == "/tmp/project")
+    #expect(second?.payload.type == "project.updated")
   }
 
   @Test func subscribeEventsIgnoresEmptyPayloadDataFrame() async {

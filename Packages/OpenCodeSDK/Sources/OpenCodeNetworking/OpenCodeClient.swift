@@ -34,8 +34,32 @@ public final class OpenCodeClient {
     try await request(.get, path: "/global/health", response: HealthResponse.self)
   }
 
+  public func getGlobalConfig() async throws -> OpenCodeConfig {
+    try await request(.get, path: "/global/config", response: OpenCodeConfig.self)
+  }
+
+  public func getConfig(directory: String? = nil) async throws -> OpenCodeConfig {
+    try await request(.get, path: "/config", query: mergedDirectoryQuery(directory), response: OpenCodeConfig.self)
+  }
+
   public func getPath() async throws -> PathInfo {
     try await request(.get, path: "/path", response: PathInfo.self)
+  }
+
+  public func listProjects() async throws -> [ProjectInfo] {
+    try await request(.get, path: "/project", response: [ProjectInfo].self)
+  }
+
+  public func getCurrentProject(directory: String? = nil) async throws -> ProjectInfo {
+    try await request(.get, path: "/project/current", query: mergedDirectoryQuery(directory), response: ProjectInfo.self)
+  }
+
+  public func listProviders(directory: String? = nil) async throws -> ProviderListResponse {
+    try await request(.get, path: "/provider", query: mergedDirectoryQuery(directory), response: ProviderListResponse.self)
+  }
+
+  public func listProviderAuthMethods(directory: String? = nil) async throws -> ProviderAuthMethodResponse {
+    try await request(.get, path: "/provider/auth", query: mergedDirectoryQuery(directory), response: ProviderAuthMethodResponse.self)
   }
 
   public func listFiles(path: String, directory: String? = nil) async throws -> [FileNode] {
@@ -245,6 +269,18 @@ public final class OpenCodeClient {
   }
 
   public func subscribeEvents(directory: String? = nil) -> AsyncStream<ServerEvent> {
+    subscribeSSE(path: "/event", query: mergedDirectoryQuery(directory), decode: Self.decodeServerEvent)
+  }
+
+  public func subscribeGlobalEvents() -> AsyncStream<GlobalServerEvent> {
+    subscribeSSE(path: "/global/event", decode: Self.decodeGlobalEvent)
+  }
+
+  private func subscribeSSE<Event: Sendable>(
+    path: String,
+    query: [URLQueryItem] = [],
+    decode: @escaping (String) -> Event
+  ) -> AsyncStream<Event> {
     AsyncStream { continuation in
       let task = Task {
         var attempts = 0
@@ -264,9 +300,9 @@ public final class OpenCodeClient {
             }
 
             let request = try requestBuilder.makeRequest(
-              path: "/event",
+              path: path,
               method: .get,
-              query: mergedDirectoryQuery(directory),
+              query: query,
               timeout: 600,
               headers: headers
             )
@@ -291,7 +327,8 @@ public final class OpenCodeClient {
                 parser: &parser,
                 lastEventID: &lastEventID,
                 retryDelayMilliseconds: &retryDelayMilliseconds,
-                continuation: continuation
+                continuation: continuation,
+                decode: decode
               )
             }
 
@@ -300,14 +337,16 @@ public final class OpenCodeClient {
               parser: &parser,
               lastEventID: &lastEventID,
               retryDelayMilliseconds: &retryDelayMilliseconds,
-              continuation: continuation
+              continuation: continuation,
+              decode: decode
             )
 
             consume(
               parser.finish(),
               lastEventID: &lastEventID,
               retryDelayMilliseconds: &retryDelayMilliseconds,
-              continuation: continuation
+              continuation: continuation,
+              decode: decode
             )
           } catch {
             if Task.isCancelled {
@@ -332,11 +371,12 @@ public final class OpenCodeClient {
     }
   }
 
-  private func consume(
+  private func consume<Event>(
     _ message: SSEMessage?,
     lastEventID: inout String?,
     retryDelayMilliseconds: inout Int,
-    continuation: AsyncStream<ServerEvent>.Continuation
+    continuation: AsyncStream<Event>.Continuation,
+    decode: (String) -> Event
   ) {
     guard let message else {
       return
@@ -351,16 +391,19 @@ public final class OpenCodeClient {
     }
 
     if let data = message.data {
-      yieldEvent(from: data, to: continuation)
+      let payload = data.trimmingCharacters(in: .whitespacesAndNewlines)
+      guard !payload.isEmpty else { return }
+      continuation.yield(decode(payload))
     }
   }
 
-  private func flushBufferedSSEFrames(
+  private func flushBufferedSSEFrames<Event>(
     buffer: inout String,
     parser: inout SSEParser,
     lastEventID: inout String?,
     retryDelayMilliseconds: inout Int,
-    continuation: AsyncStream<ServerEvent>.Continuation
+    continuation: AsyncStream<Event>.Continuation,
+    decode: (String) -> Event
   ) {
     let normalized = buffer
       .replacingOccurrences(of: "\r\n", with: "\n")
@@ -380,17 +423,19 @@ public final class OpenCodeClient {
         parser: &parser,
         lastEventID: &lastEventID,
         retryDelayMilliseconds: &retryDelayMilliseconds,
-        continuation: continuation
+        continuation: continuation,
+        decode: decode
       )
     }
   }
 
-  private func flushRemainingSSEBuffer(
+  private func flushRemainingSSEBuffer<Event>(
     buffer: inout String,
     parser: inout SSEParser,
     lastEventID: inout String?,
     retryDelayMilliseconds: inout Int,
-    continuation: AsyncStream<ServerEvent>.Continuation
+    continuation: AsyncStream<Event>.Continuation,
+    decode: (String) -> Event
   ) {
     let normalized = buffer
       .replacingOccurrences(of: "\r\n", with: "\n")
@@ -406,18 +451,20 @@ public final class OpenCodeClient {
       parser: &parser,
       lastEventID: &lastEventID,
       retryDelayMilliseconds: &retryDelayMilliseconds,
-      continuation: continuation
+      continuation: continuation,
+      decode: decode
     )
 
     buffer = ""
   }
 
-  private func flushFrame(
+  private func flushFrame<Event>(
     _ frame: String,
     parser: inout SSEParser,
     lastEventID: inout String?,
     retryDelayMilliseconds: inout Int,
-    continuation: AsyncStream<ServerEvent>.Continuation
+    continuation: AsyncStream<Event>.Continuation,
+    decode: (String) -> Event
   ) {
     for line in frame.split(separator: "\n", omittingEmptySubsequences: false) {
       _ = parser.ingest(line: String(line))
@@ -427,7 +474,8 @@ public final class OpenCodeClient {
       parser.ingest(line: ""),
       lastEventID: &lastEventID,
       retryDelayMilliseconds: &retryDelayMilliseconds,
-      continuation: continuation
+      continuation: continuation,
+      decode: decode
     )
   }
 
@@ -532,22 +580,28 @@ public final class OpenCodeClient {
     return [URLQueryItem(name: "directory", value: resolved)]
   }
 
-  private func yieldEvent(from data: String, to continuation: AsyncStream<ServerEvent>.Continuation) {
-    let payload = data.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !payload.isEmpty else { return }
-
+  private static func decodeServerEvent(from payload: String) -> ServerEvent {
     if let event = try? JSONDecoder().decode(ServerEvent.self, from: Data(payload.utf8)) {
-      continuation.yield(event)
-      return
+      return event
     }
 
-    continuation.yield(
-      ServerEvent(
-        type: "event.decode.error",
-        properties: .object([
-          "raw": .string(payload),
-        ])
-      )
+    return makeDecodeErrorEvent(raw: payload)
+  }
+
+  private static func decodeGlobalEvent(from payload: String) -> GlobalServerEvent {
+    if let event = try? JSONDecoder().decode(GlobalServerEvent.self, from: Data(payload.utf8)) {
+      return event
+    }
+
+    return GlobalServerEvent(directory: nil, payload: makeDecodeErrorEvent(raw: payload))
+  }
+
+  private static func makeDecodeErrorEvent(raw: String) -> ServerEvent {
+    ServerEvent(
+      type: "event.decode.error",
+      properties: .object([
+        "raw": .string(raw),
+      ])
     )
   }
 }

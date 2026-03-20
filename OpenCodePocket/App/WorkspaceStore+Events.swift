@@ -40,6 +40,9 @@ extension WorkspaceStore {
     case .serverConnected:
       connection.eventConnectionState = "Live updates connected"
 
+    case .serverHeartbeat, .globalDisposed, .projectUpdated, .fileWatcherUpdated, .serverInstanceDisposed, .vcsBranchUpdated:
+      break
+
     case .sessionCreated, .sessionUpdated, .sessionDeleted:
       await refreshSessions()
 

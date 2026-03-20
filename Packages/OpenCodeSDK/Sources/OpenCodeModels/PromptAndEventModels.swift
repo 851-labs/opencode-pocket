@@ -106,6 +106,12 @@ public struct SubtaskPartInput: Encodable, Hashable, Sendable {
 
 public enum ServerEventType: Hashable, Sendable {
   case serverConnected
+  case serverHeartbeat
+  case globalDisposed
+  case projectUpdated
+  case fileWatcherUpdated
+  case serverInstanceDisposed
+  case vcsBranchUpdated
   case sessionCreated
   case sessionUpdated
   case sessionDeleted
@@ -132,6 +138,18 @@ public enum ServerEventType: Hashable, Sendable {
     switch rawValue {
     case "server.connected":
       self = .serverConnected
+    case "server.heartbeat":
+      self = .serverHeartbeat
+    case "global.disposed":
+      self = .globalDisposed
+    case "project.updated":
+      self = .projectUpdated
+    case "file.watcher.updated":
+      self = .fileWatcherUpdated
+    case "server.instance.disposed":
+      self = .serverInstanceDisposed
+    case "vcs.branch.updated":
+      self = .vcsBranchUpdated
     case "session.created":
       self = .sessionCreated
     case "session.updated":
@@ -181,6 +199,18 @@ public enum ServerEventType: Hashable, Sendable {
     switch self {
     case .serverConnected:
       return "server.connected"
+    case .serverHeartbeat:
+      return "server.heartbeat"
+    case .globalDisposed:
+      return "global.disposed"
+    case .projectUpdated:
+      return "project.updated"
+    case .fileWatcherUpdated:
+      return "file.watcher.updated"
+    case .serverInstanceDisposed:
+      return "server.instance.disposed"
+    case .vcsBranchUpdated:
+      return "vcs.branch.updated"
     case .sessionCreated:
       return "session.created"
     case .sessionUpdated:
@@ -224,6 +254,22 @@ public enum ServerEventType: Hashable, Sendable {
     case let .unknown(value):
       return value
     }
+  }
+}
+
+public struct GlobalServerEvent: Decodable, Hashable, Sendable {
+  public let directory: String?
+  public let payload: ServerEvent
+
+  public init(directory: String?, payload: ServerEvent) {
+    self.directory = directory
+    self.payload = payload
+  }
+}
+
+public extension GlobalServerEvent {
+  var resolvedDirectory: String {
+    directory ?? "global"
   }
 }
 
