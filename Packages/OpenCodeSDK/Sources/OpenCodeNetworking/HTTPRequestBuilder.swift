@@ -8,7 +8,7 @@ public enum HTTPMethod: String {
   case put = "PUT"
 }
 
-public struct HTTPRequestBuilder {
+public struct HTTPRequestBuilder: Sendable {
   public let baseURL: URL
   public let basicAuthHeader: String?
 
