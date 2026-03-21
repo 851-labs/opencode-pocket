@@ -25,10 +25,7 @@ let package = Package(
       dependencies: [
         "OpenCodeSDK",
       ],
-      path: "Tests/OpenCodeNetworkingTests",
-      exclude: [
-        "APP_CLIENT_PARITY_COVERAGE.md",
-      ]
+      path: "Tests/OpenCodeNetworkingTests"
     ),
   ]
 )

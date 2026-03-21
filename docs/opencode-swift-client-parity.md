@@ -108,4 +108,3 @@ When deciding whether to add a new SDK route for this initiative, first confirm 
 - main SDK smoke coverage: `Packages/OpenCodeSDK/Tests/OpenCodeNetworkingTests/OpenCodeClientTests.swift`
 - model decoding coverage: `Packages/OpenCodeSDK/Tests/OpenCodeNetworkingTests/JSONDecodingTests.swift`
 - transport/request coverage: `Packages/OpenCodeSDK/Tests/OpenCodeNetworkingTests/RequestBuilderTests.swift`
-- coverage notes: `Packages/OpenCodeSDK/Tests/OpenCodeNetworkingTests/APP_CLIENT_PARITY_COVERAGE.md`
