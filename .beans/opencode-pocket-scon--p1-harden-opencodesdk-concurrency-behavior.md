@@ -10,7 +10,7 @@ tags:
     - swift-6
     - networking
 created_at: 2026-03-21T00:21:54Z
-updated_at: 2026-03-21T00:25:25Z
+updated_at: 2026-03-21T00:26:57Z
 ---
 
 The Swift concurrency review surfaced two real SDK issues in the networking layer: long-lived SSE processing can inherit caller actor isolation, and JSON decoding currently runs on the caller's actor under Swift 6.2 semantics.

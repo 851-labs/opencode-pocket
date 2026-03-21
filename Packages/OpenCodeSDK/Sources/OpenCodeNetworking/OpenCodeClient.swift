@@ -741,7 +741,7 @@ public final class OpenCodeClient {
     )
   }
 
-  private func request<T: Decodable>(
+  private func request<T: Decodable & Sendable>(
     _ method: HTTPMethod,
     path: String,
     query: [URLQueryItem] = [],
@@ -752,7 +752,7 @@ public final class OpenCodeClient {
       let (data, _) = try await performRequest(method, path: path, query: query, body: body)
 
       do {
-        return try JSONDecoder().decode(type, from: data)
+        return try await Self.decodeResponse(type, from: data)
       } catch {
         throw OpenCodeClientError.decoding(error)
       }
@@ -774,7 +774,7 @@ public final class OpenCodeClient {
       let (data, response) = try await performRequest(method, path: path, query: query, body: body)
 
       do {
-        let items = try JSONDecoder().decode([T].self, from: data)
+        let items = try await Self.decodeResponse([T].self, from: data)
         return OpenCodePage(
           items: items,
           nextCursor: response.value(forHTTPHeaderField: "X-Next-Cursor")?.trimmedNonEmpty,
@@ -858,6 +858,11 @@ public final class OpenCodeClient {
     }
 
     return .httpStatus(code: code, message: nil)
+  }
+
+  @concurrent
+  private static func decodeResponse<T: Decodable & Sendable>(_ type: T.Type, from data: Data) async throws -> T {
+    try JSONDecoder().decode(type, from: data)
   }
 
   private func escapedPathComponent(_ value: String) -> String {
