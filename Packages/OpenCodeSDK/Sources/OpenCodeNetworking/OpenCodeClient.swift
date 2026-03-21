@@ -248,6 +248,53 @@ public final class OpenCodeClient {
     try await request(.get, path: "/mcp", query: mergedDirectoryQuery(directory), response: [String: MCPServerStatus].self)
   }
 
+  public func addMCP(name: String, config: MCPConfiguration, directory: String? = nil) async throws -> [String: MCPServerStatus] {
+    try await request(
+      .post,
+      path: "/mcp",
+      query: mergedDirectoryQuery(directory),
+      body: AnyEncodable(MCPAddRequest(name: name, config: config)),
+      response: [String: MCPServerStatus].self
+    )
+  }
+
+  public func startMCPAuth(name: String, directory: String? = nil) async throws -> MCPOAuthStartResponse {
+    try await request(
+      .post,
+      path: "/mcp/\(escapedPathComponent(name))/auth",
+      query: mergedDirectoryQuery(directory),
+      response: MCPOAuthStartResponse.self
+    )
+  }
+
+  public func callbackMCPAuth(name: String, code: String, directory: String? = nil) async throws -> MCPServerStatus {
+    try await request(
+      .post,
+      path: "/mcp/\(escapedPathComponent(name))/auth/callback",
+      query: mergedDirectoryQuery(directory),
+      body: AnyEncodable(MCPOAuthCallbackRequest(code: code)),
+      response: MCPServerStatus.self
+    )
+  }
+
+  public func authenticateMCPAuth(name: String, directory: String? = nil) async throws -> MCPServerStatus {
+    try await request(
+      .post,
+      path: "/mcp/\(escapedPathComponent(name))/auth/authenticate",
+      query: mergedDirectoryQuery(directory),
+      response: MCPServerStatus.self
+    )
+  }
+
+  public func removeMCPAuth(name: String, directory: String? = nil) async throws -> MCPOAuthRemoveResponse {
+    try await request(
+      .delete,
+      path: "/mcp/\(escapedPathComponent(name))/auth",
+      query: mergedDirectoryQuery(directory),
+      response: MCPOAuthRemoveResponse.self
+    )
+  }
+
   public func connectMCP(name: String, directory: String? = nil) async throws -> Bool {
     try await request(
       .post,

@@ -390,6 +390,49 @@ struct JSONDecodingTests {
     #expect(authorization.url == "https://provider.example/auth")
   }
 
+  @Test func encodesMCPConfigurationsAndDecodesAuthResponses() throws {
+    let local = MCPConfiguration.local(
+      MCPLocalConfiguration(
+        command: ["bun", "run", "server"],
+        environment: ["TOKEN": "abc"],
+        enabled: true,
+        timeout: 5000
+      )
+    )
+    let remote = MCPConfiguration.remote(
+      MCPRemoteConfiguration(
+        url: "https://mcp.example",
+        headers: ["Authorization": "Bearer token"],
+        oauth: .config(MCPOAuthConfiguration(clientID: "client", scope: "repo")),
+        timeout: 3000
+      )
+    )
+    let startJSON = """
+    {
+      "authorizationUrl": "https://mcp.example/auth"
+    }
+    """.data(using: .utf8)!
+    let removeJSON = """
+    {
+      "success": true
+    }
+    """.data(using: .utf8)!
+
+    let localData = try JSONEncoder().encode(local)
+    let remoteData = try JSONEncoder().encode(remote)
+    let localObject = try #require(JSONSerialization.jsonObject(with: localData) as? [String: Any])
+    let remoteObject = try #require(JSONSerialization.jsonObject(with: remoteData) as? [String: Any])
+    let start = try JSONDecoder().decode(MCPOAuthStartResponse.self, from: startJSON)
+    let remove = try JSONDecoder().decode(MCPOAuthRemoveResponse.self, from: removeJSON)
+
+    #expect(localObject["type"] as? String == "local")
+    #expect((localObject["command"] as? [String]) == ["bun", "run", "server"])
+    #expect(remoteObject["type"] as? String == "remote")
+    #expect(remoteObject["url"] as? String == "https://mcp.example")
+    #expect(start.authorizationURL == "https://mcp.example/auth")
+    #expect(remove.success == true)
+  }
+
   @Test func decodesLSPAndMCPStatusPayloads() throws {
     let lspJSON = """
     [

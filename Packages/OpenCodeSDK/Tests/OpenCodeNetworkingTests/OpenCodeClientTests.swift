@@ -126,6 +126,35 @@ struct OpenCodeClientTests {
         return try makeJSONResponse(request: request, json: """
         {"github":{"status":"connected"},"linear":{"status":"needs_auth"}}
         """)
+      case ("POST", "/mcp"):
+        let body = try JSONSerialization.jsonObject(with: requestBodyData(request))
+        let object = try requireDictionary(body)
+        #expect(object["name"] as? String == "github")
+        let config = try requireDictionary(object["config"])
+        #expect(config["type"] as? String == "remote")
+        #expect(config["url"] as? String == "https://mcp.example")
+        return try makeJSONResponse(request: request, json: """
+        {"github":{"status":"needs_auth"}}
+        """)
+      case let ("POST", path) where path?.hasSuffix("/auth") == true:
+        return try makeJSONResponse(request: request, json: """
+        {"authorizationUrl":"https://mcp.example/auth"}
+        """)
+      case let ("POST", path) where path?.hasSuffix("/auth/callback") == true:
+        let body = try JSONSerialization.jsonObject(with: requestBodyData(request))
+        let object = try requireDictionary(body)
+        #expect(object["code"] as? String == "oauth-code")
+        return try makeJSONResponse(request: request, json: """
+        {"status":"connected"}
+        """)
+      case let ("POST", path) where path?.hasSuffix("/auth/authenticate") == true:
+        return try makeJSONResponse(request: request, json: """
+        {"status":"connected"}
+        """)
+      case let ("DELETE", path) where path?.hasSuffix("/auth") == true:
+        return try makeJSONResponse(request: request, json: """
+        {"success":true}
+        """)
       case let ("POST", path) where path?.hasSuffix("/connect") == true:
         return try makeJSONResponse(request: request, json: "true")
       case let ("POST", path) where path?.hasSuffix("/disconnect") == true:
@@ -374,6 +403,24 @@ struct OpenCodeClientTests {
     #expect(mcpStatus["github"]?.status == .connected)
     #expect(mcpStatus["linear"]?.status == .needsAuth)
 
+    let addedMCP = try await client.addMCP(
+      name: "github",
+      config: .remote(MCPRemoteConfiguration(url: "https://mcp.example", oauth: .disabled))
+    )
+    #expect(addedMCP["github"]?.status == .needsAuth)
+
+    let mcpAuthStart = try await client.startMCPAuth(name: "github")
+    #expect(mcpAuthStart.authorizationURL == "https://mcp.example/auth")
+
+    let mcpAuthCallback = try await client.callbackMCPAuth(name: "github", code: "oauth-code")
+    #expect(mcpAuthCallback.status == .connected)
+
+    let mcpAuthenticated = try await client.authenticateMCPAuth(name: "github")
+    #expect(mcpAuthenticated.status == .connected)
+
+    let removedMCPAuth = try await client.removeMCPAuth(name: "github")
+    #expect(removedMCPAuth.success == true)
+
     let connectedMCP = try await client.connectMCP(name: "github")
     #expect(connectedMCP == true)
 
@@ -543,6 +590,11 @@ struct OpenCodeClientTests {
     #expect(requests.contains { $0.url?.path == "/command" && $0.httpMethod == "GET" })
     #expect(requests.contains { $0.url?.path == "/lsp" && $0.httpMethod == "GET" })
     #expect(requests.contains { $0.url?.path == "/mcp" && $0.httpMethod == "GET" })
+    #expect(requests.contains { $0.url?.path == "/mcp" && $0.httpMethod == "POST" })
+    #expect(requests.contains { $0.url?.path == "/mcp/github/auth" && $0.httpMethod == "POST" })
+    #expect(requests.contains { $0.url?.path == "/mcp/github/auth/callback" && $0.httpMethod == "POST" })
+    #expect(requests.contains { $0.url?.path == "/mcp/github/auth/authenticate" && $0.httpMethod == "POST" })
+    #expect(requests.contains { $0.url?.path == "/mcp/github/auth" && $0.httpMethod == "DELETE" })
     #expect(requests.contains { $0.url?.path == "/mcp/github/connect" && $0.httpMethod == "POST" })
     #expect(requests.contains { $0.url?.path == "/mcp/github/disconnect" && $0.httpMethod == "POST" })
     #expect(requests.contains { $0.url?.path.contains("/session/ses") == true && $0.httpMethod == "GET" })
