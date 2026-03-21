@@ -236,12 +236,20 @@ public final class OpenCodeClient {
     try await request(.get, path: "/agent", query: mergedDirectoryQuery(directory), response: [AgentDescriptor].self)
   }
 
+  public func listSkills(directory: String? = nil) async throws -> [SkillInfo] {
+    try await request(.get, path: "/skill", query: mergedDirectoryQuery(directory), response: [SkillInfo].self)
+  }
+
   public func listConfigProviders(directory: String? = nil) async throws -> ProviderCatalogResponse {
     try await request(.get, path: "/config/providers", query: mergedDirectoryQuery(directory), response: ProviderCatalogResponse.self)
   }
 
   public func listLSPStatus(directory: String? = nil) async throws -> [LSPServerStatus] {
     try await request(.get, path: "/lsp", query: mergedDirectoryQuery(directory), response: [LSPServerStatus].self)
+  }
+
+  public func listFormatterStatus(directory: String? = nil) async throws -> [FormatterStatus] {
+    try await request(.get, path: "/formatter", query: mergedDirectoryQuery(directory), response: [FormatterStatus].self)
   }
 
   public func listMCPStatus(directory: String? = nil) async throws -> [String: MCPServerStatus] {

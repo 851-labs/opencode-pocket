@@ -1,7 +1,7 @@
 ---
 # opencode-pocket-ssup
 title: P2 add skill and formatter status parity to OpenCodeSDK
-status: todo
+status: completed
 type: feature
 priority: medium
 tags:
@@ -10,7 +10,7 @@ tags:
     - skills
     - formatter
 created_at: 2026-03-21T04:48:08Z
-updated_at: 2026-03-21T04:48:08Z
+updated_at: 2026-03-21T05:05:50Z
 ---
 
 The OpenAPI surface exposes skill discovery and formatter status endpoints that are useful to SDK consumers, but currently missing from `OpenCodeSDK`.

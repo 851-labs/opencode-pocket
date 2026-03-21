@@ -114,6 +114,10 @@ struct OpenCodeClientTests {
         return try makeJSONResponse(request: request, json: """
         [{"name":"build","description":"Build agent","mode":"primary","hidden":false}]
         """)
+      case ("GET", "/skill"):
+        return try makeJSONResponse(request: request, json: """
+        [{"name":"swift-concurrency-pro","description":"Reviews Swift concurrency code","location":"/tmp/skills/swift/SKILL.md","content":"# Skill\\nUse async await."}]
+        """)
       case ("GET", "/config/providers"):
         return try makeJSONResponse(request: request, json: """
         {"providers":[{"id":"openai","name":"OpenAI","models":{"gpt-5":{"id":"gpt-5","providerID":"openai","name":"GPT-5","variants":{"high":{}}}}}],"default":{"openai":"gpt-5"}}
@@ -121,6 +125,10 @@ struct OpenCodeClientTests {
       case ("GET", "/lsp"):
         return try makeJSONResponse(request: request, json: """
         [{"id":"sourcekit-lsp","name":"sourcekit-lsp","root":"Packages/OpenCodeSDK","status":"connected"}]
+        """)
+      case ("GET", "/formatter"):
+        return try makeJSONResponse(request: request, json: """
+        [{"name":"swiftformat","extensions":["swift"],"enabled":true}]
         """)
       case ("GET", "/mcp"):
         return try makeJSONResponse(request: request, json: """
@@ -345,6 +353,10 @@ struct OpenCodeClientTests {
     let agents = try await client.listAgents()
     #expect(agents.first?.name == "build")
 
+    let skills = try await client.listSkills()
+    #expect(skills.first?.name == "swift-concurrency-pro")
+    #expect(skills.first?.content.contains("async await") == true)
+
     let listedFiles = try await client.listFiles(path: "", directory: "/tmp/project")
     #expect(listedFiles.count == 2)
     #expect(listedFiles.first?.type == .directory)
@@ -398,6 +410,10 @@ struct OpenCodeClientTests {
     let lspStatus = try await client.listLSPStatus()
     #expect(lspStatus.first?.id == "sourcekit-lsp")
     #expect(lspStatus.first?.status == .connected)
+
+    let formatterStatus = try await client.listFormatterStatus()
+    #expect(formatterStatus.first?.name == "swiftformat")
+    #expect(formatterStatus.first?.enabled == true)
 
     let mcpStatus = try await client.listMCPStatus()
     #expect(mcpStatus["github"]?.status == .connected)
@@ -576,6 +592,7 @@ struct OpenCodeClientTests {
     #expect(requests.contains { $0.url?.path == "/session" && $0.url?.query?.contains("roots=true") == true })
     #expect(requests.contains { $0.url?.path == "/session" && $0.url?.query?.contains("limit=10") == true })
     #expect(requests.contains { $0.url?.path == "/session/ses_1/children" && $0.httpMethod == "GET" })
+    #expect(requests.contains { $0.url?.path == "/skill" && $0.httpMethod == "GET" })
     #expect(requests.contains { $0.url?.path == "/session/status" && $0.httpMethod == "GET" })
     #expect(requests.contains { $0.url?.path == "/path" && $0.httpMethod == "GET" })
     #expect(requests.contains { $0.url?.path == "/file" && $0.url?.query?.contains("path=") == true })
@@ -589,6 +606,7 @@ struct OpenCodeClientTests {
     #expect(requests.contains { $0.url?.path == "/vcs" && $0.httpMethod == "GET" })
     #expect(requests.contains { $0.url?.path == "/command" && $0.httpMethod == "GET" })
     #expect(requests.contains { $0.url?.path == "/lsp" && $0.httpMethod == "GET" })
+    #expect(requests.contains { $0.url?.path == "/formatter" && $0.httpMethod == "GET" })
     #expect(requests.contains { $0.url?.path == "/mcp" && $0.httpMethod == "GET" })
     #expect(requests.contains { $0.url?.path == "/mcp" && $0.httpMethod == "POST" })
     #expect(requests.contains { $0.url?.path == "/mcp/github/auth" && $0.httpMethod == "POST" })

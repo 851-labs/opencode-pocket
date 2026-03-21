@@ -10,7 +10,7 @@ tags:
     - openapi
     - follow-up
 created_at: 2026-03-21T04:48:08Z
-updated_at: 2026-03-21T05:02:18Z
+updated_at: 2026-03-21T05:05:50Z
 ---
 
 `OpenCodeSDK` now covers the core app-client surface, but several meaningful non-TUI OpenAPI routes still remain uncovered.

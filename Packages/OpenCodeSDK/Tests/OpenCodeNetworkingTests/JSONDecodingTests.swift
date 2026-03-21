@@ -433,6 +433,36 @@ struct JSONDecodingTests {
     #expect(remove.success == true)
   }
 
+  @Test func decodesSkillAndFormatterStatus() throws {
+    let skillsJSON = """
+    [
+      {
+        "name": "swift-concurrency-pro",
+        "description": "Reviews Swift concurrency code",
+        "location": "/tmp/skills/swift/SKILL.md",
+        "content": "# Skill\\nUse async await."
+      }
+    ]
+    """.data(using: .utf8)!
+    let formatterJSON = """
+    [
+      {
+        "name": "swiftformat",
+        "extensions": ["swift"],
+        "enabled": true
+      }
+    ]
+    """.data(using: .utf8)!
+
+    let skills = try JSONDecoder().decode([SkillInfo].self, from: skillsJSON)
+    let formatter = try JSONDecoder().decode([FormatterStatus].self, from: formatterJSON)
+
+    #expect(skills.first?.location == "/tmp/skills/swift/SKILL.md")
+    #expect(skills.first?.content.contains("async await") == true)
+    #expect(formatter.first?.extensions == ["swift"])
+    #expect(formatter.first?.enabled == true)
+  }
+
   @Test func decodesLSPAndMCPStatusPayloads() throws {
     let lspJSON = """
     [
