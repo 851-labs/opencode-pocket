@@ -889,6 +889,27 @@ struct OpenCodeClientTests {
     #expect(controller.recordedRequests.count == 1)
   }
 
+  @Test(.timeLimit(.minutes(1)))
+  func subscribeEventsCancelsDuringRetryBackoff() async {
+    let controller = URLProtocolStubController { request in
+      try makeStatusResponse(request: request, code: 503, body: Data())
+    }
+
+    let client = makeClient(controller: controller)
+    let stream = client.subscribeEvents()
+
+    let consumer = Task {
+      var iterator = stream.makeAsyncIterator()
+      _ = await iterator.next()
+    }
+
+    await controller.waitForFirstRequest()
+    consumer.cancel()
+    _ = await consumer.result
+
+    #expect(controller.recordedRequests.count == 1)
+  }
+
   @Test func errorDescriptions() {
     #expect(OpenCodeClientError.invalidURL("x").errorDescription == "Invalid server URL: x")
     #expect(OpenCodeClientError.invalidResponse.errorDescription == "Server returned an invalid response.")

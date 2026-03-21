@@ -1,7 +1,7 @@
 ---
 # opencode-pocket-cgrs
 title: P2 add concurrency regression coverage for OpenCodeSDK networking
-status: todo
+status: completed
 type: task
 priority: medium
 tags:
@@ -10,7 +10,7 @@ tags:
     - testing
     - regression
 created_at: 2026-03-21T00:21:54Z
-updated_at: 2026-03-21T00:21:54Z
+updated_at: 2026-03-21T00:29:34Z
 ---
 
 Changing SSE execution context and response decoding behavior should be protected by focused concurrency regression tests.
