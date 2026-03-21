@@ -1,5 +1,5 @@
 #if os(macOS)
-  import OpenCodeModels
+  import OpenCodeSDK
   import SwiftUI
 
   struct MacTranscriptPane: View {

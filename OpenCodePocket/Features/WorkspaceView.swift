@@ -1,4 +1,4 @@
-import OpenCodeModels
+import OpenCodeSDK
 import SwiftUI
 
 private enum WorkspacePanel: String, CaseIterable, Identifiable {

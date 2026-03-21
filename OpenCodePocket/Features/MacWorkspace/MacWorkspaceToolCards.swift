@@ -1,6 +1,6 @@
 #if os(macOS)
   import AppKit
-  import OpenCodeModels
+  import OpenCodeSDK
   import SwiftUI
   import TranscriptUI
 

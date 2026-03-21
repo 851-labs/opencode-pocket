@@ -9,23 +9,23 @@ let package = Package(
     .macOS(.v12),
   ],
   products: [
-    .library(name: "OpenCodeModels", targets: ["OpenCodeModels"]),
-    .library(name: "OpenCodeNetworking", targets: ["OpenCodeNetworking"]),
+    .library(name: "OpenCodeSDK", targets: ["OpenCodeSDK"]),
   ],
   targets: [
-    .target(name: "OpenCodeModels"),
     .target(
-      name: "OpenCodeNetworking",
-      dependencies: [
+      name: "OpenCodeSDK",
+      path: "Sources",
+      sources: [
         "OpenCodeModels",
+        "OpenCodeNetworking",
       ]
     ),
     .testTarget(
-      name: "OpenCodeNetworkingTests",
+      name: "OpenCodeSDKTests",
       dependencies: [
-        "OpenCodeNetworking",
-        "OpenCodeModels",
+        "OpenCodeSDK",
       ],
+      path: "Tests/OpenCodeNetworkingTests",
       exclude: [
         "APP_CLIENT_PARITY_COVERAGE.md",
       ]

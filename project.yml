@@ -54,9 +54,7 @@ targets:
         "EXCLUDED_SOURCE_FILE_NAMES[sdk=iphonesimulator*]": "MacConnectView.swift MacWorkspaceView.swift */Features/MacWorkspace/* */FeaturesV2/Settings/MacSettings/* */FeaturesV2/Workspace/MacWorkspace/*"
     dependencies:
       - package: OpenCodeSDK
-        product: OpenCodeModels
-      - package: OpenCodeSDK
-        product: OpenCodeNetworking
+        product: OpenCodeSDK
       - package: TranscriptUI
         product: TranscriptUI
 schemes:

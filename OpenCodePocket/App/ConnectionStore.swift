@@ -1,6 +1,6 @@
 import Foundation
 import Observation
-import OpenCodeNetworking
+import OpenCodeSDK
 
 #if os(macOS)
   import Darwin

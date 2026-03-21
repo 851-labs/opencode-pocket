@@ -1,5 +1,4 @@
 import Foundation
-import OpenCodeModels
 
 public enum OpenCodeClientError: LocalizedError {
   case invalidURL(String)

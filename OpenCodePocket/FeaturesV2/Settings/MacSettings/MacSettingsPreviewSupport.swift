@@ -1,6 +1,6 @@
 #if os(macOS)
   import Foundation
-  import OpenCodeModels
+  import OpenCodeSDK
   import SwiftUI
 
   enum MacSettingsPreviewScenario {

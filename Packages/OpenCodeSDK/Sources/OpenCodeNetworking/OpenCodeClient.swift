@@ -1,5 +1,4 @@
 import Foundation
-import OpenCodeModels
 
 public struct OpenCodeClientConfiguration: Sendable {
   public let baseURL: URL
@@ -601,18 +600,18 @@ public final class OpenCodeClient {
     )
   }
 
-  public func listPermissions(directory: String? = nil) async throws -> [OpenCodeModels.PermissionRequest] {
+  public func listPermissions(directory: String? = nil) async throws -> [PermissionRequest] {
     try await request(
       .get,
       path: "/permission",
       query: mergedDirectoryQuery(directory),
-      response: [OpenCodeModels.PermissionRequest].self
+      response: [PermissionRequest].self
     )
   }
 
   public func replyPermission(
     requestID: String,
-    reply: OpenCodeModels.PermissionReply,
+    reply: PermissionReply,
     message: String? = nil,
     directory: String? = nil
   ) async throws -> Bool {
@@ -621,7 +620,7 @@ public final class OpenCodeClient {
 
   public func respondPermission(
     requestID: String,
-    response: OpenCodeModels.PermissionReply,
+    response: PermissionReply,
     message: String? = nil,
     directory: String? = nil
   ) async throws -> Bool {
@@ -629,30 +628,30 @@ public final class OpenCodeClient {
       .post,
       path: "/permission/\(escapedPathComponent(requestID))/reply",
       query: mergedDirectoryQuery(directory),
-      body: AnyEncodable(OpenCodeModels.PermissionReplyRequest(reply: response, message: message)),
+      body: AnyEncodable(PermissionReplyRequest(reply: response, message: message)),
       response: Bool.self
     )
   }
 
-  public func listQuestions(directory: String? = nil) async throws -> [OpenCodeModels.QuestionRequest] {
+  public func listQuestions(directory: String? = nil) async throws -> [QuestionRequest] {
     try await request(
       .get,
       path: "/question",
       query: mergedDirectoryQuery(directory),
-      response: [OpenCodeModels.QuestionRequest].self
+      response: [QuestionRequest].self
     )
   }
 
   public func replyQuestion(
     requestID: String,
-    answers: [OpenCodeModels.QuestionAnswer],
+    answers: [QuestionAnswer],
     directory: String? = nil
   ) async throws -> Bool {
     try await request(
       .post,
       path: "/question/\(escapedPathComponent(requestID))/reply",
       query: mergedDirectoryQuery(directory),
-      body: AnyEncodable(OpenCodeModels.QuestionReplyRequest(answers: answers)),
+      body: AnyEncodable(QuestionReplyRequest(answers: answers)),
       response: Bool.self
     )
   }

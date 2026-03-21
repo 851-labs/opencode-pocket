@@ -1,6 +1,5 @@
 import Foundation
-import OpenCodeModels
-import OpenCodeNetworking
+import OpenCodeSDK
 import Testing
 
 @Suite(.tags(.networking))

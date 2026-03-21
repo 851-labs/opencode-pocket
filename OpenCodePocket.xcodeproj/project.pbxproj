@@ -10,7 +10,7 @@
 		0336F6CF4A6DAE07B166B8C9 /* MacWorkspaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 681188C7D0FE47069D7F445B /* MacWorkspaceView.swift */; };
 		0452BEC068B08BFA3A2067E9 /* WorkspaceMessageCards.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A728FB3B761B021F17CF6C5 /* WorkspaceMessageCards.swift */; };
 		06C4BC829CCC1FB46B79708F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 8E5D2399CD06F9BB20324AC1 /* Assets.xcassets */; };
-		07DBA528548F6EBC0D4B58C4 /* OpenCodeNetworking in Frameworks */ = {isa = PBXBuildFile; productRef = 3812E39D97AD2EB76D3F11BB /* OpenCodeNetworking */; };
+		07DBA528548F6EBC0D4B58C4 /* TranscriptUI in Frameworks */ = {isa = PBXBuildFile; productRef = 3D7D11C579C7189C0C2E1491 /* TranscriptUI */; };
 		090049CB1F8AC1F6A722C68F /* MacWorkspaceTranscriptPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28B2F3932AA1CACC175E281B /* MacWorkspaceTranscriptPane.swift */; };
 		092264648B46CFA696E08050 /* DeleteSessionConfirmationDialog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 662BF7E329B6224DF5CE4861 /* DeleteSessionConfirmationDialog.swift */; };
 		09D6A584B0209852D35B95F4 /* WorkspaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D83BD8354E87398437EA542 /* WorkspaceView.swift */; };
@@ -29,7 +29,7 @@
 		3457A341B95471F19DD82C6E /* WorkspaceShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1203AEA599143C5C6B9FAE4 /* WorkspaceShared.swift */; };
 		381731C83DA3795EDF3A1CE7 /* MacConnectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8E410DE47EC2B77914A2902 /* MacConnectView.swift */; };
 		40749F61C6A14FD9644C8AAE /* MacWorkspaceToolbar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FF800D90067DFFCE0D25859 /* MacWorkspaceToolbar.swift */; };
-		4362D490CDC954625128E4DF /* OpenCodeModels in Frameworks */ = {isa = PBXBuildFile; productRef = 0B5BC2DE254EA41F83F4AFD4 /* OpenCodeModels */; };
+		4362D490CDC954625128E4DF /* OpenCodeSDK in Frameworks */ = {isa = PBXBuildFile; productRef = D07907B350EB211D4C9C3413 /* OpenCodeSDK */; };
 		43998436472CA16316129DD7 /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E2236AE73B2BB09D504746E /* ChatView.swift */; };
 		46B1125B38ACDEF41428152A /* OpenCodePocketApp+Dependencies.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46F3D80D429B9CF2772DA087 /* OpenCodePocketApp+Dependencies.swift */; };
 		4A03056A65DCD7008E2E7613 /* MacWorkspaceToolCards.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD4DF75BBBB1E53B1769F822 /* MacWorkspaceToolCards.swift */; };
@@ -66,7 +66,6 @@
 		E36C44AF8B26BE1A45E83A93 /* MacWorkspaceDetail.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52BE2A37FFD51B0A08B5FC5C /* MacWorkspaceDetail.swift */; };
 		E5D170470C94B7A6A872F3A1 /* WorkspaceComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE441A71ED45FC10DDFFBB36 /* WorkspaceComposer.swift */; };
 		E62308C1947F3F506FBBC3B9 /* MacWorkspaceDiffSummary.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6D76D90C2BB54B4DC0919B1 /* MacWorkspaceDiffSummary.swift */; };
-		FBA94DCFE75A76E029FB6156 /* TranscriptUI in Frameworks */ = {isa = PBXBuildFile; productRef = 3D7D11C579C7189C0C2E1491 /* TranscriptUI */; };
 		FF7318683B4AC11F18AA77B3 /* WorkspaceSessionInspectorTodoSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 481A2B345060A0CE8FE8D12F /* WorkspaceSessionInspectorTodoSection.swift */; };
 /* End PBXBuildFile section */
 
@@ -139,9 +138,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4362D490CDC954625128E4DF /* OpenCodeModels in Frameworks */,
-				07DBA528548F6EBC0D4B58C4 /* OpenCodeNetworking in Frameworks */,
-				FBA94DCFE75A76E029FB6156 /* TranscriptUI in Frameworks */,
+				4362D490CDC954625128E4DF /* OpenCodeSDK in Frameworks */,
+				07DBA528548F6EBC0D4B58C4 /* TranscriptUI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -376,8 +374,7 @@
 			);
 			name = OpenCodePocket;
 			packageProductDependencies = (
-				0B5BC2DE254EA41F83F4AFD4 /* OpenCodeModels */,
-				3812E39D97AD2EB76D3F11BB /* OpenCodeNetworking */,
+				D07907B350EB211D4C9C3413 /* OpenCodeSDK */,
 				3D7D11C579C7189C0C2E1491 /* TranscriptUI */,
 			);
 			productName = OpenCodePocket;
@@ -706,17 +703,13 @@
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		0B5BC2DE254EA41F83F4AFD4 /* OpenCodeModels */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = OpenCodeModels;
-		};
-		3812E39D97AD2EB76D3F11BB /* OpenCodeNetworking */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = OpenCodeNetworking;
-		};
 		3D7D11C579C7189C0C2E1491 /* TranscriptUI */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = TranscriptUI;
+		};
+		D07907B350EB211D4C9C3413 /* OpenCodeSDK */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = OpenCodeSDK;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

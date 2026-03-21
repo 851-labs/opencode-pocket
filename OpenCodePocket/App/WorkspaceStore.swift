@@ -1,7 +1,6 @@
 import Foundation
 import Observation
-import OpenCodeModels
-import OpenCodeNetworking
+import OpenCodeSDK
 
 struct WorkspaceSessionRuntimeState {
   var messages: [MessageEnvelope]?

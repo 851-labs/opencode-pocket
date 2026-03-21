@@ -1,4 +1,4 @@
-import OpenCodeModels
+import OpenCodeSDK
 import SwiftUI
 
 struct WorkspaceSessionInspectorTodoSection: View {

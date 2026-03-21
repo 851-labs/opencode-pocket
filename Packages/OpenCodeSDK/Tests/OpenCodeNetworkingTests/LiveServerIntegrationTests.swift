@@ -1,5 +1,5 @@
 import Foundation
-import OpenCodeNetworking
+import OpenCodeSDK
 import Testing
 
 @Suite(.tags(.networking, .live))

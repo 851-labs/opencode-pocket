@@ -1,5 +1,5 @@
 import Foundation
-import OpenCodeModels
+import OpenCodeSDK
 
 @MainActor
 extension WorkspaceStore {
