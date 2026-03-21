@@ -49,8 +49,9 @@ The project uses SwiftFormat with 2-space indentation (`.swiftformat`).
   - shared rendering (`RichMarkdownText`)
 
 ### SDK Layer
-- `Packages/OpenCodeSDK/Sources/OpenCodeModels`
-- `Packages/OpenCodeSDK/Sources/OpenCodeNetworking`
+- `Packages/OpenCodeSDK/Sources/OpenCodeSDK/Client`
+- `Packages/OpenCodeSDK/Sources/OpenCodeSDK/Transport`
+- `Packages/OpenCodeSDK/Sources/OpenCodeSDK/Models`
 
 Keep protocol and API behavior in SDK, not in app feature views.
 
@@ -109,7 +110,7 @@ After code changes, agents must:
 ## Testing Notes
 
 ### Live integration tests
-`Packages/OpenCodeSDK/Tests/OpenCodeNetworkingTests/LiveServerIntegrationTests.swift` honors:
+`Packages/OpenCodeSDK/Tests/OpenCodeSDKTests/Integration/LiveServerIntegrationTests.swift` honors:
 - `OPENCODE_RUN_LIVE_TESTS=1` to enable
 - `OPENCODE_SKIP_LIVE_TESTS=1` to skip
 - `OPENCODE_BASE_URL`

@@ -14,18 +14,14 @@ let package = Package(
   targets: [
     .target(
       name: "OpenCodeSDK",
-      path: "Sources",
-      sources: [
-        "OpenCodeModels",
-        "OpenCodeNetworking",
-      ]
+      path: "Sources/OpenCodeSDK"
     ),
     .testTarget(
       name: "OpenCodeSDKTests",
       dependencies: [
         "OpenCodeSDK",
       ],
-      path: "Tests/OpenCodeNetworkingTests"
+      path: "Tests/OpenCodeSDKTests"
     ),
   ]
 )

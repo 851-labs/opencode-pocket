@@ -105,6 +105,6 @@ When deciding whether to add a new SDK route for this initiative, first confirm 
 
 ## Regression Coverage
 
-- main SDK smoke coverage: `Packages/OpenCodeSDK/Tests/OpenCodeNetworkingTests/OpenCodeClientTests.swift`
-- model decoding coverage: `Packages/OpenCodeSDK/Tests/OpenCodeNetworkingTests/JSONDecodingTests.swift`
-- transport/request coverage: `Packages/OpenCodeSDK/Tests/OpenCodeNetworkingTests/RequestBuilderTests.swift`
+- main SDK smoke coverage: `Packages/OpenCodeSDK/Tests/OpenCodeSDKTests/Client/OpenCodeClientTests.swift`
+- model decoding coverage: `Packages/OpenCodeSDK/Tests/OpenCodeSDKTests/Models/JSONDecodingTests.swift`
+- transport/request coverage: `Packages/OpenCodeSDK/Tests/OpenCodeSDKTests/Transport/RequestBuilderTests.swift`
