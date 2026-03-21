@@ -106,6 +106,10 @@ struct OpenCodeClientTests {
         return try makeJSONResponse(request: request, json: """
         {"ses_1":{"type":"busy"},"ses_2":{"type":"retry","attempt":2,"message":"Retrying","next":174000}}
         """)
+      case let ("GET", path) where path?.hasSuffix("/children") == true:
+        return try makeJSONResponse(request: request, json: """
+        [{"id":"ses_child","slug":"child","projectID":"prj_1","directory":"/tmp/project","parentID":"ses_1","title":"Child","version":"1","time":{"created":2,"updated":3,"archived":null},"summary":null,"share":null,"revert":null}]
+        """)
       case ("GET", "/agent"):
         return try makeJSONResponse(request: request, json: """
         [{"name":"build","description":"Build agent","mode":"primary","hidden":false}]
@@ -153,16 +157,44 @@ struct OpenCodeClientTests {
         return try makeJSONResponse(request: request, json: """
         {"id":"ses_get","slug":"slug","projectID":"prj_1","directory":"/tmp/project","parentID":null,"title":"Fetched","version":"1","time":{"created":1,"updated":1,"archived":null},"summary":null,"share":null,"revert":null}
         """)
+      case let ("PATCH", path) where path?.contains("/part/") == true:
+        let body = try JSONSerialization.jsonObject(with: requestBodyData(request))
+        let object = try requireDictionary(body)
+        #expect(object["id"] as? String == "part_patch_1")
+        #expect(object["messageID"] as? String == "msg_1")
+        return try makeJSONResponse(request: request, json: """
+        {"id":"part_patch_1","sessionID":"ses_1","messageID":"msg_1","type":"text","text":"Updated text"}
+        """)
       case let ("PATCH", path) where path?.hasPrefix("/session/") == true:
         return try makeJSONResponse(request: request, json: """
         {"id":"ses_patch","slug":"slug","projectID":"prj_1","directory":"/tmp/project","parentID":null,"title":"Patched","version":"1","time":{"created":1,"updated":2,"archived":null},"summary":null,"share":null,"revert":null}
         """)
+      case let ("DELETE", path) where path?.hasSuffix("/share") == true:
+        return try makeJSONResponse(request: request, json: """
+        {"id":"ses_share","slug":"share","projectID":"prj_1","directory":"/tmp/project","parentID":null,"title":"Unshared","version":"1","time":{"created":1,"updated":6,"archived":null},"summary":null,"share":null,"revert":null}
+        """)
+      case let ("DELETE", path) where path?.contains("/part/") == true:
+        return try makeJSONResponse(request: request, json: "true")
       case let ("DELETE", path) where path?.hasPrefix("/session/") == true:
         return try makeJSONResponse(request: request, json: "true")
       case let ("POST", path) where path?.hasSuffix("/message") == true:
         return try makeJSONResponse(request: request, json: Self.messageJSON(id: "msg_send", sessionID: "ses_1", text: "sent"))
       case let ("POST", path) where path?.hasSuffix("/prompt_async") == true:
         return try makeJSONResponse(request: request, json: "{}")
+      case let ("POST", path) where path?.hasSuffix("/init") == true:
+        let body = try JSONSerialization.jsonObject(with: requestBodyData(request))
+        let object = try requireDictionary(body)
+        #expect(object["providerID"] as? String == "openai")
+        #expect(object["modelID"] as? String == "gpt-5")
+        #expect(object["messageID"] as? String == "msg_1")
+        return try makeJSONResponse(request: request, json: "true")
+      case let ("POST", path) where path?.hasSuffix("/fork") == true:
+        let body = try JSONSerialization.jsonObject(with: requestBodyData(request))
+        let object = try requireDictionary(body)
+        #expect(object["messageID"] as? String == "msg_1")
+        return try makeJSONResponse(request: request, json: """
+        {"id":"ses_fork","slug":"fork","projectID":"prj_1","directory":"/tmp/project","parentID":"ses_1","title":"Forked","version":"1","time":{"created":3,"updated":3,"archived":null},"summary":null,"share":null,"revert":null}
+        """)
       case let ("POST", path) where path?.hasSuffix("/command") == true:
         let body = try JSONSerialization.jsonObject(with: requestBodyData(request))
         let object = try requireDictionary(body)
@@ -177,6 +209,10 @@ struct OpenCodeClientTests {
         return try makeJSONResponse(request: request, json: Self.messageJSON(id: "msg_shell", sessionID: "ses_1", text: "shell"))
       case let ("POST", path) where path?.hasSuffix("/abort") == true:
         return try makeJSONResponse(request: request, json: "true")
+      case let ("POST", path) where path?.hasSuffix("/share") == true:
+        return try makeJSONResponse(request: request, json: """
+        {"id":"ses_share","slug":"share","projectID":"prj_1","directory":"/tmp/project","parentID":null,"title":"Shared","version":"1","time":{"created":1,"updated":5,"archived":null},"summary":null,"share":{"url":"https://share/opencode"},"revert":null}
+        """)
       case let ("POST", path) where path?.hasSuffix("/revert") == true:
         let body = try JSONSerialization.jsonObject(with: requestBodyData(request))
         let object = try requireDictionary(body)
@@ -320,6 +356,9 @@ struct OpenCodeClientTests {
     let sessions = try await client.listSessions(roots: true, limit: 10)
     #expect(sessions.count == 1)
 
+    let sessionChildren = try await client.listSessionChildren(sessionID: "ses_1")
+    #expect(sessionChildren.first?.parentID == "ses_1")
+
     let sessionStatuses = try await client.listSessionStatuses()
     #expect(sessionStatuses["ses_1"]?.type == .busy)
     #expect(sessionStatuses["ses_2"]?.type == .retry)
@@ -347,6 +386,15 @@ struct OpenCodeClientTests {
     let fetched = try await client.getSession(id: "ses 1")
     #expect(fetched.id == "ses_get")
 
+    let initialized = try await client.initializeSession(
+      sessionID: "ses_1",
+      body: SessionInitializeRequest(providerID: "openai", modelID: "gpt-5", messageID: "msg_1")
+    )
+    #expect(initialized == true)
+
+    let forked = try await client.forkSession(sessionID: "ses_1", body: SessionForkRequest(messageID: "msg_1"))
+    #expect(forked.id == "ses_fork")
+
     let updated = try await client.updateSession(id: "ses 1", body: SessionUpdateRequest(title: "Renamed"))
     #expect(updated.id == "ses_patch")
 
@@ -362,6 +410,9 @@ struct OpenCodeClientTests {
 
     let fetchedMessage = try await client.getMessage(sessionID: "ses_1", messageID: "msg_1")
     #expect(fetchedMessage.id == "msg_get")
+
+    let deletedMessage = try await client.deleteMessage(sessionID: "ses_1", messageID: "msg_1")
+    #expect(deletedMessage == true)
 
     let diffs = try await client.getSessionDiff(sessionID: "ses_1", messageID: "msg_1")
     #expect(diffs.first?.file == "a.swift")
@@ -410,6 +461,37 @@ struct OpenCodeClientTests {
     )
     #expect(summarized == true)
 
+    let shared = try await client.shareSession(sessionID: "ses_1")
+    #expect(shared.share?.objectValue?["url"]?.stringValue == "https://share/opencode")
+
+    let unshared = try await client.unshareSession(sessionID: "ses_1")
+    #expect(unshared.share == nil)
+
+    let updatedPart = try await client.updatePart(
+      sessionID: "ses_1",
+      messageID: "msg_1",
+      partID: "part_patch_1",
+      part: MessagePart(
+        id: "part_patch_1",
+        sessionID: "ses_1",
+        messageID: "msg_1",
+        type: "text",
+        text: "Updated text",
+        tool: nil,
+        raw: .object([
+          "id": .string("part_patch_1"),
+          "sessionID": .string("ses_1"),
+          "messageID": .string("msg_1"),
+          "type": .string("text"),
+          "text": .string("Updated text"),
+        ])
+      )
+    )
+    #expect(updatedPart.text == "Updated text")
+
+    let deletedPart = try await client.deletePart(sessionID: "ses_1", messageID: "msg_1", partID: "part_patch_1")
+    #expect(deletedPart == true)
+
     let permissions = try await client.listPermissions()
     #expect(permissions.first?.id == "perm_1")
 
@@ -446,6 +528,7 @@ struct OpenCodeClientTests {
     #expect(requests.contains { $0.url?.path == "/session" && $0.url?.query?.contains("directory=/tmp/default") == true })
     #expect(requests.contains { $0.url?.path == "/session" && $0.url?.query?.contains("roots=true") == true })
     #expect(requests.contains { $0.url?.path == "/session" && $0.url?.query?.contains("limit=10") == true })
+    #expect(requests.contains { $0.url?.path == "/session/ses_1/children" && $0.httpMethod == "GET" })
     #expect(requests.contains { $0.url?.path == "/session/status" && $0.httpMethod == "GET" })
     #expect(requests.contains { $0.url?.path == "/path" && $0.httpMethod == "GET" })
     #expect(requests.contains { $0.url?.path == "/file" && $0.url?.query?.contains("path=") == true })
@@ -463,15 +546,22 @@ struct OpenCodeClientTests {
     #expect(requests.contains { $0.url?.path == "/mcp/github/connect" && $0.httpMethod == "POST" })
     #expect(requests.contains { $0.url?.path == "/mcp/github/disconnect" && $0.httpMethod == "POST" })
     #expect(requests.contains { $0.url?.path.contains("/session/ses") == true && $0.httpMethod == "GET" })
+    #expect(requests.contains { $0.url?.path == "/session/ses_1/init" && $0.httpMethod == "POST" })
+    #expect(requests.contains { $0.url?.path == "/session/ses_1/fork" && $0.httpMethod == "POST" })
     #expect(requests.contains { $0.url?.absoluteString.contains("limit=5") == true })
     #expect(requests.contains { $0.url?.absoluteString.contains("before=cur_0") == true })
     #expect(requests.contains { $0.url?.absoluteString.contains("messageID=msg_1") == true })
+    #expect(requests.contains { $0.url?.path == "/session/ses_1/message/msg_1" && $0.httpMethod == "DELETE" })
     #expect(requests.contains { $0.url?.path == "/session/ses_1/todo" && $0.httpMethod == "GET" })
     #expect(requests.contains { $0.url?.path == "/session/ses_1/command" && $0.httpMethod == "POST" })
     #expect(requests.contains { $0.url?.path == "/session/ses_1/shell" && $0.httpMethod == "POST" })
+    #expect(requests.contains { $0.url?.path == "/session/ses_1/share" && $0.httpMethod == "POST" })
+    #expect(requests.contains { $0.url?.path == "/session/ses_1/share" && $0.httpMethod == "DELETE" })
     #expect(requests.contains { $0.url?.path == "/session/ses_1/revert" && $0.httpMethod == "POST" })
     #expect(requests.contains { $0.url?.path == "/session/ses_1/unrevert" && $0.httpMethod == "POST" })
     #expect(requests.contains { $0.url?.path == "/session/ses_1/summarize" && $0.httpMethod == "POST" })
+    #expect(requests.contains { $0.url?.path == "/session/ses_1/message/msg_1/part/part_patch_1" && $0.httpMethod == "PATCH" })
+    #expect(requests.contains { $0.url?.path == "/session/ses_1/message/msg_1/part/part_patch_1" && $0.httpMethod == "DELETE" })
     #expect(requests.contains { $0.url?.path == "/permission" && $0.httpMethod == "GET" })
     #expect(requests.contains { $0.url?.path == "/permission/perm_1/reply" && $0.httpMethod == "POST" })
     #expect(requests.contains { $0.url?.path == "/question" && $0.httpMethod == "GET" })

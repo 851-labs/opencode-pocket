@@ -1,7 +1,7 @@
 ---
 # opencode-pocket-ssxn
 title: P1 add advanced session and part management parity to OpenCodeSDK
-status: todo
+status: completed
 type: feature
 priority: high
 tags:
@@ -10,7 +10,7 @@ tags:
     - sessions
     - messages
 created_at: 2026-03-21T04:48:08Z
-updated_at: 2026-03-21T04:48:08Z
+updated_at: 2026-03-21T04:58:43Z
 ---
 
 The current SDK covers core session flow, but several important non-TUI session lifecycle and message-editing routes remain unimplemented.

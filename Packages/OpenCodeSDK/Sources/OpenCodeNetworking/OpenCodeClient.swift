@@ -219,6 +219,15 @@ public final class OpenCodeClient {
     return try await request(.get, path: "/session", query: query, response: [Session].self)
   }
 
+  public func listSessionChildren(sessionID: String, directory: String? = nil) async throws -> [Session] {
+    try await request(
+      .get,
+      path: "/session/\(escapedPathComponent(sessionID))/children",
+      query: mergedDirectoryQuery(directory),
+      response: [Session].self
+    )
+  }
+
   public func listSessionStatuses() async throws -> [String: SessionStatus] {
     try await request(.get, path: "/session/status", response: [String: SessionStatus].self)
   }
@@ -295,6 +304,34 @@ public final class OpenCodeClient {
     )
   }
 
+  public func initializeSession(
+    sessionID: String,
+    body: SessionInitializeRequest,
+    directory: String? = nil
+  ) async throws -> Bool {
+    try await request(
+      .post,
+      path: "/session/\(escapedPathComponent(sessionID))/init",
+      query: mergedDirectoryQuery(directory),
+      body: AnyEncodable(body),
+      response: Bool.self
+    )
+  }
+
+  public func forkSession(
+    sessionID: String,
+    body: SessionForkRequest = SessionForkRequest(),
+    directory: String? = nil
+  ) async throws -> Session {
+    try await request(
+      .post,
+      path: "/session/\(escapedPathComponent(sessionID))/fork",
+      query: mergedDirectoryQuery(directory),
+      body: AnyEncodable(body),
+      response: Session.self
+    )
+  }
+
   public func listMessages(
     sessionID: String,
     limit: Int? = nil,
@@ -334,6 +371,15 @@ public final class OpenCodeClient {
       path: "/session/\(escapedPathComponent(sessionID))/message/\(escapedPathComponent(messageID))",
       query: mergedDirectoryQuery(directory),
       response: MessageEnvelope.self
+    )
+  }
+
+  public func deleteMessage(sessionID: String, messageID: String, directory: String? = nil) async throws -> Bool {
+    try await request(
+      .delete,
+      path: "/session/\(escapedPathComponent(sessionID))/message/\(escapedPathComponent(messageID))",
+      query: mergedDirectoryQuery(directory),
+      response: Bool.self
     )
   }
 
@@ -450,6 +496,49 @@ public final class OpenCodeClient {
       query: mergedDirectoryQuery(directory),
       body: AnyEncodable(body),
       response: Bool.self
+    )
+  }
+
+  public func shareSession(sessionID: String, directory: String? = nil) async throws -> Session {
+    try await request(
+      .post,
+      path: "/session/\(escapedPathComponent(sessionID))/share",
+      query: mergedDirectoryQuery(directory),
+      response: Session.self
+    )
+  }
+
+  public func unshareSession(sessionID: String, directory: String? = nil) async throws -> Session {
+    try await request(
+      .delete,
+      path: "/session/\(escapedPathComponent(sessionID))/share",
+      query: mergedDirectoryQuery(directory),
+      response: Session.self
+    )
+  }
+
+  public func deletePart(sessionID: String, messageID: String, partID: String, directory: String? = nil) async throws -> Bool {
+    try await request(
+      .delete,
+      path: "/session/\(escapedPathComponent(sessionID))/message/\(escapedPathComponent(messageID))/part/\(escapedPathComponent(partID))",
+      query: mergedDirectoryQuery(directory),
+      response: Bool.self
+    )
+  }
+
+  public func updatePart(
+    sessionID: String,
+    messageID: String,
+    partID: String,
+    part: MessagePart,
+    directory: String? = nil
+  ) async throws -> MessagePart {
+    try await request(
+      .patch,
+      path: "/session/\(escapedPathComponent(sessionID))/message/\(escapedPathComponent(messageID))/part/\(escapedPathComponent(partID))",
+      query: mergedDirectoryQuery(directory),
+      body: AnyEncodable(part),
+      response: MessagePart.self
     )
   }
 

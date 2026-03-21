@@ -173,6 +173,26 @@ public struct SessionSummarizeRequest: Encodable, Sendable {
   }
 }
 
+public struct SessionInitializeRequest: Encodable, Sendable {
+  public var providerID: String
+  public var modelID: String
+  public var messageID: String
+
+  public init(providerID: String, modelID: String, messageID: String) {
+    self.providerID = providerID
+    self.modelID = modelID
+    self.messageID = messageID
+  }
+}
+
+public struct SessionForkRequest: Encodable, Sendable {
+  public var messageID: String?
+
+  public init(messageID: String? = nil) {
+    self.messageID = messageID
+  }
+}
+
 public enum SessionStatusType: Hashable, Sendable {
   case idle
   case busy
