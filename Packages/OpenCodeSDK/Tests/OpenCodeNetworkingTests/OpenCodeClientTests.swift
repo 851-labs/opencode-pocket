@@ -82,6 +82,14 @@ struct OpenCodeClientTests {
         return try makeJSONResponse(request: request, json: """
         ["src","tests"]
         """)
+      case ("GET", "/find"):
+        return try makeJSONResponse(request: request, json: """
+        [{"path":{"text":"Sources/App.swift"},"lines":{"text":"let value = 1"},"line_number":42,"absolute_offset":1024,"submatches":[{"match":{"text":"value"},"start":4,"end":9}]}]
+        """)
+      case ("GET", "/find/symbol"):
+        return try makeJSONResponse(request: request, json: """
+        [{"name":"renderWorkspace","kind":12,"location":{"uri":"file:///tmp/project/Sources/App.swift","range":{"start":{"line":9,"character":2},"end":{"line":14,"character":1}}}}]
+        """)
       case ("GET", "/vcs"):
         return try makeJSONResponse(request: request, json: """
         {"branch":"main"}
@@ -301,6 +309,14 @@ struct OpenCodeClientTests {
     )
     #expect(directoryMatches == ["src", "tests"])
 
+    let textMatches = try await client.findText(pattern: "value")
+    #expect(textMatches.first?.lineNumber == 42)
+    #expect(textMatches.first?.submatches.first?.match.text == "value")
+
+    let symbols = try await client.findSymbols(query: "render")
+    #expect(symbols.first?.name == "renderWorkspace")
+    #expect(symbols.first?.location.range.start.line == 9)
+
     let sessions = try await client.listSessions(roots: true, limit: 10)
     #expect(sessions.count == 1)
 
@@ -438,6 +454,8 @@ struct OpenCodeClientTests {
     #expect(requests.contains { $0.url?.path == "/find/file" && $0.url?.query?.contains("type=directory") == true })
     #expect(requests.contains { $0.url?.path == "/find/file" && $0.url?.query?.contains("dirs=true") == true })
     #expect(requests.contains { $0.url?.path == "/find/file" && $0.url?.query?.contains("limit=10") == true })
+    #expect(requests.contains { $0.url?.path == "/find" && $0.url?.query?.contains("pattern=value") == true })
+    #expect(requests.contains { $0.url?.path == "/find/symbol" && $0.url?.query?.contains("query=render") == true })
     #expect(requests.contains { $0.url?.path == "/vcs" && $0.httpMethod == "GET" })
     #expect(requests.contains { $0.url?.path == "/command" && $0.httpMethod == "GET" })
     #expect(requests.contains { $0.url?.path == "/lsp" && $0.httpMethod == "GET" })

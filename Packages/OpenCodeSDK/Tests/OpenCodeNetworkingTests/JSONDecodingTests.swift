@@ -298,6 +298,62 @@ struct JSONDecodingTests {
     #expect(commands.last?.source == .unknown("other"))
   }
 
+  @Test func decodesTextMatchesAndWorkspaceSymbols() throws {
+    let matchesJSON = """
+    [
+      {
+        "path": {
+          "text": "Sources/App.swift"
+        },
+        "lines": {
+          "text": "let value = 1"
+        },
+        "line_number": 42,
+        "absolute_offset": 1024,
+        "submatches": [
+          {
+            "match": {
+              "text": "value"
+            },
+            "start": 4,
+            "end": 9
+          }
+        ]
+      }
+    ]
+    """.data(using: .utf8)!
+
+    let symbolsJSON = """
+    [
+      {
+        "name": "renderWorkspace",
+        "kind": 12,
+        "location": {
+          "uri": "file:///tmp/project/Sources/App.swift",
+          "range": {
+            "start": {
+              "line": 9,
+              "character": 2
+            },
+            "end": {
+              "line": 14,
+              "character": 1
+            }
+          }
+        }
+      }
+    ]
+    """.data(using: .utf8)!
+
+    let matches = try JSONDecoder().decode([TextSearchMatch].self, from: matchesJSON)
+    let symbols = try JSONDecoder().decode([WorkspaceSymbol].self, from: symbolsJSON)
+
+    #expect(matches.first?.path.text == "Sources/App.swift")
+    #expect(matches.first?.submatches.first?.start == 4)
+    #expect(symbols.first?.location.range.end.character == 1)
+    #expect(symbols.first?.id.contains("renderWorkspace") == true)
+  }
+
   @Test func decodesAuthCredentialAndOAuthAuthorization() throws {
     let authJSON = """
     {

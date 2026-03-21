@@ -183,6 +183,18 @@ public final class OpenCodeClient {
     return try await request(.get, path: "/find/file", query: queryItems, response: [String].self)
   }
 
+  public func findText(pattern: String, directory: String? = nil) async throws -> [TextSearchMatch] {
+    var queryItems = mergedDirectoryQuery(directory)
+    queryItems.append(URLQueryItem(name: "pattern", value: pattern))
+    return try await request(.get, path: "/find", query: queryItems, response: [TextSearchMatch].self)
+  }
+
+  public func findSymbols(query searchQuery: String, directory: String? = nil) async throws -> [WorkspaceSymbol] {
+    var queryItems = mergedDirectoryQuery(directory)
+    queryItems.append(URLQueryItem(name: "query", value: searchQuery))
+    return try await request(.get, path: "/find/symbol", query: queryItems, response: [WorkspaceSymbol].self)
+  }
+
   public func listSessions(
     directory: String? = nil,
     roots: Bool? = nil,
