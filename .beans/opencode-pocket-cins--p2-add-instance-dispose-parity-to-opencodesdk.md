@@ -1,7 +1,7 @@
 ---
 # opencode-pocket-cins
 title: P2 add instance dispose parity to OpenCodeSDK
-status: todo
+status: completed
 type: task
 priority: medium
 tags:
@@ -10,7 +10,7 @@ tags:
     - cleanup
     - instance
 created_at: 2026-03-20T23:21:08Z
-updated_at: 2026-03-20T23:21:08Z
+updated_at: 2026-03-21T00:02:04Z
 ---
 
 The app client uses instance cleanup when tearing down directory-scoped state, but `OpenCodeSDK` does not yet expose that route.

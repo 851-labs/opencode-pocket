@@ -46,6 +46,10 @@ public final class OpenCodeClient {
     try await request(.post, path: "/global/dispose", response: Bool.self)
   }
 
+  public func disposeInstance(directory: String? = nil) async throws -> Bool {
+    try await request(.post, path: "/instance/dispose", query: mergedDirectoryQuery(directory), response: Bool.self)
+  }
+
   public func getConfig(directory: String? = nil) async throws -> OpenCodeConfig {
     try await request(.get, path: "/config", query: mergedDirectoryQuery(directory), response: OpenCodeConfig.self)
   }

@@ -1,7 +1,7 @@
 ---
 # opencode-pocket-cpty
 title: P2 add optional PTY remove parity to OpenCodeSDK
-status: todo
+status: scrapped
 type: feature
 priority: low
 tags:
@@ -10,7 +10,7 @@ tags:
     - pty
     - optional
 created_at: 2026-03-20T23:21:08Z
-updated_at: 2026-03-20T23:21:08Z
+updated_at: 2026-03-21T00:02:04Z
 ---
 
 The app client removes PTY sessions in terminal flows, but PTY parity is currently outside the scoped Swift client target.

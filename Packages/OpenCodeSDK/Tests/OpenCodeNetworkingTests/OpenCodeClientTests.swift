@@ -22,6 +22,8 @@ struct OpenCodeClientTests {
         """)
       case ("POST", "/global/dispose"):
         return try makeJSONResponse(request: request, json: "true")
+      case ("POST", "/instance/dispose"):
+        return try makeJSONResponse(request: request, json: "true")
       case ("GET", "/path"):
         return try makeJSONResponse(request: request, json: """
         {"home":"/Users/opencode","state":"/Users/opencode/.config/opencode/state","config":"/Users/opencode/.config/opencode/config","worktree":"/Users/opencode/.local/opencode/worktree","directory":"/Users/opencode/projects"}
@@ -219,6 +221,9 @@ struct OpenCodeClientTests {
     let disposedGlobal = try await client.disposeGlobal()
     #expect(disposedGlobal == true)
 
+    let disposedInstance = try await client.disposeInstance()
+    #expect(disposedInstance == true)
+
     let pathInfo = try await client.getPath()
     #expect(pathInfo.home == "/Users/opencode")
 
@@ -408,6 +413,8 @@ struct OpenCodeClientTests {
     #expect(requests.contains { $0.url?.path == "/global/config" && $0.httpMethod == "GET" })
     #expect(requests.contains { $0.url?.path == "/global/config" && $0.httpMethod == "PATCH" })
     #expect(requests.contains { $0.url?.path == "/global/dispose" && $0.httpMethod == "POST" })
+    #expect(requests.contains { $0.url?.path == "/instance/dispose" && $0.httpMethod == "POST" })
+    #expect(requests.contains { $0.url?.path == "/instance/dispose" && $0.url?.query?.contains("directory=/tmp/default") == true })
     #expect(requests.contains { $0.url?.path == "/config" && $0.httpMethod == "GET" })
     #expect(requests.contains { $0.url?.path == "/config" && $0.httpMethod == "PATCH" })
     #expect(requests.contains { $0.url?.path == "/project" && $0.httpMethod == "GET" })
