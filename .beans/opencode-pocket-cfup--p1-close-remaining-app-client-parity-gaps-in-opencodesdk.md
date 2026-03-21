@@ -10,7 +10,7 @@ tags:
     - parity
     - follow-up
 created_at: 2026-03-20T23:21:08Z
-updated_at: 2026-03-20T23:58:41Z
+updated_at: 2026-03-21T00:00:28Z
 ---
 
 The main Swift client parity track is complete, but a small follow-up set of app-used APIs still remains outside `OpenCodeSDK`.

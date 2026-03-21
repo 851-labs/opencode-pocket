@@ -1,7 +1,7 @@
 ---
 # opencode-pocket-cmcp
 title: P1 add MCP connect and disconnect parity to OpenCodeSDK
-status: todo
+status: completed
 type: feature
 priority: high
 tags:
@@ -10,7 +10,7 @@ tags:
     - mcp
     - parity
 created_at: 2026-03-20T23:21:08Z
-updated_at: 2026-03-20T23:21:08Z
+updated_at: 2026-03-21T00:00:28Z
 ---
 
 `OpenCodeSDK` can already read MCP status, but the app client also uses MCP connect and disconnect controls from its status and settings surfaces.

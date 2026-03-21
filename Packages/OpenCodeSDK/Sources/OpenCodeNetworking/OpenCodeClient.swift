@@ -223,6 +223,24 @@ public final class OpenCodeClient {
     try await request(.get, path: "/mcp", query: mergedDirectoryQuery(directory), response: [String: MCPServerStatus].self)
   }
 
+  public func connectMCP(name: String, directory: String? = nil) async throws -> Bool {
+    try await request(
+      .post,
+      path: "/mcp/\(escapedPathComponent(name))/connect",
+      query: mergedDirectoryQuery(directory),
+      response: Bool.self
+    )
+  }
+
+  public func disconnectMCP(name: String, directory: String? = nil) async throws -> Bool {
+    try await request(
+      .post,
+      path: "/mcp/\(escapedPathComponent(name))/disconnect",
+      query: mergedDirectoryQuery(directory),
+      response: Bool.self
+    )
+  }
+
   public func createSession(_ body: SessionCreateRequest, directory: String? = nil) async throws -> Session {
     try await request(
       .post,

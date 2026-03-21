@@ -112,6 +112,10 @@ struct OpenCodeClientTests {
         return try makeJSONResponse(request: request, json: """
         {"github":{"status":"connected"},"linear":{"status":"needs_auth"}}
         """)
+      case let ("POST", path) where path?.hasSuffix("/connect") == true:
+        return try makeJSONResponse(request: request, json: "true")
+      case let ("POST", path) where path?.hasSuffix("/disconnect") == true:
+        return try makeJSONResponse(request: request, json: "true")
       case ("POST", "/session"):
         return try makeJSONResponse(request: request, json: """
         {"id":"ses_new","slug":"slug","projectID":"prj_1","directory":"/tmp/project","parentID":null,"title":"Created","version":"1","time":{"created":1,"updated":1,"archived":null},"summary":null,"share":null,"revert":null}
@@ -310,6 +314,12 @@ struct OpenCodeClientTests {
     #expect(mcpStatus["github"]?.status == .connected)
     #expect(mcpStatus["linear"]?.status == .needsAuth)
 
+    let connectedMCP = try await client.connectMCP(name: "github")
+    #expect(connectedMCP == true)
+
+    let disconnectedMCP = try await client.disconnectMCP(name: "github")
+    #expect(disconnectedMCP == true)
+
     let created = try await client.createSession(SessionCreateRequest(title: "Hi"))
     #expect(created.id == "ses_new")
 
@@ -425,6 +435,8 @@ struct OpenCodeClientTests {
     #expect(requests.contains { $0.url?.path == "/command" && $0.httpMethod == "GET" })
     #expect(requests.contains { $0.url?.path == "/lsp" && $0.httpMethod == "GET" })
     #expect(requests.contains { $0.url?.path == "/mcp" && $0.httpMethod == "GET" })
+    #expect(requests.contains { $0.url?.path == "/mcp/github/connect" && $0.httpMethod == "POST" })
+    #expect(requests.contains { $0.url?.path == "/mcp/github/disconnect" && $0.httpMethod == "POST" })
     #expect(requests.contains { $0.url?.path.contains("/session/ses") == true && $0.httpMethod == "GET" })
     #expect(requests.contains { $0.url?.absoluteString.contains("limit=5") == true })
     #expect(requests.contains { $0.url?.absoluteString.contains("before=cur_0") == true })
