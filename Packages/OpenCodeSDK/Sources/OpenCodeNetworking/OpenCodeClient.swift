@@ -76,6 +76,10 @@ public final class OpenCodeClient {
     try await request(.get, path: "/project/current", query: mergedDirectoryQuery(directory), response: ProjectInfo.self)
   }
 
+  public func initializeProjectGit(directory: String? = nil) async throws -> ProjectInfo {
+    try await request(.post, path: "/project/git/init", query: mergedDirectoryQuery(directory), response: ProjectInfo.self)
+  }
+
   public func updateProject(id: String, body: ProjectUpdateRequest, directory: String? = nil) async throws -> ProjectInfo {
     try await request(
       .patch,

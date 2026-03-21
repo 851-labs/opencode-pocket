@@ -219,6 +219,30 @@ struct JSONDecodingTests {
     #expect(event.payload.eventType == .serverConnected)
   }
 
+  @Test func decodesProjectWithInitializedTimestamp() throws {
+    let json = """
+    {
+      "id": "prj_git",
+      "worktree": "/tmp/project",
+      "vcs": "git",
+      "name": "Git Ready",
+      "icon": null,
+      "commands": null,
+      "time": {
+        "created": 1,
+        "updated": 4,
+        "initialized": 4
+      },
+      "sandboxes": []
+    }
+    """.data(using: .utf8)!
+
+    let project = try JSONDecoder().decode(ProjectInfo.self, from: json)
+
+    #expect(project.vcs == "git")
+    #expect(project.time.initialized == 4)
+  }
+
   @Test func decodesFileContentStatusAndVCSInfo() throws {
     let fileContentJSON = """
     {

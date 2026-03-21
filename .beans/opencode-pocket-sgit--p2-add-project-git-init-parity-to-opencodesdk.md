@@ -1,7 +1,7 @@
 ---
 # opencode-pocket-sgit
 title: P2 add project git init parity to OpenCodeSDK
-status: todo
+status: completed
 type: task
 priority: medium
 tags:
@@ -10,7 +10,7 @@ tags:
     - project
     - git
 created_at: 2026-03-21T04:48:08Z
-updated_at: 2026-03-21T04:48:08Z
+updated_at: 2026-03-21T05:08:09Z
 ---
 
 The OpenAPI surface includes project git initialization, but the Swift SDK currently lacks a matching wrapper.

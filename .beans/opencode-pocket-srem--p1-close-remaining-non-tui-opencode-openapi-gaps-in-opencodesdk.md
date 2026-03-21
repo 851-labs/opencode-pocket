@@ -1,7 +1,7 @@
 ---
 # opencode-pocket-srem
 title: P1 close remaining non-TUI opencode OpenAPI gaps in OpenCodeSDK
-status: in_progress
+status: completed
 type: feature
 priority: high
 tags:
@@ -10,7 +10,7 @@ tags:
     - openapi
     - follow-up
 created_at: 2026-03-21T04:48:08Z
-updated_at: 2026-03-21T05:05:50Z
+updated_at: 2026-03-21T05:08:09Z
 ---
 
 `OpenCodeSDK` now covers the core app-client surface, but several meaningful non-TUI OpenAPI routes still remain uncovered.
