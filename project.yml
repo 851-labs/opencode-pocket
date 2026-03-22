@@ -37,8 +37,6 @@ targets:
         SDKROOT: auto
         SUPPORTED_PLATFORMS: "iphoneos iphonesimulator macosx"
         TARGETED_DEVICE_FAMILY: "1,2,7"
-        IPHONEOS_DEPLOYMENT_TARGET: "26.0"
-        MACOSX_DEPLOYMENT_TARGET: "26.0"
         SUPPORTS_MACCATALYST: NO
         SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
         LD_RUNPATH_SEARCH_PATHS: "@executable_path/Frameworks"
