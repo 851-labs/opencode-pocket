@@ -28,11 +28,6 @@ targets:
         CFBundleDisplayName: OpenCode Pocket
         UIApplicationSupportsIndirectInputEvents: true
         UILaunchScreen: {}
-        NSAppTransportSecurity:
-          NSExceptionDomains:
-            claudl.taile64ce5.ts.net:
-              NSExceptionAllowsInsecureHTTPLoads: true
-              NSIncludesSubdomains: true
     settings:
       base:
         PRODUCT_NAME: OpenCodePocket
