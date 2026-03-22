@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-MIN_LINE="${1:-98}"
-MIN_FUNCTION="${2:-96}"
+MIN_LINE="${1:-99.9}"
+MIN_FUNCTION="${2:-100}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 COVERAGE_SCRIPT="$SCRIPT_DIR/coverage.sh"

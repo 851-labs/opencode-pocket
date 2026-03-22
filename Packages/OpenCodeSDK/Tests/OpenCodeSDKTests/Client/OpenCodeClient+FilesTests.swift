@@ -84,4 +84,17 @@ struct OpenCodeClientFilesTests {
 
     #expect(matches == [])
   }
+
+  @Test func fileSearchRoutesEncodeFalseDirectoryFlag() async throws {
+    let controller = URLProtocolStubController { request in
+      #expect(request.url?.path == "/find/file")
+      #expect(request.url?.query?.contains("dirs=false") == true)
+      return try makeJSONResponse(request: request, json: "[]")
+    }
+
+    let client = makeClient(controller: controller)
+    let matches = try await client.findFiles(query: "src", includeDirectories: false)
+
+    #expect(matches == [])
+  }
 }

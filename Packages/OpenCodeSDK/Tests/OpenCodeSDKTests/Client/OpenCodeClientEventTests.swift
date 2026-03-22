@@ -184,7 +184,7 @@ struct OpenCodeClientEventTests {
       _ = await iterator.next()
     }
 
-    await invalidController.waitForFirstRequest()
+    await invalidController.waitUntilRequestCount(atLeast: 2)
     invalidConsumer.cancel()
     _ = await invalidConsumer.result
 
@@ -198,12 +198,29 @@ struct OpenCodeClientEventTests {
       _ = await iterator.next()
     }
 
-    await failureController.waitForFirstRequest()
+    await failureController.waitUntilRequestCount(atLeast: 2)
     failureConsumer.cancel()
     _ = await failureConsumer.result
 
-    #expect(invalidController.recordedRequests.count == 1)
-    #expect(failureController.recordedRequests.count == 1)
+    #expect(invalidController.recordedRequests.count >= 2)
+    #expect(failureController.recordedRequests.count >= 2)
+  }
+
+  @Test func subscribeGlobalEventsFallsBackOnInvalidPayload() async {
+    let controller = URLProtocolStubController { request in
+      try makeStatusResponse(
+        request: request,
+        code: 200,
+        body: Data("data: invalid-json\n\n".utf8)
+      )
+    }
+
+    let client = makeClient(controller: controller)
+    var iterator = client.subscribeGlobalEvents().makeAsyncIterator()
+    let first = await iterator.next()
+
+    #expect(first?.resolvedDirectory == "global")
+    #expect(first?.payload.type == "event.decode.error")
   }
 }
 

@@ -243,4 +243,44 @@ struct OpenCodeClientRequestCoreTests {
       try await client.listMessagesPage(sessionID: "ses_1")
     }
   }
+
+  @Test func encodeBodyFailureReturnsMessageError() async {
+    let controller = URLProtocolStubController { request in
+      try makeJSONResponse(request: request, json: "{}")
+    }
+
+    let client = makeClient(controller: controller)
+    await assertClientError(expected: .message) {
+      try await client.updateGlobalConfig(["bad": .number(.nan)])
+    }
+  }
+
+  @Test func listMessagesPageHandlesMissingAndNonNextLinkHeaders() async throws {
+    let noLinkController = URLProtocolStubController { request in
+      try makeStatusResponse(
+        request: request,
+        code: 200,
+        body: Data(("[" + sampleMessageJSON(id: "msg_list", sessionID: "ses_1", text: "listed") + "]").utf8),
+        headers: ["Content-Type": "application/json"]
+      )
+    }
+    let noLinkClient = makeClient(controller: noLinkController)
+    let noLinkPage = try await noLinkClient.listMessagesPage(sessionID: "ses_1")
+    #expect(noLinkPage.nextURL == nil)
+
+    let prevLinkController = URLProtocolStubController { request in
+      try makeStatusResponse(
+        request: request,
+        code: 200,
+        body: Data(("[" + sampleMessageJSON(id: "msg_list", sessionID: "ses_1", text: "listed") + "]").utf8),
+        headers: [
+          "Content-Type": "application/json",
+          "Link": "<http://localhost:4096/session/ses_1/message?before=old>; rel=\"prev\"",
+        ]
+      )
+    }
+    let prevLinkClient = makeClient(controller: prevLinkController)
+    let prevLinkPage = try await prevLinkClient.listMessagesPage(sessionID: "ses_1")
+    #expect(prevLinkPage.nextURL == nil)
+  }
 }

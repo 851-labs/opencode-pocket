@@ -63,6 +63,8 @@ struct RemainingModelCoverageTests {
     let encodedObject = try #require(JSONSerialization.jsonObject(with: encodedMetadata) as? [String: Any])
     #expect(encodedObject["id"] as? String == "msg_1")
     #expect(MessageRole.user.rawValue == "user")
+    #expect(MessageRole.assistant.rawValue == "assistant")
+    #expect(MessageRole.unknown.rawValue == "unknown")
   }
 
   @Test func messageMutationBranchesCoverFallbackPaths() {
@@ -82,6 +84,33 @@ struct RemainingModelCoverageTests {
 
     let noPartRemoval = MessageEnvelope.partRemovalMutation(from: ["sessionID": .string(sessionID), "messageID": .string("msg_1"), "partID": .string("missing")], messagesBySession: [sessionID: [envelope]])
     #expect(noPartRemoval == nil)
+
+    let deltaGuardFailure = MessageEnvelope.partDeltaMutation(from: ["sessionID": .string(sessionID)], messagesBySession: [sessionID: [envelope]])
+    #expect(deltaGuardFailure == nil)
+
+    let partUpdateGuardFailure = MessageEnvelope.partUpdatedMutation(from: [:], messagesBySession: [sessionID: [envelope]])
+    #expect(partUpdateGuardFailure == nil)
+
+    let appendAtEndPart = makeCoveragePart(sessionID: sessionID, messageID: "msg_1", partID: "prt_9", text: "nine")
+    let appendAtEndMutation = MessageEnvelope.partUpdatedMutation(from: ["part": appendAtEndPart.raw], messagesBySession: [sessionID: [envelope]])
+    #expect(appendAtEndMutation?.messages.first?.parts.map(\.id) == ["prt_2", "prt_9"])
+
+    let invalidInfoMutation = MessageEnvelope.messageUpdatedMutation(from: ["id": .string("msg_1")], messagesBySession: [sessionID: [envelope]])
+    #expect(invalidInfoMutation == nil)
+
+    let newSessionInfo = makeCoverageInfo(sessionID: "ses_new", messageID: "msg_2", role: .assistant)
+    let newSessionMutation = MessageEnvelope.messageUpdatedMutation(from: ["info": newSessionInfo.raw], messagesBySession: [:])
+    #expect(newSessionMutation?.messages.count == 1)
+
+    let appendAtEndInfo = makeCoverageInfo(sessionID: sessionID, messageID: "msg_z", role: .assistant)
+    let appendAtEndMessageMutation = MessageEnvelope.messageUpdatedMutation(from: ["info": appendAtEndInfo.raw], messagesBySession: [sessionID: [envelope]])
+    #expect(appendAtEndMessageMutation?.messages.map(\.id) == ["msg_1", "msg_z"])
+
+    let messageRemovalGuardFailure = MessageEnvelope.messageRemovalMutation(from: ["sessionID": .string(sessionID)], messagesBySession: [sessionID: [envelope]])
+    #expect(messageRemovalGuardFailure == nil)
+
+    let partRemovalGuardFailure = MessageEnvelope.partRemovalMutation(from: ["sessionID": .string(sessionID)], messagesBySession: [sessionID: [envelope]])
+    #expect(partRemovalGuardFailure == nil)
   }
 
   @Test func messagePartAndJsonHelpersCoverRemainingBranches() throws {
@@ -125,6 +154,14 @@ struct RemainingModelCoverageTests {
     let subtaskPart = try JSONDecoder().decode(MessagePart.self, from: subtaskJSON)
     #expect(subtaskPart.subtaskModel == ModelSelector(providerID: "openai", modelID: "gpt-5"))
 
+    let noFilesJSON = #"{"id":"part_files","sessionID":"ses_1","messageID":"msg_1","type":"patch"}"#.data(using: .utf8)!
+    let noFilesPart = try JSONDecoder().decode(MessagePart.self, from: noFilesJSON)
+    #expect(noFilesPart.files == [])
+
+    let mixedFilesJSON = #"{"id":"part_files_mixed","sessionID":"ses_1","messageID":"msg_1","type":"patch","files":["a.swift",1,true]}"#.data(using: .utf8)!
+    let mixedFilesPart = try JSONDecoder().decode(MessagePart.self, from: mixedFilesJSON)
+    #expect(mixedFilesPart.files == ["a.swift"])
+
     let nonToolPart = MessagePart(
       id: "part_text",
       sessionID: "ses_1",
@@ -153,6 +190,12 @@ struct RemainingModelCoverageTests {
     )
     #expect(invalidRawPart.appendingDelta(field: "text", delta: "x") == nil)
 
+    let appendNewLeaf = try #require(nonToolPart.appendingDelta(field: "newField", delta: "x"))
+    #expect(appendNewLeaf.raw.objectValue?["newField"]?.stringValue == "x")
+
+    let appendNested = try #require(nonToolPart.appendingDelta(field: "metadata.inner.value", delta: "x"))
+    #expect(appendNested.metadata?["inner"]?.objectValue?["value"]?.stringValue == "x")
+
     let boolData = try JSONEncoder().encode(JSONValue.bool(true))
     let nullData = try JSONEncoder().encode(JSONValue.null)
     let boolValue = try JSONDecoder().decode(JSONValue.self, from: boolData)
@@ -176,6 +219,21 @@ struct RemainingModelCoverageTests {
     #expect(usageObject["total"] == nil)
     #expect(usageObject["input"] as? Int == 1)
 
+    let usageWithCacheJSON = #"{"input":1,"cache":{"read":2,"write":3}}"#.data(using: .utf8)!
+    let usageWithCache = try JSONDecoder().decode(MessageTokenUsage.self, from: usageWithCacheJSON)
+    #expect(usageWithCache.cache.read == 2)
+    #expect(usageWithCache.cache.write == 3)
+
+    let cacheFallbackJSON = #"{}"#.data(using: .utf8)!
+    let cacheFallback = try JSONDecoder().decode(MessageTokenUsage.CacheUsage.self, from: cacheFallbackJSON)
+    #expect(cacheFallback.read == 0)
+    #expect(cacheFallback.write == 0)
+
+    let usageCacheFallbackJSON = #"{"cache":{}}"#.data(using: .utf8)!
+    let usageCacheFallback = try JSONDecoder().decode(MessageTokenUsage.self, from: usageCacheFallbackJSON)
+    #expect(usageCacheFallback.cache.read == 0)
+    #expect(usageCacheFallback.cache.write == 0)
+
     let pending = ToolExecutionStatus.pending
     let error = ToolExecutionStatus.error
     #expect(pending.rawValue == "pending")
@@ -189,6 +247,25 @@ struct RemainingModelCoverageTests {
     #expect(try JSONDecoder().decode(ToolExecutionStatus.self, from: runningData) == .running)
     #expect(try JSONDecoder().decode(ToolExecutionStatus.self, from: completedData) == .completed)
     #expect(try JSONDecoder().decode(ToolExecutionStatus.self, from: errorData) == .error)
+  }
+
+  @Test func messageMetadataMissingRoleFallsBackToUnknown() throws {
+    let json = #"{"id":"msg_no_role","sessionID":"ses_1"}"#.data(using: .utf8)!
+    let metadata = try JSONDecoder().decode(MessageMetadata.self, from: json)
+    #expect(metadata.role == .unknown)
+  }
+
+  @Test func sessionStatusTypeCoversRemainingRawValueAndDecodeBranches() throws {
+    #expect(SessionStatusType.busy.rawValue == "busy")
+    #expect(SessionStatusType.idle.isRunning == false)
+    #expect(SessionStatusType.unknown("weird").isRunning == false)
+
+    let idle = try JSONDecoder().decode(SessionStatusType.self, from: Data(#""idle""#.utf8))
+    let busy = try JSONDecoder().decode(SessionStatusType.self, from: Data(#""busy""#.utf8))
+    let retry = try JSONDecoder().decode(SessionStatusType.self, from: Data(#""retry""#.utf8))
+    #expect(idle == .idle)
+    #expect(busy == .busy)
+    #expect(retry == .retry)
   }
 }
 

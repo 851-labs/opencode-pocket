@@ -237,11 +237,24 @@ struct ModelLogicCoverageTests {
     #expect(ToolExecutionStatus(rawValue: "pending").isInFlight == true)
     #expect(ToolExecutionStatus(rawValue: "running").isInFlight == true)
     #expect(ToolExecutionStatus(rawValue: "completed").isInFlight == false)
+    #expect(ToolExecutionStatus(rawValue: "error").isInFlight == false)
     #expect(ToolExecutionStatus(rawValue: "weird") == .unknown("weird"))
+
+    #expect(ToolExecutionStatus.pending.rawValue == "pending")
+    #expect(ToolExecutionStatus.error.rawValue == "error")
 
     let encodedStatus = try JSONEncoder().encode(ToolExecutionStatus.unknown("weird"))
     let decodedStatus = try JSONDecoder().decode(ToolExecutionStatus.self, from: encodedStatus)
     #expect(decodedStatus == .unknown("weird"))
+
+    let pendingData = try JSONEncoder().encode(ToolExecutionStatus.pending)
+    let runningData = try JSONEncoder().encode(ToolExecutionStatus.running)
+    let completedData = try JSONEncoder().encode(ToolExecutionStatus.completed)
+    let errorData = try JSONEncoder().encode(ToolExecutionStatus.error)
+    #expect(try JSONDecoder().decode(ToolExecutionStatus.self, from: pendingData) == .pending)
+    #expect(try JSONDecoder().decode(ToolExecutionStatus.self, from: runningData) == .running)
+    #expect(try JSONDecoder().decode(ToolExecutionStatus.self, from: completedData) == .completed)
+    #expect(try JSONDecoder().decode(ToolExecutionStatus.self, from: errorData) == .error)
 
     let state = ToolExecutionState(
       status: .completed,
@@ -266,6 +279,10 @@ struct ModelLogicCoverageTests {
     let sparse = try JSONDecoder().decode(ToolExecutionState.self, from: sparseJSON)
     #expect(sparse.input == [:])
     #expect(sparse.time == nil)
+
+    let missingStatusJSON = #"{}"#.data(using: .utf8)!
+    let missingStatus = try JSONDecoder().decode(ToolExecutionState.self, from: missingStatusJSON)
+    #expect(missingStatus.status == .unknown("unknown"))
 
     do {
       _ = try JSONDecoder().decode(ToolExecutionState.self, from: Data(#"[]"#.utf8))

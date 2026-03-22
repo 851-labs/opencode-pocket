@@ -404,6 +404,16 @@ final class URLProtocolStubController: @unchecked Sendable {
   func waitForStopLoading() async {
     await stopLoadingSignal.wait()
   }
+
+  func waitUntilRequestCount(atLeast minimum: Int, timeoutNanoseconds: UInt64 = 5_000_000_000) async {
+    let start = ContinuousClock.now
+    while ContinuousClock.now - start < .nanoseconds(Int64(timeoutNanoseconds)) {
+      if recordedRequests.count >= minimum {
+        return
+      }
+      try? await Task.sleep(nanoseconds: 50_000_000)
+    }
+  }
 }
 
 final class AsyncSignal: @unchecked Sendable {

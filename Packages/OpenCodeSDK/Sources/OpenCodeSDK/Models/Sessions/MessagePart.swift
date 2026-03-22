@@ -246,9 +246,7 @@ private func appendDelta(_ delta: String, to field: String, in object: inout [St
 }
 
 private func appendDelta(_ delta: String, path: ArraySlice<String>, in object: inout [String: JSONValue]) -> Bool {
-  guard let key = path.first else {
-    return false
-  }
+  let key = path.first!
 
   if path.count == 1 {
     let currentValue = object[key]?.stringValue ?? ""

@@ -118,6 +118,7 @@ struct CodableBranchCoverageTests {
     #expect(CommandSource.command.rawValue == "command")
     #expect(CommandSource.mcp.rawValue == "mcp")
     #expect(CommandSource.skill.rawValue == "skill")
+    #expect(CommandSource(rawValue: "mcp") == .mcp)
     #expect(CommandSource(rawValue: "skill") == .skill)
     #expect(CommandSource(rawValue: "mystery") == .unknown("mystery"))
 
@@ -145,6 +146,7 @@ struct CodableBranchCoverageTests {
     #expect(MCPServerConnectionState.failed.rawValue == "failed")
     #expect(MCPServerConnectionState.needsAuth.rawValue == "needs_auth")
     #expect(MCPServerConnectionState.needsClientRegistration.rawValue == "needs_client_registration")
+    #expect(MCPServerConnectionState.unknown("mystery").rawValue == "mystery")
     #expect(MCPServerConnectionState(rawValue: "disabled") == .disabled)
     #expect(MCPServerConnectionState(rawValue: "failed") == .failed)
     #expect(MCPServerConnectionState(rawValue: "needs_client_registration") == .needsClientRegistration)
