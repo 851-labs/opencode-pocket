@@ -1,7 +1,7 @@
 ---
 # opencode-pocket-covdec
 title: P1 cover custom Codable branches in SDK models
-status: todo
+status: completed
 type: task
 priority: high
 tags:
@@ -10,7 +10,7 @@ tags:
     - coverage
     - codable
 created_at: 2026-03-22T05:39:31Z
-updated_at: 2026-03-22T05:39:31Z
+updated_at: 2026-03-22T05:52:20Z
 ---
 
 The remaining coverage gap includes several custom `Codable` implementations with alternate decode branches, unknown-case fallbacks, and shape-dependent encoding logic.

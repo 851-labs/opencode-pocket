@@ -185,6 +185,9 @@ private final class LockedResponses: @unchecked Sendable {
   func next(lastEventID: String?) -> (code: Int, body: String) {
     lock.withLock {
       lastEventIDs.append(lastEventID)
+      guard responses.isEmpty == false else {
+        return (200, "")
+      }
       let next = responses.removeFirst()
       return (next.0, next.1)
     }
