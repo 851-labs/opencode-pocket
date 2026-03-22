@@ -112,6 +112,12 @@ final class WorkspaceStore {
   let allowsPersistence: Bool
   private let settingsStore: WorkspaceSettingsStore
 
+  private struct RequestContext {
+    let client: OpenCodeClient
+    let directory: String?
+    let projectDirectories: [String]
+  }
+
   init(
     connection: ConnectionStore,
     settingsStore: WorkspaceSettingsStore = WorkspaceSettingsStore(),
@@ -649,7 +655,8 @@ final class WorkspaceStore {
   }
 
   func refreshSessions() async {
-    guard let client = connection.client else { return }
+    guard let context = currentRequestContext(includeProjects: true) else { return }
+    let client = context.client
     guard !isRefreshingSessions else { return }
 
     isRefreshingSessions = true
@@ -665,11 +672,18 @@ final class WorkspaceStore {
         projectSessions.sort(by: isSessionNewer(_:than:))
         nextSessions.append(contentsOf: projectSessions)
       } catch {
+        guard matchesCurrentRequestContext(context, includeProjects: true) else {
+          return
+        }
         workspaceError = error.localizedDescription
       }
     }
 
     nextSessions.sort(by: isSessionNewer(_:than:))
+
+    guard matchesCurrentRequestContext(context, includeProjects: true) else {
+      return
+    }
 
     sessions = nextSessions
     let activeSessionIDs = Set(nextSessions.filter { ($0.time.archived ?? 0) <= 0 }.map(\.id))
@@ -783,7 +797,8 @@ final class WorkspaceStore {
   }
 
   func loadMessages(sessionID: String, limit: Int? = nil) async {
-    guard let client = connection.client else { return }
+    guard let context = currentRequestContext() else { return }
+    let client = context.client
 
     beginLoadingMessages(for: sessionID)
     defer {
@@ -794,10 +809,19 @@ final class WorkspaceStore {
       let messages = try await client.listMessages(
         sessionID: sessionID,
         limit: limit,
-        directory: connection.resolvedDirectory
+        directory: context.directory
       )
+
+      guard matchesCurrentRequestContext(context) else {
+        return
+      }
+
       messagesBySession[sessionID] = messages
     } catch {
+      guard matchesCurrentRequestContext(context) else {
+        return
+      }
+
       workspaceError = error.localizedDescription
     }
   }
@@ -807,12 +831,22 @@ final class WorkspaceStore {
   }
 
   func loadDiffs(sessionID: String) async {
-    guard let client = connection.client else { return }
+    guard let context = currentRequestContext() else { return }
+    let client = context.client
 
     do {
-      let diffs = try await client.getSessionDiff(sessionID: sessionID, directory: connection.resolvedDirectory)
+      let diffs = try await client.getSessionDiff(sessionID: sessionID, directory: context.directory)
+
+      guard matchesCurrentRequestContext(context) else {
+        return
+      }
+
       diffsBySession[sessionID] = diffs
     } catch {
+      guard matchesCurrentRequestContext(context) else {
+        return
+      }
+
       workspaceError = error.localizedDescription
     }
   }
@@ -902,16 +936,21 @@ final class WorkspaceStore {
   }
 
   func refreshAgentAndModelOptions() async {
-    guard let client = connection.client else { return }
+    guard let context = currentRequestContext() else { return }
+    let client = context.client
 
     do {
-      let allAgents = try await client.listAgents(directory: connection.resolvedDirectory)
+      let allAgents = try await client.listAgents(directory: context.directory)
       let primaryAgents = allAgents
         .filter { $0.mode == "primary" }
         .filter { $0.hidden != true }
         .sorted { lhs, rhs in
           lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
         }
+
+      guard matchesCurrentRequestContext(context) else {
+        return
+      }
 
       availableAgents = primaryAgents
 
@@ -923,11 +962,15 @@ final class WorkspaceStore {
         }
       }
     } catch {
+      guard matchesCurrentRequestContext(context) else {
+        return
+      }
+
       workspaceError = error.localizedDescription
     }
 
     do {
-      let catalog = try await client.listConfigProviders(directory: connection.resolvedDirectory)
+      let catalog = try await client.listConfigProviders(directory: context.directory)
       var options: [ModelOption] = []
 
       for provider in catalog.providers {
@@ -952,6 +995,10 @@ final class WorkspaceStore {
         return lhs.modelName.localizedCaseInsensitiveCompare(rhs.modelName) == .orderedAscending
       }
 
+      guard matchesCurrentRequestContext(context) else {
+        return
+      }
+
       availableModels = options
       let knownKeys = Set(options.map { modelVisibilityKey($0.selector) })
       hiddenModelKeys = hiddenModelKeys.intersection(knownKeys)
@@ -959,6 +1006,10 @@ final class WorkspaceStore {
       reconcileSelectedModelVariant()
       persistWorkspaceSettings()
     } catch {
+      guard matchesCurrentRequestContext(context) else {
+        return
+      }
+
       workspaceError = error.localizedDescription
     }
   }
@@ -969,11 +1020,22 @@ final class WorkspaceStore {
   }
 
   func refreshLSPStatuses() async {
-    guard let client = connection.client else { return }
+    guard let context = currentRequestContext() else { return }
+    let client = context.client
 
     do {
-      lspStatuses = try await client.listLSPStatus(directory: connection.resolvedDirectory)
+      let statuses = try await client.listLSPStatus(directory: context.directory)
+
+      guard matchesCurrentRequestContext(context) else {
+        return
+      }
+
+      lspStatuses = statuses
     } catch {
+      guard matchesCurrentRequestContext(context) else {
+        return
+      }
+
       guard isOptionalInspectorStatusError(error) else {
         workspaceError = error.localizedDescription
         return
@@ -983,11 +1045,22 @@ final class WorkspaceStore {
   }
 
   func refreshMCPStatuses() async {
-    guard let client = connection.client else { return }
+    guard let context = currentRequestContext() else { return }
+    let client = context.client
 
     do {
-      mcpStatuses = try await client.listMCPStatus(directory: connection.resolvedDirectory)
+      let statuses = try await client.listMCPStatus(directory: context.directory)
+
+      guard matchesCurrentRequestContext(context) else {
+        return
+      }
+
+      mcpStatuses = statuses
     } catch {
+      guard matchesCurrentRequestContext(context) else {
+        return
+      }
+
       guard isOptionalInspectorStatusError(error) else {
         workspaceError = error.localizedDescription
         return
@@ -1076,19 +1149,38 @@ final class WorkspaceStore {
   }
 
   func refreshPendingPrompts() async {
-    guard let client = connection.client else { return }
+    guard let context = currentRequestContext() else { return }
+    let client = context.client
 
     do {
-      let permissions = try await client.listPermissions(directory: connection.resolvedDirectory)
+      let permissions = try await client.listPermissions(directory: context.directory)
+
+      guard matchesCurrentRequestContext(context) else {
+        return
+      }
+
       permissionsBySession = Dictionary(grouping: permissions, by: \.sessionID)
     } catch {
+      guard matchesCurrentRequestContext(context) else {
+        return
+      }
+
       workspaceError = error.localizedDescription
     }
 
     do {
-      let questions = try await client.listQuestions(directory: connection.resolvedDirectory)
+      let questions = try await client.listQuestions(directory: context.directory)
+
+      guard matchesCurrentRequestContext(context) else {
+        return
+      }
+
       questionsBySession = Dictionary(grouping: questions, by: \.sessionID)
     } catch {
+      guard matchesCurrentRequestContext(context) else {
+        return
+      }
+
       workspaceError = error.localizedDescription
     }
   }
@@ -1260,6 +1352,34 @@ final class WorkspaceStore {
     return availableModels.first(where: {
       $0.providerID == providerID && $0.modelID == modelID
     })?.contextWindow
+  }
+
+  private func currentRequestContext(includeProjects: Bool = false) -> RequestContext? {
+    guard let client = connection.client else {
+      return nil
+    }
+
+    return RequestContext(
+      client: client,
+      directory: connection.resolvedDirectory,
+      projectDirectories: includeProjects ? projects.map(\.directory) : []
+    )
+  }
+
+  private func matchesCurrentRequestContext(_ context: RequestContext, includeProjects: Bool = false) -> Bool {
+    guard connection.client === context.client else {
+      return false
+    }
+
+    guard connection.resolvedDirectory == context.directory else {
+      return false
+    }
+
+    if includeProjects {
+      return projects.map(\.directory) == context.projectDirectories
+    }
+
+    return true
   }
 
   private func isOptionalInspectorStatusError(_ error: Error) -> Bool {

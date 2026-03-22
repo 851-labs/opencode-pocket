@@ -365,12 +365,12 @@ final class URLProtocolStubController: @unchecked Sendable {
   let id = UUID().uuidString
 
   private let lock = NSLock()
-  private let handler: (URLRequest) async throws -> (URLResponse, Data)
+  private let handler: @Sendable (URLRequest) async throws -> (URLResponse, Data)
   private let firstRequestSignal = AsyncSignal()
   private let stopLoadingSignal = AsyncSignal()
   private var requests: [URLRequest] = []
 
-  init(handler: @escaping (URLRequest) async throws -> (URLResponse, Data)) {
+  init(handler: @escaping @Sendable (URLRequest) async throws -> (URLResponse, Data)) {
     self.handler = handler
     URLProtocolStub.register(self)
   }
@@ -449,31 +449,25 @@ final class AsyncSignal: @unchecked Sendable {
   }
 }
 
-final class URLProtocolStub: URLProtocol {
+final class URLProtocolStub: URLProtocol, @unchecked Sendable {
   static let controllerIDHeader = "X-OpenCode-Test-ID"
 
-  private static let lock = NSLock()
-  private static var controllers: [String: URLProtocolStubController] = [:]
+  private static let controllerRegistry = URLProtocolControllerRegistry()
 
   private var controller: URLProtocolStubController?
+  private var loadProxy: URLProtocolLoadProxy?
   private var loadingTask: Task<Void, Never>?
 
   static func register(_ controller: URLProtocolStubController) {
-    lock.withLock {
-      controllers[controller.id] = controller
-    }
+    controllerRegistry.register(controller)
   }
 
   static func unregister(_ id: String) {
-    lock.withLock {
-      controllers[id] = nil
-    }
+    controllerRegistry.unregister(id)
   }
 
   private static func controller(for id: String) -> URLProtocolStubController? {
-    lock.withLock {
-      controllers[id]
-    }
+    controllerRegistry.controller(for: id)
   }
 
   override class func canInit(with _: URLRequest) -> Bool {
@@ -493,33 +487,103 @@ final class URLProtocolStub: URLProtocol {
     }
 
     self.controller = controller
-    let urlProtocolClient = client
     let request = request
+    let loadProxy = URLProtocolLoadProxy(stub: self, client: client)
+    self.loadProxy = loadProxy
 
-    loadingTask = Task {
+    loadingTask = Task { [controller, request, loadProxy] in
       do {
         let (response, data) = try await controller.respond(to: request)
         guard !Task.isCancelled else {
           return
         }
-        urlProtocolClient?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
-        if !data.isEmpty {
-          urlProtocolClient?.urlProtocol(self, didLoad: data)
-        }
-        urlProtocolClient?.urlProtocolDidFinishLoading(self)
+        loadProxy.finish(response: response, data: data)
       } catch {
         guard !Task.isCancelled else {
           return
         }
-        urlProtocolClient?.urlProtocol(self, didFailWithError: error)
+        loadProxy.fail(error)
       }
     }
   }
 
   override func stopLoading() {
+    loadProxy?.stop()
+    loadProxy = nil
     controller?.notifyStopLoading()
     loadingTask?.cancel()
     loadingTask = nil
+  }
+}
+
+private final class URLProtocolControllerRegistry: @unchecked Sendable {
+  private let lock = NSLock()
+  private var controllers: [String: URLProtocolStubController] = [:]
+
+  func register(_ controller: URLProtocolStubController) {
+    lock.withLock {
+      controllers[controller.id] = controller
+    }
+  }
+
+  func unregister(_ id: String) {
+    lock.withLock {
+      controllers[id] = nil
+    }
+  }
+
+  func controller(for id: String) -> URLProtocolStubController? {
+    lock.withLock {
+      controllers[id]
+    }
+  }
+}
+
+private final class URLProtocolLoadProxy: @unchecked Sendable {
+  private let lock = NSLock()
+  private weak var stub: URLProtocolStub?
+  private let client: (any URLProtocolClient)?
+  private var isStopped = false
+
+  init(stub: URLProtocolStub, client: (any URLProtocolClient)?) {
+    self.stub = stub
+    self.client = client
+  }
+
+  func stop() {
+    lock.withLock {
+      isStopped = true
+    }
+  }
+
+  func finish(response: URLResponse, data: Data) {
+    guard let stub = activeStub() else {
+      return
+    }
+
+    client?.urlProtocol(stub, didReceive: response, cacheStoragePolicy: .notAllowed)
+    if !data.isEmpty {
+      client?.urlProtocol(stub, didLoad: data)
+    }
+    client?.urlProtocolDidFinishLoading(stub)
+  }
+
+  func fail(_ error: any Error) {
+    guard let stub = activeStub() else {
+      return
+    }
+
+    client?.urlProtocol(stub, didFailWithError: error)
+  }
+
+  private func activeStub() -> URLProtocolStub? {
+    lock.withLock {
+      guard !isStopped else {
+        return nil
+      }
+
+      return stub
+    }
   }
 }
 

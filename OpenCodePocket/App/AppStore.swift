@@ -100,7 +100,7 @@ final class AppStore {
     #endif
   }
 
-  deinit {
+  isolated deinit {
     #if os(macOS)
       if let terminationObserver {
         NotificationCenter.default.removeObserver(terminationObserver)

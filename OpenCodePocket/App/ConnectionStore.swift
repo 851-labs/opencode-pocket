@@ -24,6 +24,8 @@ final class ConnectionStore {
   private(set) var client: OpenCodeClient?
   weak var lifecycleCoordinator: ConnectionLifecycleCoordinating?
 
+  @ObservationIgnored private var connectionAttemptID = 0
+
   private let settingsStore: ConnectionSettingsStore
 
   #if os(macOS)
@@ -48,27 +50,72 @@ final class ConnectionStore {
     directory.trimmedNonEmpty
   }
 
+  private struct ConnectionAttemptResult {
+    let client: OpenCodeClient
+    let isConnected: Bool
+    let serverVersion: String?
+    let eventConnectionState: String
+    let persistedBaseURL: String?
+
+    #if os(macOS)
+      let localServerOwnership: ManagedLocalOpenCodeServer.EndpointOwnership?
+    #endif
+  }
+
   func connect() async {
     guard !isConnecting else { return }
 
     isConnecting = true
     connectionError = nil
+    connectionAttemptID += 1
+    let attemptID = connectionAttemptID
 
     defer {
       isConnecting = false
     }
 
     do {
+      let result: ConnectionAttemptResult
+
       #if os(macOS)
-        try await connectUsingManagedLocalServer()
+        result = try await connectUsingManagedLocalServer()
       #else
-        try await connectUsingRemoteServer()
+        result = try await connectUsingRemoteServer()
       #endif
+
+      guard attemptID == connectionAttemptID else {
+        #if os(macOS)
+          if result.localServerOwnership == .managed {
+            localServerRuntime.stopManagedProcess()
+          }
+        #endif
+        return
+      }
+
+      client = result.client
+      isConnected = result.isConnected
+      serverVersion = result.serverVersion
+      eventConnectionState = result.eventConnectionState
+
+      #if os(macOS)
+        connectedLocalServerOwnership = result.localServerOwnership
+      #endif
+
+      if let persistedBaseURL = result.persistedBaseURL {
+        saveConnectionSettings(using: persistedBaseURL)
+      }
 
       if isConnected {
         await lifecycleCoordinator?.connectionDidConnect()
       }
     } catch {
+      guard attemptID == connectionAttemptID else {
+        #if os(macOS)
+          localServerRuntime.stopManagedProcess()
+        #endif
+        return
+      }
+
       isConnected = false
       eventConnectionState = "Disconnected"
       connectionError = error.localizedDescription
@@ -80,6 +127,7 @@ final class ConnectionStore {
   }
 
   func disconnect() {
+    connectionAttemptID += 1
     lifecycleCoordinator?.connectionDidDisconnect()
     client = nil
     isConnected = false
@@ -132,7 +180,7 @@ final class ConnectionStore {
     return fallback?.absoluteString ?? ""
   }
 
-  private func connectUsingRemoteServer() async throws {
+  private func connectUsingRemoteServer() async throws -> ConnectionAttemptResult {
     let normalizedURL = try normalizedBaseURL()
 
     let resolvedUsername = username.trimmedNonEmpty
@@ -162,23 +210,28 @@ final class ConnectionStore {
 
     let health = try await nextClient.health()
 
-    client = nextClient
-    isConnected = health.healthy
-    serverVersion = health.version
-    eventConnectionState = "Connected"
-
     #if os(macOS)
-      connectedLocalServerOwnership = nil
+      return ConnectionAttemptResult(
+        client: nextClient,
+        isConnected: health.healthy,
+        serverVersion: health.version,
+        eventConnectionState: "Connected",
+        persistedBaseURL: normalizedURL.absoluteString,
+        localServerOwnership: nil
+      )
+    #else
+      return ConnectionAttemptResult(
+        client: nextClient,
+        isConnected: health.healthy,
+        serverVersion: health.version,
+        eventConnectionState: "Connected",
+        persistedBaseURL: normalizedURL.absoluteString
+      )
     #endif
-
-    saveConnectionSettings(
-      using: normalizedURL.absoluteString
-    )
-
   }
 
   #if os(macOS)
-    private func connectUsingManagedLocalServer() async throws {
+    private func connectUsingManagedLocalServer() async throws -> ConnectionAttemptResult {
       eventConnectionState = "Starting local server"
 
       let endpoint = try await localServerRuntime.establishEndpoint()
@@ -193,19 +246,16 @@ final class ConnectionStore {
 
       let health = try await nextClient.health()
 
-      client = nextClient
-      isConnected = health.healthy
-      serverVersion = health.version
-      eventConnectionState = "Connected (Local)"
-      connectedLocalServerOwnership = endpoint.ownership
-
       let persistedBaseURL = normalizedBaseURLForPersistence(fallback: endpoint.baseURL)
-      if !persistedBaseURL.isEmpty {
-        saveConnectionSettings(
-          using: persistedBaseURL
-        )
-      }
 
+      return ConnectionAttemptResult(
+        client: nextClient,
+        isConnected: health.healthy,
+        serverVersion: health.version,
+        eventConnectionState: "Connected (Local)",
+        persistedBaseURL: persistedBaseURL.isEmpty ? nil : persistedBaseURL,
+        localServerOwnership: endpoint.ownership
+      )
     }
   #endif
 
@@ -318,8 +368,9 @@ final class ConnectionStore {
         let pid = managedProcess.processIdentifier
         managedProcess.terminate()
 
-        DispatchQueue.global().asyncAfter(deadline: .now() + 1.0) {
-          if managedProcess.isRunning {
+        Task.detached(priority: .background) {
+          try? await Task.sleep(nanoseconds: 1_000_000_000)
+          if kill(pid_t(pid), 0) == 0 {
             kill(pid_t(pid), SIGKILL)
           }
         }

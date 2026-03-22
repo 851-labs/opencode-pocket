@@ -14,7 +14,7 @@ public struct OpenCodeClientConfiguration: Sendable {
   }
 }
 
-public final class OpenCodeClient {
+public final class OpenCodeClient: Sendable {
   let configuration: OpenCodeClientConfiguration
   let requestBuilder: HTTPRequestBuilder
   let urlSession: URLSession
