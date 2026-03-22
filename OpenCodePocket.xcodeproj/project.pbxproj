@@ -561,8 +561,7 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				DEVELOPMENT_TEAM = WH4QW9ND3J;
 				"EXCLUDED_SOURCE_FILE_NAMES[sdk=macosx*]" = "ConnectView.swift SessionsView.swift WorkspaceView.swift */Features/Workspace/*";
-				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = OpenCodePocket/Support/Info.plist;
+				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = "sh.851.opencode-pocket";
@@ -646,8 +645,7 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				DEVELOPMENT_TEAM = WH4QW9ND3J;
 				"EXCLUDED_SOURCE_FILE_NAMES[sdk=macosx*]" = "ConnectView.swift SessionsView.swift WorkspaceView.swift */Features/Workspace/*";
-				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = OpenCodePocket/Support/Info.plist;
+				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = "sh.851.opencode-pocket";
