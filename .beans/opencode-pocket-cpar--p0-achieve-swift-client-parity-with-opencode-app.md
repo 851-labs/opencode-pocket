@@ -16,7 +16,7 @@ updated_at: 2026-03-20T22:43:14Z
 `OpenCodeSDK` should target parity with the real opencode app client in `.local/opencode/packages/app`, not the full server or TUI control surface.
 
 Scope:
-- Track parity against the app client route usage documented in `docs/opencode-swift-client-parity.md`.
+- Track parity against the app client route usage audited from `.local/opencode/packages/app`.
 - Coordinate the child Beans `capi`, `cboo`, `cses`, `ctrn`, `cfil`, `cset`, `cadv`, and `ctst`.
 - Exclude TUI-only routes, `app.log`, and PTY terminal parity unless the product scope expands later.
 
