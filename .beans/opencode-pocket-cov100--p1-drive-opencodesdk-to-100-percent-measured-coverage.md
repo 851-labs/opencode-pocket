@@ -10,7 +10,7 @@ tags:
     - coverage
     - quality
 created_at: 2026-03-22T05:39:31Z
-updated_at: 2026-03-22T06:09:41Z
+updated_at: 2026-03-22T06:18:27Z
 ---
 
 `Packages/OpenCodeSDK/Scripts/coverage.sh` currently reports roughly 68 percent line coverage and 64 percent function coverage. The remaining gap is concentrated in model files and helper branches rather than the main route wrappers.

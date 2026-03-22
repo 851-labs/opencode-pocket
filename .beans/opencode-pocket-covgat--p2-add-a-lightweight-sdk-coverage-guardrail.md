@@ -1,7 +1,7 @@
 ---
 # opencode-pocket-covgat
 title: P2 add a lightweight SDK coverage guardrail
-status: todo
+status: completed
 type: task
 priority: medium
 tags:
@@ -10,7 +10,7 @@ tags:
     - coverage
     - tooling
 created_at: 2026-03-22T05:39:31Z
-updated_at: 2026-03-22T05:39:31Z
+updated_at: 2026-03-22T06:18:27Z
 ---
 
 Now that coverage can be measured locally, the repo should have a lightweight way to keep it from regressing after the SDK reaches the desired target.
