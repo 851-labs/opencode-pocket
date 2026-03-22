@@ -16,7 +16,6 @@ targets:
   OpenCodePocket:
     type: application
     platform: iOS
-    deploymentTarget: "26.0"
     sources:
       - path: OpenCodePocket
         excludes:
