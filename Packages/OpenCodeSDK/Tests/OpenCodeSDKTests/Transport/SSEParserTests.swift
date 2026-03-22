@@ -1,7 +1,6 @@
 import OpenCodeSDK
 import Testing
 
-@Suite(.tags(.networking))
 struct SSEParserTests {
   @Test func parsesSingleMessage() {
     var parser = SSEParser()

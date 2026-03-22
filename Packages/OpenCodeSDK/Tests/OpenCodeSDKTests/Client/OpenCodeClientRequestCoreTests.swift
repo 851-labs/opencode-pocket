@@ -2,7 +2,6 @@ import Foundation
 import OpenCodeSDK
 import Testing
 
-@Suite(.tags(.networking))
 struct OpenCodeClientRequestCoreTests {
   @Test func directoryQueryOverride() async throws {
     let controller = URLProtocolStubController { request in

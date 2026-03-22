@@ -2,7 +2,6 @@ import Foundation
 import OpenCodeSDK
 import Testing
 
-@Suite(.tags(.networking))
 struct RequestBuilderTests {
   @Test func buildsGETRequestWithQueryAndAuth() throws {
     let builder = HTTPRequestBuilder(

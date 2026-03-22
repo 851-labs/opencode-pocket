@@ -2,7 +2,6 @@ import Foundation
 import OpenCodeSDK
 import Testing
 
-@Suite(.tags(.networking))
 struct OpenCodeClientEventTests {
   @Test func subscribeEventsParsesStreamReconnectsAndSendsLastEventID() async {
     let responses = LockedResponses([

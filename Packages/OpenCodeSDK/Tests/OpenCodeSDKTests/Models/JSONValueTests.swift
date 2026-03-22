@@ -2,7 +2,6 @@ import Foundation
 import OpenCodeSDK
 import Testing
 
-@Suite(.tags(.networking))
 struct JSONValueTests {
   @Test func compactDescriptionPrefersObjectMessage() {
     let value: JSONValue = .object([

@@ -2,7 +2,6 @@ import Foundation
 import OpenCodeSDK
 import Testing
 
-@Suite(.tags(.networking))
 struct OpenCodeClientProjectsTests {
   @Test func projectRoutes() async throws {
     let controller = makeSuccessPathController()

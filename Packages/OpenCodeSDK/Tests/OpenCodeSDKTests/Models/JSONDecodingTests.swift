@@ -2,7 +2,6 @@ import Foundation
 import OpenCodeSDK
 import Testing
 
-@Suite(.tags(.networking))
 struct JSONDecodingTests {
   @Test func decodesSession() throws {
     let json = """

@@ -1,7 +1,6 @@
 import OpenCodeSDK
 import Testing
 
-@Suite(.tags(.networking))
 struct MessageEventNormalizationTests {
   @Test func partDeltaMutationAppendsTextToExistingPart() {
     let sessionID = "ses_1"
