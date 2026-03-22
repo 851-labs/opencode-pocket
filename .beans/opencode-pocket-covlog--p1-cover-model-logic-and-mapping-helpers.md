@@ -1,7 +1,7 @@
 ---
 # opencode-pocket-covlog
 title: P1 cover model logic and mapping helpers
-status: todo
+status: completed
 type: task
 priority: medium
 tags:
@@ -10,7 +10,7 @@ tags:
     - coverage
     - logic
 created_at: 2026-03-22T05:39:31Z
-updated_at: 2026-03-22T05:39:31Z
+updated_at: 2026-03-22T05:55:38Z
 ---
 
 Several of the remaining under-covered files contain branchy mapping and helper logic that is more valuable than pure initializer coverage, especially around events, message parts, and tool execution state.
