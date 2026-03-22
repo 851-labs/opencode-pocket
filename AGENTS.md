@@ -107,17 +107,6 @@ After code changes, agents must:
 3. Run `swift test` in `Packages/OpenCodeSDK`.
 4. Fix compilation/test failures before declaring completion.
 
-## Testing Notes
-
-### Live integration tests
-`Packages/OpenCodeSDK/Tests/OpenCodeSDKTests/Integration/LiveServerIntegrationTests.swift` honors:
-- `OPENCODE_RUN_LIVE_TESTS=1` to enable
-- `OPENCODE_SKIP_LIVE_TESTS=1` to skip
-- `OPENCODE_BASE_URL`
-- `OPENCODE_USERNAME`
-- `OPENCODE_PASSWORD`
-- `OPENCODE_DIRECTORY`
-
 ## Accessibility and UI Test Contract
 
 - Keep accessibility identifiers stable where possible (`composer.*`, `drawer.*`, `workspace.*`, `message.*`).
