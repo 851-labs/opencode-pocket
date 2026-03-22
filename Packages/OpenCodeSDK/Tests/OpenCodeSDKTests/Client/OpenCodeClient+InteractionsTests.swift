@@ -10,6 +10,9 @@ struct OpenCodeClientInteractionsTests {
     let permissions = try await client.listPermissions()
     #expect(permissions.first?.id == "perm_1")
 
+    let repliedPermissionAlias = try await client.replyPermission(requestID: "perm_1", reply: .always)
+    #expect(repliedPermissionAlias == true)
+
     let repliedPermission = try await client.respondPermission(requestID: "perm_1", response: .once, message: "Proceed")
     #expect(repliedPermission == true)
 

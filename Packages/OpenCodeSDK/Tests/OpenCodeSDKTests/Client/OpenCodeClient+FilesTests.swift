@@ -71,4 +71,17 @@ struct OpenCodeClientFilesTests {
     #expect(page.nextCursor == "cur_5")
     #expect(page.nextURL == nil)
   }
+
+  @Test func fileSearchRoutesOmitOptionalQueryItemsWhenUnset() async throws {
+    let controller = URLProtocolStubController { request in
+      #expect(request.url?.path == "/find/file")
+      #expect(request.url?.query == "directory=/tmp/default&query=src")
+      return try makeJSONResponse(request: request, json: "[]")
+    }
+
+    let client = makeClient(controller: controller)
+    let matches = try await client.findFiles(query: "src")
+
+    #expect(matches == [])
+  }
 }

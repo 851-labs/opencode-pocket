@@ -92,14 +92,18 @@ struct CodableBranchCoverageTests {
   @Test func authCredentialCoversApiWellKnownAndInvalidType() throws {
     let api = AuthCredential.api(key: "secret")
     let wellKnown = AuthCredential.wellKnown(key: "service", token: "token")
+    let oauth = AuthCredential.oauth(refresh: "refresh", access: "access", expires: 42, accountID: "acct", enterpriseURL: "https://enterprise")
 
     let apiData = try JSONEncoder().encode(api)
     let wellKnownData = try JSONEncoder().encode(wellKnown)
+    let oauthData = try JSONEncoder().encode(oauth)
     let decodedAPI = try JSONDecoder().decode(AuthCredential.self, from: apiData)
     let decodedWellKnown = try JSONDecoder().decode(AuthCredential.self, from: wellKnownData)
+    let decodedOAuth = try JSONDecoder().decode(AuthCredential.self, from: oauthData)
 
     #expect(decodedAPI == .api(key: "secret"))
     #expect(decodedWellKnown == .wellKnown(key: "service", token: "token"))
+    #expect(decodedOAuth == .oauth(refresh: "refresh", access: "access", expires: 42, accountID: "acct", enterpriseURL: "https://enterprise"))
 
     let invalidJSON = #"{"type":"mystery"}"#.data(using: .utf8)!
     do {
@@ -111,6 +115,9 @@ struct CodableBranchCoverageTests {
   }
 
   @Test func commandModelsCoverUnknownSourceAndDescriptorInit() throws {
+    #expect(CommandSource.command.rawValue == "command")
+    #expect(CommandSource.mcp.rawValue == "mcp")
+    #expect(CommandSource.skill.rawValue == "skill")
     #expect(CommandSource(rawValue: "skill") == .skill)
     #expect(CommandSource(rawValue: "mystery") == .unknown("mystery"))
 
@@ -133,10 +140,28 @@ struct CodableBranchCoverageTests {
   }
 
   @Test func mcpModelsCoverEnumCasesConfigShapesAndInitHelpers() throws {
+    #expect(MCPServerConnectionState.connected.rawValue == "connected")
+    #expect(MCPServerConnectionState.disabled.rawValue == "disabled")
+    #expect(MCPServerConnectionState.failed.rawValue == "failed")
+    #expect(MCPServerConnectionState.needsAuth.rawValue == "needs_auth")
+    #expect(MCPServerConnectionState.needsClientRegistration.rawValue == "needs_client_registration")
     #expect(MCPServerConnectionState(rawValue: "disabled") == .disabled)
     #expect(MCPServerConnectionState(rawValue: "failed") == .failed)
     #expect(MCPServerConnectionState(rawValue: "needs_client_registration") == .needsClientRegistration)
     #expect(MCPServerConnectionState(rawValue: "weird") == .unknown("weird"))
+
+    let encodedState = try JSONEncoder().encode(MCPServerConnectionState.needsAuth)
+    let decodedState = try JSONDecoder().decode(MCPServerConnectionState.self, from: encodedState)
+    #expect(decodedState == .needsAuth)
+
+    let connectedData = try JSONEncoder().encode(MCPServerConnectionState.connected)
+    let disabledData = try JSONEncoder().encode(MCPServerConnectionState.disabled)
+    let failedData = try JSONEncoder().encode(MCPServerConnectionState.failed)
+    let registrationData = try JSONEncoder().encode(MCPServerConnectionState.needsClientRegistration)
+    #expect(try JSONDecoder().decode(MCPServerConnectionState.self, from: connectedData) == .connected)
+    #expect(try JSONDecoder().decode(MCPServerConnectionState.self, from: disabledData) == .disabled)
+    #expect(try JSONDecoder().decode(MCPServerConnectionState.self, from: failedData) == .failed)
+    #expect(try JSONDecoder().decode(MCPServerConnectionState.self, from: registrationData) == .needsClientRegistration)
 
     let status = MCPServerStatus(status: .failed, error: "boom")
     #expect(status.error == "boom")

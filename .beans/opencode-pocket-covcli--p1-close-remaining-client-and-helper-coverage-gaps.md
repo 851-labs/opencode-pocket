@@ -1,7 +1,7 @@
 ---
 # opencode-pocket-covcli
 title: P1 close remaining client and helper coverage gaps
-status: todo
+status: completed
 type: task
 priority: medium
 tags:
@@ -10,7 +10,7 @@ tags:
     - coverage
     - client
 created_at: 2026-03-22T05:39:31Z
-updated_at: 2026-03-22T05:39:31Z
+updated_at: 2026-03-22T06:09:41Z
 ---
 
 Most `OpenCodeClient` route files already have high coverage, but a few remaining helper branches and edge cases still need direct tests to reach full measured coverage.

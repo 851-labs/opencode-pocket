@@ -83,4 +83,38 @@ struct OpenCodeClientSessionsTests {
     #expect(requests.contains { $0.url?.path == "/session/ses_1/summarize" && $0.httpMethod == "POST" })
     #expect(requests.contains { $0.url?.path == "/session/ses_1/todo" && $0.httpMethod == "GET" })
   }
+
+  @Test func sessionRoutesCoverSearchStartAndDefaultForkBody() async throws {
+    let controller = URLProtocolStubController { request in
+      switch (request.httpMethod, request.url?.path) {
+      case ("GET", "/session"):
+        #expect(request.url?.query?.contains("roots=false") == true)
+        #expect(request.url?.query?.contains("start=12.5") == true)
+        #expect(request.url?.query?.contains("search=term") == true)
+        return try makeJSONResponse(request: request, json: "[]")
+      case let ("POST", path) where path?.hasSuffix("/fork") == true:
+        let body = try JSONSerialization.jsonObject(with: requestBodyData(request))
+        let object = try requireDictionary(body)
+        #expect(object["messageID"] == nil)
+        return try makeJSONResponse(request: request, json: """
+        {"id":"ses_fork","slug":"fork","projectID":"prj_1","directory":"/tmp/project","parentID":"ses_1","title":"Forked","version":"1","time":{"created":3,"updated":3,"archived":null},"summary":null,"share":null,"revert":null}
+        """)
+      case let ("GET", path) where path?.hasSuffix("/diff") == true:
+        #expect(request.url?.query == "directory=/tmp/default")
+        return try makeJSONResponse(request: request, json: "[]")
+      default:
+        throw OpenCodeClientError.message("Unexpected request: \(request.httpMethod ?? "?") \(request.url?.absoluteString ?? "nil")")
+      }
+    }
+
+    let client = makeClient(controller: controller)
+    let sessions = try await client.listSessions(roots: false, start: 12.5, search: "term")
+    #expect(sessions == [])
+
+    let forked = try await client.forkSession(sessionID: "ses_1")
+    #expect(forked.id == "ses_fork")
+
+    let diffs = try await client.getSessionDiff(sessionID: "ses_1")
+    #expect(diffs == [])
+  }
 }

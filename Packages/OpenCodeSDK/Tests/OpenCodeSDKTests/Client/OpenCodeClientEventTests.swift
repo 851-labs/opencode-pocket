@@ -171,6 +171,40 @@ struct OpenCodeClientEventTests {
 
     #expect(controller.recordedRequests.count == 1)
   }
+
+  @Test(.timeLimit(.minutes(1)))
+  func subscribeEventsStopsOnInvalidResponseAndHTTPFailure() async {
+    let invalidController = URLProtocolStubController { _ in
+      (URLResponse(), Data())
+    }
+
+    let invalidClient = makeClient(controller: invalidController)
+    let invalidConsumer = Task {
+      var iterator = invalidClient.subscribeEvents().makeAsyncIterator()
+      _ = await iterator.next()
+    }
+
+    await invalidController.waitForFirstRequest()
+    invalidConsumer.cancel()
+    _ = await invalidConsumer.result
+
+    let failureController = URLProtocolStubController { request in
+      try makeStatusResponse(request: request, code: 503, body: Data())
+    }
+
+    let failureClient = makeClient(controller: failureController)
+    let failureConsumer = Task {
+      var iterator = failureClient.subscribeEvents().makeAsyncIterator()
+      _ = await iterator.next()
+    }
+
+    await failureController.waitForFirstRequest()
+    failureConsumer.cancel()
+    _ = await failureConsumer.result
+
+    #expect(invalidController.recordedRequests.count == 1)
+    #expect(failureController.recordedRequests.count == 1)
+  }
 }
 
 private final class LockedResponses: @unchecked Sendable {

@@ -101,7 +101,7 @@ struct OpenCodeClientRequestCoreTests {
   @Test func parsesNotFoundEnvelopeError() async {
     let controller = URLProtocolStubController { request in
       try makeStatusResponse(request: request, code: 404, body: Data("""
-      {"data":{"message":"session missing"}}
+      {"name":"NotFoundError","data":{"message":"session missing"}}
       """.utf8))
     }
 
@@ -113,11 +113,13 @@ struct OpenCodeClientRequestCoreTests {
 
   @Test func parsesNotFoundEnvelopeWithoutMessage() async {
     let controller = URLProtocolStubController { request in
-      try makeStatusResponse(request: request, code: 404, body: Data("{}".utf8))
+      try makeStatusResponse(request: request, code: 404, body: Data("""
+      {"name":"NotFoundError","data":{}}
+      """.utf8))
     }
 
     let client = makeClient(controller: controller)
-    await assertHTTPStatusError(code: 404, contains: nil) {
+    await assertHTTPStatusError(code: 404, contains: "Not found") {
       try await client.health()
     }
   }
@@ -211,5 +213,34 @@ struct OpenCodeClientRequestCoreTests {
     #expect(OpenCodeClientError.httpStatus(code: 500, message: "boom").errorDescription == "Server error (500): boom")
     #expect(OpenCodeClientError.httpStatus(code: 500, message: nil).errorDescription == "Server error (500): No details")
     #expect(OpenCodeClientError.message("custom").errorDescription == "custom")
+  }
+
+  @Test func requestPageWrapsTransportAndInvalidResponseErrors() async {
+    let transportController = URLProtocolStubController { _ in
+      throw URLError(.networkConnectionLost)
+    }
+    let transportClient = makeClient(controller: transportController)
+    await assertClientError(expected: .transport) {
+      try await transportClient.listMessagesPage(sessionID: "ses_1")
+    }
+
+    let invalidController = URLProtocolStubController { _ in
+      (URLResponse(), Data())
+    }
+    let invalidClient = makeClient(controller: invalidController)
+    await assertClientError(expected: .invalidResponse) {
+      try await invalidClient.listMessagesPage(sessionID: "ses_1")
+    }
+  }
+
+  @Test func requestPageWrapsDecodingFailure() async {
+    let controller = URLProtocolStubController { request in
+      try makeStatusResponse(request: request, code: 200, body: Data("{not-json".utf8))
+    }
+
+    let client = makeClient(controller: controller)
+    await assertClientError(expected: .decoding) {
+      try await client.listMessagesPage(sessionID: "ses_1")
+    }
   }
 }

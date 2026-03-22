@@ -42,4 +42,19 @@ struct JSONValueTests {
     #expect(request.id == "perm_1")
     #expect(request.patterns == ["src/**"])
   }
+
+  @Test func boolNullAndDoubleValuesRoundTrip() throws {
+    let values: [JSONValue] = [
+      .bool(true),
+      .null,
+      .number(1.5),
+    ]
+
+    let encoded = try values.map { try JSONEncoder().encode($0) }
+    let decoded = try encoded.map { try JSONDecoder().decode(JSONValue.self, from: $0) }
+
+    #expect(decoded[0].boolValue == true)
+    #expect(decoded[1].compactDescription == "null")
+    #expect(decoded[2].doubleValue == 1.5)
+  }
 }

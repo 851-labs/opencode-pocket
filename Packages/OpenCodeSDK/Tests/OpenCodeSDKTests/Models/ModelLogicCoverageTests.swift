@@ -186,6 +186,10 @@ struct ModelLogicCoverageTests {
     )
     #expect(direct.errorDisplayText == "failed")
 
+    let encodedDirect = try JSONEncoder().encode(direct)
+    let encodedObject = try #require(JSONSerialization.jsonObject(with: encodedDirect) as? [String: Any])
+    #expect(encodedObject["id"] as? String == "msg_2")
+
     do {
       _ = try JSONDecoder().decode(MessageMetadata.self, from: Data(#"[]"#.utf8))
       Issue.record("Expected invalid MessageMetadata decode to throw")
